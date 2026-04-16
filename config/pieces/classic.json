@@ -1,0 +1,17 @@
+{
+  "setName": "Classic Stratego",
+  "pieces": [
+    { "id": "flag", "label": "Flag", "rank": 0, "count": 1, "immovable": true },
+    { "id": "bomb", "label": "Bomb", "rank": 11, "count": 6, "immovable": true },
+    { "id": "marshal", "label": "Marshal", "rank": 10, "count": 1 },
+    { "id": "general", "label": "General", "rank": 9, "count": 1 },
+    { "id": "colonel", "label": "Colonel", "rank": 8, "count": 2 },
+    { "id": "major", "label": "Major", "rank": 7, "count": 3 },
+    { "id": "captain", "label": "Captain", "rank": 6, "count": 4 },
+    { "id": "lieutenant", "label": "Lieutenant", "rank": 5, "count": 4 },
+    { "id": "sergeant", "label": "Sergeant", "rank": 4, "count": 4 },
+    { "id": "miner", "label": "Miner", "rank": 3, "count": 5, "canDefuseBomb": true },
+    { "id": "scout", "label": "Scout", "rank": 2, "count": 8, "canTraverseMany": true },
+    { "id": "spy", "label": "Spy", "rank": 1, "count": 1 }
+  ]
+}
