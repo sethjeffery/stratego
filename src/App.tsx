@@ -51,7 +51,7 @@ export function App() {
           setRules(config.rulesConfig);
         })
         .catch(() => {
-          setError('Cannot reach game backend. Set VITE_BACKEND_ORIGIN or configure Supabase env vars.');
+          setError('Cannot reach game backend. Set VITE_BACKEND_ORIGIN or configure Supabase client env vars.');
         });
 
       socket.connect();

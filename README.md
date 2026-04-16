@@ -23,9 +23,15 @@ Open `http://localhost:5173`, host on one device, and join using room code from 
 - Realtime updates come from Supabase Realtime.
 - Flow is **initiator + challenger** (tokenized session id), not host/client.
 
-Set these in Vite env:
+Set either of these client env pairs:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+
+Or, if you are using the Vercel Supabase integration:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` is also accepted as a fallback client key.
 
 Then run the SQL in `supabase/schema.sql` in your Supabase project.
 
@@ -36,8 +42,8 @@ If you are asking “is there anything I need to do?” — **yes, these steps a
 2. In Supabase dashboard, go to **SQL Editor** and run `supabase/schema.sql`.
 3. In dashboard, confirm **Database → Replication** includes `public.game_sessions` (required for realtime updates).
 4. In dashboard, copy:
-   - **Project URL** → `VITE_SUPABASE_URL`
-   - **Anon public key** → `VITE_SUPABASE_ANON_KEY`
+   - **Project URL** → `VITE_SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`
+   - **Anon public key** → `VITE_SUPABASE_ANON_KEY` or `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 5. Put those keys in your frontend environment:
    - local `.env`
    - Vercel Project Settings → Environment Variables
@@ -50,11 +56,19 @@ VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
 ```
 
 ### Vercel env vars for Supabase mode
-Set these **exactly** in Vercel:
+Any one of these client-safe configurations works:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
+Or Vercel Supabase integration defaults:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Optional fallback:
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
 You do **not** need `VITE_BACKEND_ORIGIN` if using Supabase mode only.
+You also do **not** need to expose `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_SECRET_KEY`, or `SUPABASE_JWT_SECRET` to the browser.
 
 ### Quick validation steps
 After deployment:
