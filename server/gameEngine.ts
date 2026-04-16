@@ -24,7 +24,10 @@ const inBounds = (p: Position) =>
 
 const blocked = new Set(rulesConfig.board.blockedCells.map((c) => `${c.x},${c.y}`));
 
-const randomCode = () => Math.random().toString(36).slice(2, 8).toUpperCase();
+const ROOM_CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+const randomCode = () =>
+  Array.from({ length: 6 }, () => ROOM_CODE_ALPHABET[Math.floor(Math.random() * ROOM_CODE_ALPHABET.length)]).join('');
 
 const createLineup = (ownerId: string, fromTop: boolean): Unit[] => {
   const startY = fromTop ? 0 : rulesConfig.board.height - rulesConfig.setupRowsPerPlayer;

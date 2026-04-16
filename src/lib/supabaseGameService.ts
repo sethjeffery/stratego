@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { nanoid } from 'nanoid';
+import { customAlphabet, nanoid } from 'nanoid';
 import piecesJson from '../../config/pieces/classic.json';
 import rulesJson from '../../config/rules/default.json';
 import { GameState, Position, piecesConfigSchema, rulesSchema } from '../shared/schema';
@@ -32,11 +32,13 @@ const rules = rulesSchema.parse(rulesJson);
 const client = isSupabaseMode ? createClient(supabaseUrl!, supabaseAnonKey!) : null;
 
 const TABLE = 'game_sessions';
+const SESSION_CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const createSessionCode = customAlphabet(SESSION_CODE_ALPHABET, 8);
 
 export const createInitiatedSession = async (initiatorName: string) => {
   if (!client) throw new Error('Supabase is not configured.');
 
-  const sessionId = nanoid(8);
+  const sessionId = createSessionCode();
   const { data, error } = await client
     .from(TABLE)
     .insert({
