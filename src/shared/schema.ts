@@ -69,15 +69,3 @@ export type GameState = {
     winner: 'attacker' | 'defender' | 'both';
   };
 };
-
-export type ClientEvents = {
-  'room:create': { playerName: string };
-  'room:join': { playerName: string; roomCode: string };
-  'game:move': { roomCode: string; from: Position; to: Position };
-};
-
-export type ServerEvents = {
-  'room:joined': { playerId: string; state: GameState };
-  'game:state': GameState;
-  'game:error': { message: string };
-};

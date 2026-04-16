@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="30 30 228 390" width="224px" height="386px">
+  <defs>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="144" y1="32" x2="144" y2="418" id="gradient-5">
+      <stop offset="0" style="stop-color: rgb(255, 87, 87);"/>
+      <stop offset="0.513" style="stop-color: rgb(141, 0, 0); stop-opacity: 0;"/>
+      <stop offset="1" style="stop-color: rgb(78, 0, 0);"/>
+    </linearGradient>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="143.961" y1="72" x2="143.961" y2="128" id="gradient-1" gradientTransform="matrix(0.999594, 0, 0, 1, 0.09725, 0.000291)">
+      <stop offset="0" style="stop-opacity: 0.81; stop-color: rgb(130, 0, 0);"/>
+      <stop offset="1" style="stop-opacity: 0; stop-color: rgb(172, 0, 0);"/>
+    </linearGradient>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="144" y1="72" x2="144" y2="128" id="gradient-0" gradientTransform="matrix(0.459873, 0, 0, 0.459873, 77.778266, 38.889133)">
+      <stop offset="0" style="stop-color: rgb(255, 115, 115); stop-opacity: 0.7;"/>
+      <stop offset="1" style="stop-color: rgb(255, 255, 255); stop-opacity: 0;"/>
+    </linearGradient>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="143.961" y1="72" x2="143.961" y2="128" id="gradient-3" gradientTransform="matrix(0.999594, 0, 0, 1, 0.097466, 247.999328)">
+      <stop offset="0" style="stop-opacity: 0.81; stop-color: rgb(130, 0, 0);"/>
+      <stop offset="1" style="stop-opacity: 0; stop-color: rgb(172, 0, 0);"/>
+    </linearGradient>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="144" y1="72" x2="144" y2="128" id="gradient-4" gradientTransform="matrix(0.459873, 0, 0, 0.459873, 77.77848, 286.888183)">
+      <stop offset="0" style="stop-color: rgb(255, 115, 115); stop-opacity: 0.7;"/>
+      <stop offset="1" style="stop-color: rgb(255, 255, 255); stop-opacity: 0;"/>
+    </linearGradient>
+  </defs>
+  <path style="fill: rgba(90, 0, 0, 0.608);" d="M 64.529 418 L 72 409.532 L 72 393.844 L 216 393.844 L 216 409.532 L 224 417.376 L 232 409.532 L 232 386 L 56 386 L 56 409.532 L 64.529 418 Z"/>
+  <path style="fill: rgb(189, 11, 11); fill-rule: nonzero; stroke: url(&quot;#gradient-5&quot;); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" d="M 32 40 C 32 36.239 34.73 32 40 32 L 56 32 C 60.547 32 64 35.472 64 40 L 64 54 L 96 54 L 96 40 C 96 35.76 99.538 32 104 32 L 120 32 C 124.572 32 128 35.645 128 40 L 128 54 L 160 54 L 160 40 C 160 35.516 162.943 32 168 32 L 184 32 C 188.591 32 192 34.758 192 40 L 192 54 L 224 54 L 224 40 C 224 35.479 227.14 32 232 32 L 248 32 C 252.988 32 256 35.155 256 40 L 256 418 L 224 418 L 224 396 L 64 396 L 64 418 L 32 418 L 32 40"/>
+  <path style="fill: url(&quot;#gradient-1&quot;); stroke-width: 1; stroke: url(&quot;#gradient-0&quot;);" d="M 48 96.773 C 48.078 80 56.074 72 64.072 72 L 224.007 72 C 232.003 72 240 80 240 95.999 L 240 128 L 48.078 128 L 48 96.773 Z"/>
+  <path style="stroke-width: 1; fill: url(&quot;#gradient-3&quot;); stroke: url(&quot;#gradient-4&quot;); transform-origin: 144px 348px;" d="M 48 336 C 48 320 56.074 320 64.072 320 L 224.007 320 C 232.003 320 240 320 240 336 L 240 376 L 48.078 376 L 48 336 Z" transform="matrix(-1, 0, 0, -1, -0.00003052, 0)"/>
+</svg>

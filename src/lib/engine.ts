@@ -7,6 +7,12 @@ const inBounds = (p: Position, rules: RulesConfig) =>
   p.x >= 0 && p.x < rules.board.width && p.y >= 0 && p.y < rules.board.height;
 
 const blockedSet = (rules: RulesConfig) => new Set(rules.board.blockedCells.map((c) => `${c.x},${c.y}`));
+const directions: Position[] = [
+  { x: 1, y: 0 },
+  { x: -1, y: 0 },
+  { x: 0, y: 1 },
+  { x: 0, y: -1 },
+];
 
 const createLineup = (
   ownerId: string,
@@ -65,9 +71,10 @@ export const createSessionGame = (
   challengerName: string,
   rules: RulesConfig,
   pieces: PieceDefinition[],
+  playerIds?: { initiatorId: string; challengerId: string },
 ): { state: GameState; initiatorId: string; challengerId: string } => {
-  const initiatorId = nanoid(10);
-  const challengerId = nanoid(10);
+  const initiatorId = playerIds?.initiatorId ?? nanoid(10);
+  const challengerId = playerIds?.challengerId ?? nanoid(10);
 
   const players: PlayerState[] = [
     { id: initiatorId, name: initiatorName, connected: true },
@@ -116,14 +123,10 @@ export const applyMoveToState = (
 
   const movingPiece = pieceById.get(moving.pieceId)!;
   if (movingPiece.immovable) return { error: `${movingPiece.label} cannot move.` };
-
-  const dx = Math.abs(from.x - to.x);
-  const dy = Math.abs(from.y - to.y);
-  const legalStep = movingPiece.canTraverseMany ? dx === 0 || dy === 0 : dx + dy === 1;
-  if (!legalStep) return { error: 'Illegal movement vector.' };
-
-  const occupiedBySelf = nextState.units.some((u) => u.ownerId === playerId && u.x === to.x && u.y === to.y);
-  if (occupiedBySelf) return { error: 'Cell occupied by ally.' };
+  const legalMoves = getLegalMovesForUnit(state, playerId, from, rules, pieces);
+  if (!legalMoves.some((move) => move.x === to.x && move.y === to.y)) {
+    return { error: 'Illegal movement vector.' };
+  }
 
   const defender = nextState.units.find((u) => u.x === to.x && u.y === to.y && u.ownerId !== playerId);
   moving.revealedTo = Array.from(new Set([...moving.revealedTo, ...nextState.players.map((p) => p.id)]));
@@ -163,4 +166,61 @@ export const applyMoveToState = (
   nextState.turnPlayerId = nextState.winnerId ? null : nextPlayer?.id ?? null;
 
   return { nextState };
+};
+
+export const getLegalMovesForUnit = (
+  state: GameState,
+  playerId: string,
+  from: Position,
+  rules: RulesConfig,
+  pieces: PieceDefinition[],
+): Position[] => {
+  if (state.winnerId) return [];
+
+  const blocked = blockedSet(rules);
+  if (!inBounds(from, rules) || blocked.has(`${from.x},${from.y}`)) return [];
+
+  const pieceById = buildPieceMap(pieces);
+  const moving = state.units.find((u) => u.x === from.x && u.y === from.y && u.ownerId === playerId);
+  if (!moving) return [];
+
+  const movingPiece = pieceById.get(moving.pieceId);
+  if (!movingPiece || movingPiece.immovable) return [];
+
+  const occupiedBySelf = new Set(
+    state.units.filter((u) => u.ownerId === playerId).map((u) => `${u.x},${u.y}`),
+  );
+  const occupiedByEnemy = new Set(
+    state.units.filter((u) => u.ownerId !== playerId).map((u) => `${u.x},${u.y}`),
+  );
+
+  if (!movingPiece.canTraverseMany) {
+    return directions
+      .map((direction) => ({ x: from.x + direction.x, y: from.y + direction.y }))
+      .filter((target) => (
+        inBounds(target, rules)
+        && !blocked.has(`${target.x},${target.y}`)
+        && !occupiedBySelf.has(`${target.x},${target.y}`)
+      ));
+  }
+
+  const legalMoves: Position[] = [];
+
+  for (const direction of directions) {
+    let x = from.x + direction.x;
+    let y = from.y + direction.y;
+
+    while (inBounds({ x, y }, rules) && !blocked.has(`${x},${y}`)) {
+      const key = `${x},${y}`;
+      if (occupiedBySelf.has(key)) break;
+
+      legalMoves.push({ x, y });
+      if (occupiedByEnemy.has(key)) break;
+
+      x += direction.x;
+      y += direction.y;
+    }
+  }
+
+  return legalMoves;
 };

@@ -5,7 +5,7 @@ A real-time multiplayer Stratego-inspired web game with animated battles, config
 ## Stack
 - TypeScript
 - React + Vite
-- Node + Express + Socket.IO
+- Supabase Realtime + Postgres
 - Zod schema validation for rule/piece config files
 
 ## Run
@@ -16,12 +16,24 @@ npm run dev
 
 Open `http://localhost:5173`, host on one device, and join using room code from another device on the same network (pointing both to the same server).
 
+## Board debug preview
+For local renderer tuning, open the app with `?debugBoard=1`:
+
+```bash
+http://localhost:5173/?debugBoard=1
+```
+
+This bypasses live session setup and renders a deterministic local board state so you can inspect board geometry, piece scaling, and SVG surface changes in the browser.
+This bypasses live session setup and renders a deterministic local board state so you can inspect board geometry, piece scaling, and SVG surface changes in the browser.
+
 ## Architecture options
-### 1) Supabase direct mode (recommended for Vercel)
+### Supabase direct mode
 - No custom Node server required for gameplay.
 - Session storage is persistent in Postgres.
 - Realtime updates come from Supabase Realtime.
 - Flow is **initiator + challenger** (tokenized session id), not host/client.
+- The current session is mirrored into the URL as `?session=CODE`.
+- This device stores its player identity and active session memberships in local storage so refresh/reopen can resume the same side of the game.
 
 Set either of these client env pairs:
 - `VITE_SUPABASE_URL`
@@ -67,15 +79,16 @@ Or Vercel Supabase integration defaults:
 Optional fallback:
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
-You do **not** need `VITE_BACKEND_ORIGIN` if using Supabase mode only.
 You also do **not** need to expose `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_SECRET_KEY`, or `SUPABASE_JWT_SECRET` to the browser.
 
 ### Quick validation steps
 After deployment:
 1. Open app on device A and click **Create Session**.
-2. Copy session code.
+2. Copy the session link or session code.
 3. Open app on device B and **Join as Challenger** with same code.
 4. Move a piece on one device; verify board updates on the other in realtime.
+5. Refresh either browser tab; verify it restores the same game and same player perspective.
+6. Click **Leave Session**, then resume it from the **Your Active Sessions** dashboard.
 
 If this fails:
 - Check browser console for missing env vars.
@@ -83,25 +96,9 @@ If this fails:
 - Check realtime replication includes `game_sessions`.
 - Confirm your app URL is using the same Supabase project whose keys you configured.
 
-### 2) Socket backend mode
-Uses the Node Socket.IO server in `server/index.ts`.
-
-Vercel static deployments do **not** run the Socket.IO server, so you must deploy the backend separately.
-
-Recommended setup:
-1. Deploy `server/index.ts` on a long-running Node host (Railway, Render, Fly.io, VPS, etc).
-2. Set `CLIENT_ORIGIN=https://your-vercel-app.vercel.app` on that backend.
-3. In Vercel project settings, set:
-   - `VITE_BACKEND_ORIGIN=https://your-backend-domain.com`
-4. Redeploy the Vercel frontend.
-
-The client uses `VITE_BACKEND_ORIGIN` for both:
-- `GET /api/config`
-- Socket.IO connection (`/socket.io`)
-
 ## Configuration
 - Piece definitions: `config/pieces/classic.json`
 - Rules/board setup: `config/rules/default.json`
 - Schemas: `src/shared/schema.ts`
-
-You can add alternate config files and wire selection per room in the server handshake.
+ 
+You can add alternate config files and wire selection into the session flow later if needed.
