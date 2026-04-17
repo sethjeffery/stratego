@@ -131,12 +131,88 @@ button {
 
 .arena-layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: minmax(0, 1fr) 320px;
   gap: 1rem;
   margin-top: 1rem;
 }
 .hud {
   padding: 1rem;
+}
+
+.turn-status {
+  margin: 0 0 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #d8cfb7;
+  border: 1px solid rgba(209, 191, 145, 0.28);
+  background: rgba(46, 52, 37, 0.7);
+}
+
+.turn-status.is-active {
+  color: #f6f0df;
+  border-color: rgba(234, 198, 106, 0.52);
+  background: rgba(106, 82, 33, 0.6);
+}
+
+.piece-intel {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(197, 177, 127, 0.2);
+}
+
+.piece-intel h3 {
+  margin: 0 0 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.85rem;
+  color: #d2c5a5;
+}
+
+.piece-intel p,
+.piece-intel ul {
+  margin: 0;
+  color: #d9d0ba;
+}
+
+.piece-intel ul {
+  padding-left: 1.05rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.piece-intel-header {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.piece-intel-header p {
+  margin-top: 0.15rem;
+  color: #bcb295;
+  font-size: 0.9rem;
+}
+
+.piece-intel-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 9px;
+  border: 1px solid rgba(197, 177, 127, 0.34);
+  background: rgba(15, 18, 13, 0.68);
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+  color: #e4dcc7;
+}
+
+.piece-intel-icon img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
 }
 .hud-actions {
   display: grid;
@@ -321,9 +397,16 @@ button {
   --piece-lift: 0px;
 }
 
-.piece-hit.is-selectable {
+.piece-hit.can-hover {
   pointer-events: auto;
+}
+
+.piece-hit.is-interactive {
   cursor: pointer;
+}
+
+.piece-hit.can-hover:hover {
+  --piece-lift: 2px;
 }
 
 .piece-hit.is-selectable:hover {
@@ -336,6 +419,10 @@ button {
 
 .piece-hit.is-selectable:hover .piece {
   filter: brightness(1.1);
+}
+
+.piece-hit.can-hover:hover .piece {
+  filter: brightness(1.08);
 }
 
 .piece-hit.is-selectable:hover .piece::before {
