@@ -6,6 +6,7 @@ import {
   getSession,
   isSupabaseMode,
   joinAsChallenger,
+  listOpenSessions,
   listSessions,
   SessionRow,
   subscribeToSession,
@@ -89,7 +90,12 @@ export function App() {
     Record<string, SessionRow>
   >({});
   const [profileReady, setProfileReady] = useState(false);
+  const [openSessions, setOpenSessions] = useState<SessionRow[]>([]);
   const debugBoardEnabled = useMemo(() => isDebugBoardEnabled(), []);
+  const demoState = useMemo(
+    () => createDebugBoardState(gameRules, gamePieces).state,
+    [],
+  );
   const pieceById = useMemo(
     () => new Map(gamePieces.map((piece) => [piece.id, piece])),
     [],
@@ -133,6 +139,28 @@ export function App() {
   const refreshSavedSessions = async () => {
     const memberships = listStoredSessions();
     setSavedMemberships(memberships);
+    const savedSessionIds = new Set(
+      memberships.map((membership) => membership.sessionId),
+    );
+
+    if (isSupabaseMode && !debugBoardEnabled) {
+      try {
+        const rows = await listOpenSessions(15);
+        setOpenSessions(
+          rows
+            .filter(
+              (row) =>
+                !savedSessionIds.has(row.session_id) &&
+                row.initiator_name !== playerName,
+            )
+            .slice(0, 5),
+        );
+      } catch (err) {
+        setError((err as Error).message);
+      }
+    } else {
+      setOpenSessions([]);
+    }
 
     if (!isSupabaseMode || debugBoardEnabled || memberships.length === 0) {
       setSavedSessionRows({});
@@ -427,18 +455,46 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <header>
-        <h1>Stratego Pulse Arena</h1>
-        <p>
+      <header className="hero">
+        <p className="eyebrow">Welcome briefing</p>
+        <h1>Stratego Online</h1>
+        <p className="hero-intro">
+          A classic hidden-information battlefield where each move is a risk,
+          each reveal matters, and each session is easy to resume from this
+          device.
+        </p>
+        <p className="hero-subtitle">
           {debugBoardEnabled
             ? "Local debug board • deterministic preview state"
-            : "Supabase direct mode • resumable session flow"}
+            : "Create or join hosted sessions and challenge a second commander in real-time."}
         </p>
       </header>
 
       {!state && (
         <div className="lobby-stack">
+          <section className="welcome-board card">
+            <h2>Field Preview</h2>
+            <p>
+              The board below is a static demonstration. Start a hosted session
+              to play with full turns, hidden enemy ranks, and live updates.
+            </p>
+            <div className="board demo-board">
+              <ProjectedBoard
+                state={demoState}
+                rules={gameRules}
+                pieces={gamePieces}
+                myId={null}
+                selected={null}
+                legalTargets={[]}
+                selectablePieceKeys={new Set<string>()}
+                canAct={false}
+                onCellClick={() => undefined}
+              />
+            </div>
+          </section>
+
           <section className="lobby card">
+            <h2>Start Playing</h2>
             <label>
               Callsign
               <input
@@ -477,6 +533,25 @@ export function App() {
               {gameRules.board.width}x{gameRules.board.height})
             </small>
           </section>
+
+          {!debugBoardEnabled && openSessions.length > 0 && (
+            <section className="open-session-feed card">
+              <h2>Open Hosted Sessions</h2>
+              <p>
+                Looking for a quick match? These sessions are waiting for a
+                second player.
+              </p>
+              <ul>
+                {openSessions.map((sessionRow) => (
+                  <li key={sessionRow.session_id}>
+                    <strong>{sessionRow.session_id}</strong> • Hosted by{" "}
+                    {sessionRow.initiator_name} • Updated{" "}
+                    {formatSessionTimestamp(sessionRow.updated_at)}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {!debugBoardEnabled && visibleSavedSessions.length > 0 && (
             <section className="session-dashboard card">
