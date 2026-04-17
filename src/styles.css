@@ -27,6 +27,17 @@ body {
   margin-bottom: 1rem;
 }
 
+.hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.9fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.hero-copy {
+  padding: 0.5rem 0;
+}
+
 header h1 {
   margin: 0;
   font-family: "PT Serif", "Times New Roman", serif;
@@ -62,12 +73,9 @@ header h1 {
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
 }
 
-.lobby {
-  padding: 1rem 1.1rem;
-}
 .lobby-stack {
   display: grid;
-  gap: 0.8rem;
+  gap: 1rem;
 }
 
 input,
@@ -88,11 +96,6 @@ button {
   cursor: pointer;
 }
 
-.lobby-actions {
-  display: flex;
-  gap: 0.55rem;
-  margin: 0.8rem 0;
-}
 .inline-actions {
   display: flex;
   gap: 0.55rem;
@@ -105,9 +108,160 @@ button {
   border-color: rgba(209, 191, 145, 0.22);
 }
 
-.session-dashboard {
-  padding: 1rem;
+.profile-card,
+.session-launcher,
+.session-dashboard,
+.preview-panel,
+.hud {
+  padding: 1rem 1.1rem;
 }
+
+.profile-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(255, 222, 133, 0.16),
+      transparent 38%
+    ),
+    linear-gradient(135deg, rgba(88, 98, 71, 0.12), transparent 60%);
+  pointer-events: none;
+}
+
+.profile-card-header,
+.preview-header,
+.launcher-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+}
+
+.profile-card-header small,
+.preview-header small,
+.launcher-header small {
+  color: #b8ae92;
+  max-width: 24ch;
+  text-align: right;
+}
+
+.profile-card h2,
+.session-launcher h2,
+.session-dashboard h2,
+.preview-panel h2,
+.hud h2 {
+  margin: 0.15rem 0 0;
+  font-family: "PT Serif", "Times New Roman", serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.profile-card-body {
+  position: relative;
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.avatar-button {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.avatar-button img,
+.player-avatar {
+  display: block;
+  border-radius: 0.8rem;
+  object-fit: cover;
+  object-position: center top;
+  background: rgba(19, 22, 17, 0.72);
+  border: 2px solid rgba(224, 205, 150, 0.35);
+}
+
+.avatar-button img {
+  width: 92px;
+  aspect-ratio: 23 / 30;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.24);
+}
+
+.profile-fields {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.profile-fields label,
+.session-launcher label {
+  display: grid;
+  gap: 0.35rem;
+  color: #d4c9aa;
+}
+
+.session-launcher {
+  display: grid;
+  gap: 1rem;
+}
+
+.launcher-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) auto minmax(180px, 0.85fr);
+  gap: 0.9rem;
+  align-items: center;
+}
+
+.join-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.7rem;
+}
+
+.join-control input {
+  min-width: 0;
+}
+
+.primary-cta {
+  min-height: 3.25rem;
+  padding: 0.8rem 1.4rem;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-color: rgba(245, 227, 173, 0.38);
+  background:
+    linear-gradient(180deg, #a69058, #776133),
+    linear-gradient(180deg, #7b6b3f, #5c4e2f);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 241, 198, 0.26),
+    0 10px 24px rgba(0, 0, 0, 0.24);
+}
+
+.host-cta {
+  width: 100%;
+}
+
+.action-divider {
+  color: #c6ba97;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.launcher-footnote {
+  justify-content: space-between;
+}
+
+.session-dashboard {
+  display: grid;
+  gap: 0.85rem;
+}
+
 .saved-session-list {
   display: grid;
   gap: 0.8rem;
@@ -118,15 +272,145 @@ button {
   justify-content: space-between;
   gap: 1rem;
   align-items: center;
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(20, 24, 17, 0.7);
+  border: 1px solid rgba(192, 173, 125, 0.18);
+}
+
+.saved-session-summary {
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+}
+
+.session-access {
+  display: grid;
+  place-items: start center;
+  margin-top: 1rem;
+}
+
+.session-status-card {
+  width: min(100%, 760px);
+  padding: 1.2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.session-status-card h1 {
+  margin: 0;
+  font-family: "PT Serif", "Times New Roman", serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.session-status-card p,
+.session-status-card small {
+  margin: 0;
+}
+
+.session-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  color: #cfc3a0;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(219, 198, 144, 0.22);
+  background: rgba(40, 46, 32, 0.82);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.status-pill.is-open {
+  color: #d8efc0;
+  border-color: rgba(143, 194, 106, 0.38);
+}
+
+.status-pill.is-full {
+  color: #f0d7a2;
+  border-color: rgba(211, 166, 84, 0.38);
+}
+
+.session-player-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.session-player-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
   padding: 0.9rem 1rem;
   border-radius: 8px;
   background: rgba(20, 24, 17, 0.7);
   border: 1px solid rgba(192, 173, 125, 0.18);
 }
 
+.session-player-row p {
+  margin-top: 0.2rem;
+  color: #b8ae92;
+}
+
+.empty-avatar {
+  width: 2.35rem;
+  height: 3rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 2px dashed rgba(224, 205, 150, 0.35);
+  color: #e7ddc2;
+  background: rgba(19, 22, 17, 0.72);
+  font-weight: 700;
+}
+
+.session-link-block {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  background: rgba(17, 20, 14, 0.78);
+  border: 1px solid rgba(197, 177, 127, 0.18);
+}
+
+.session-link-block code {
+  overflow-wrap: anywhere;
+  color: #f2ebd6;
+}
+
+.session-status-actions {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
 .saved-session-card p,
 .saved-session-card small {
   margin: 0.2rem 0 0;
+}
+
+.player-strip {
+  display: flex;
+  align-items: center;
+}
+
+.player-strip .player-avatar,
+.hud-player-list .player-avatar {
+  width: 2.35rem;
+  height: 3rem;
+}
+
+.player-strip .player-avatar + .player-avatar {
+  margin-left: -0.9rem;
 }
 
 .arena-layout {
@@ -135,13 +419,25 @@ button {
   gap: 1rem;
   margin-top: 1rem;
 }
-.hud {
-  padding: 1rem;
-}
+
 .hud-actions {
   display: grid;
   gap: 0.55rem;
   margin-top: 1rem;
+}
+
+.hud-player-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.hud-player-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
 }
 
 .winner {
@@ -149,40 +445,8 @@ button {
   font-size: 1.1rem;
 }
 
-.welcome-board {
-  padding: 0.9rem 1rem 0.5rem;
-}
-
-.welcome-board h2,
-.lobby h2,
-.open-session-feed h2,
-.session-dashboard h2,
-.hud h2 {
-  margin: 0 0 0.35rem;
-  font-family: "PT Serif", "Times New Roman", serif;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.welcome-board p,
-.open-session-feed p {
-  margin: 0.2rem 0 0.5rem;
-  color: #cdc2a4;
-}
-
 .demo-board {
-  margin: 2rem 0;
-}
-
-.open-session-feed {
-  padding: 0.9rem 1rem;
-}
-
-.open-session-feed ul {
-  margin: 0;
-  padding-left: 1.1rem;
-  display: grid;
-  gap: 0.35rem;
+  margin: 1rem 0 0.25rem;
 }
 
 .board {
@@ -458,14 +722,42 @@ button {
 }
 
 @media (max-width: 900px) {
+  .hero-grid,
   .arena-layout {
     grid-template-columns: 1fr;
   }
+
+  .profile-card-body,
+  .launcher-row,
+  .join-control {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-card-header,
+  .preview-header,
+  .launcher-header,
+  .session-meta,
   .saved-session-card {
     flex-direction: column;
     align-items: flex-start;
   }
-  .lobby-actions {
-    flex-direction: column;
+
+  .profile-card-header small,
+  .preview-header small,
+  .launcher-header small {
+    max-width: none;
+    text-align: left;
+  }
+
+  .saved-session-summary {
+    width: 100%;
+  }
+
+  .launcher-footnote {
+    justify-content: flex-start;
+  }
+
+  .session-meta {
+    justify-content: flex-start;
   }
 }

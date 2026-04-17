@@ -15,5 +15,5 @@
     "spyId": "spy",
     "marshalId": "marshal"
   },
-  "setupRowsPerPlayer": 4
+  "setupRowsPerPlayer": 2
 }

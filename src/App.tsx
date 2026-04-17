@@ -1,83 +1,103 @@
-import { useEffect, useMemo, useState } from "react";
-import { GameState, Position } from "./shared/schema";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  applyMove as applySupabaseMove,
-  createInitiatedSession,
-  getSession,
-  isSupabaseMode,
-  joinAsChallenger,
-  listOpenSessions,
-  listSessions,
-  SessionRow,
-  subscribeToSession,
-} from "./lib/supabaseGameService";
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useMatch,
+  useNavigate,
+} from "react-router-dom";
+import { AppLayout } from "./layouts/AppLayout";
+import { DashboardScreen } from "./screens/DashboardScreen";
+import { GameScreen } from "./screens/GameScreen";
+import { SessionAccessScreen } from "./screens/SessionAccessScreen";
+import { createDebugBoardState } from "./lib/debugBoardState";
+import {
+  applyMoveToState,
+  applySetupSwapToState,
+  getLegalMovesForUnit,
+  getSetupSwapTargets,
+  markPlayerSetupReady,
+} from "./lib/engine";
+import { gamePieces, gameRules } from "./lib/gameConfig";
 import {
   getOrCreateStoredProfile,
   getStoredSessionMembership,
   listStoredSessions,
-  setStoredPlayerName,
+  setStoredProfile,
   StoredSessionMembership,
   touchStoredSessionMembership,
+  updateStoredSessionMembershipProfile,
   upsertStoredSessionMembership,
 } from "./lib/localSessionStore";
-import { createDebugBoardState } from "./lib/debugBoardState";
-import { applyMoveToState, getLegalMovesForUnit } from "./lib/engine";
-import { gamePieces, gameRules } from "./lib/gameConfig";
-import { ProjectedBoard } from "./components/ProjectedBoard";
+import {
+  avatarCatalog,
+  createRandomPlayerProfile,
+  DEFAULT_AVATAR_ID,
+  generatePlayerName,
+  pickRandomAvatarId,
+  resolveAvatarUrl,
+} from "./lib/playerProfile";
+import {
+  applyMove as applySupabaseMove,
+  applySetupSwap as applySupabaseSetupSwap,
+  createInitiatedSession,
+  getSession,
+  isSupabaseMode,
+  joinAsChallenger,
+  listSessions,
+  markSetupReady as markSupabaseSetupReady,
+  SessionRow,
+  subscribeToSession,
+  updateSessionPlayerProfile,
+} from "./lib/supabaseGameService";
+import { GameState, Position } from "./shared/schema";
 
 const DEFAULT_PLAYER_NAME = "Commander Nova";
 const SESSION_QUERY_PARAM = "session";
 const DEBUG_BOARD_PARAM = "debugBoard";
+const DASHBOARD_ROUTE = "/";
+const GAME_ROUTE = "/game";
 
-const getSessionIdFromUrl = () => {
-  if (typeof window === "undefined") return "";
-  return (
-    new URL(window.location.href).searchParams
-      .get(SESSION_QUERY_PARAM)
-      ?.toUpperCase() ?? ""
-  );
+const normalizeSessionId = (sessionId: string) => sessionId.trim().toUpperCase();
+
+const getSessionIdFromSearch = (search: string) => {
+  const value = new URLSearchParams(search).get(SESSION_QUERY_PARAM);
+  return value ? normalizeSessionId(value) : "";
 };
 
-const isDebugBoardEnabled = () => {
-  if (typeof window === "undefined") return false;
-  const value = new URL(window.location.href).searchParams.get(
-    DEBUG_BOARD_PARAM,
-  );
+const buildSearchWithoutLegacySession = (search: string) => {
+  const nextParams = new URLSearchParams(search);
+  nextParams.delete(SESSION_QUERY_PARAM);
+  return nextParams.toString() ? `?${nextParams.toString()}` : "";
+};
+
+const isDebugBoardEnabled = (search: string) => {
+  const value = new URLSearchParams(search).get(DEBUG_BOARD_PARAM);
   return value === "1" || value === "true";
 };
 
-const setSessionIdInUrl = (sessionId: string | null) => {
-  if (typeof window === "undefined") return;
-
-  const nextUrl = new URL(window.location.href);
-  if (sessionId) nextUrl.searchParams.set(SESSION_QUERY_PARAM, sessionId);
-  else nextUrl.searchParams.delete(SESSION_QUERY_PARAM);
-
-  window.history.replaceState({}, "", nextUrl);
-};
-
-const buildSessionUrl = (sessionId: string) => {
-  if (typeof window === "undefined")
-    return `?${SESSION_QUERY_PARAM}=${sessionId}`;
-  const nextUrl = new URL(window.location.href);
-  nextUrl.searchParams.set(SESSION_QUERY_PARAM, sessionId);
-  return nextUrl.toString();
-};
-
-const formatSessionTimestamp = (timestamp?: string | number) => {
-  if (!timestamp) return "Unknown activity";
-  return new Date(timestamp).toLocaleString();
-};
-
-const sessionStatusLabel = (row?: SessionRow) => {
-  if (!row) return "Saved locally";
-  if (!row.state) return "Waiting for challenger";
-  if (row.state.winnerId) return "Completed";
-  return "In progress";
-};
-
 export function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const gameMatch = useMatch("/game/:sessionId");
+  const routeSessionId = normalizeSessionId(gameMatch?.params.sessionId ?? "");
+  const routeSearch = useMemo(
+    () => buildSearchWithoutLegacySession(location.search),
+    [location.search],
+  );
+  const legacySessionId = useMemo(
+    () => getSessionIdFromSearch(location.search),
+    [location.search],
+  );
+  const defaultProfile = useMemo(
+    () => createRandomPlayerProfile({ playerName: DEFAULT_PLAYER_NAME }),
+    [],
+  );
   const [playerName, setPlayerName] = useState(DEFAULT_PLAYER_NAME);
+  const [avatarId, setAvatarId] = useState(
+    avatarCatalog[0]?.id ?? DEFAULT_AVATAR_ID,
+  );
   const [roomCode, setRoomCode] = useState("");
   const [myId, setMyId] = useState<string | null>(null);
   const [state, setState] = useState<GameState | null>(null);
@@ -89,9 +109,15 @@ export function App() {
   const [savedSessionRows, setSavedSessionRows] = useState<
     Record<string, SessionRow>
   >({});
+  const [routeSessionRow, setRouteSessionRow] = useState<SessionRow | null>(null);
+  const [routeSessionLoading, setRouteSessionLoading] = useState(false);
+  const [routeSessionMissing, setRouteSessionMissing] = useState(false);
   const [profileReady, setProfileReady] = useState(false);
-  const [openSessions, setOpenSessions] = useState<SessionRow[]>([]);
-  const debugBoardEnabled = useMemo(() => isDebugBoardEnabled(), []);
+
+  const debugBoardEnabled = useMemo(
+    () => isDebugBoardEnabled(location.search),
+    [location.search],
+  );
   const demoState = useMemo(
     () => createDebugBoardState(gameRules, gamePieces).state,
     [],
@@ -100,33 +126,141 @@ export function App() {
     () => new Map(gamePieces.map((piece) => [piece.id, piece])),
     [],
   );
-  const disabled = !state || !myId || state.turnPlayerId !== myId;
+  const lastSyncedProfileKey = useRef<string | null>(null);
+  const trimmedPlayerName = playerName.trim();
+  const currentProfile = trimmedPlayerName
+    ? { playerName: trimmedPlayerName, avatarId }
+    : null;
+  const profileKey = currentProfile
+    ? `${currentProfile.playerName}::${currentProfile.avatarId}`
+    : "";
+  const profileAvatarUrl = resolveAvatarUrl(avatarId);
+  const routeMembership = useMemo(
+    () =>
+      routeSessionId
+        ? savedMemberships.find(
+            (membership) => membership.sessionId === routeSessionId,
+          ) ?? null
+        : null,
+    [routeSessionId, savedMemberships],
+  );
+
+  const isSetupPhase = Boolean(state && state.phase === "setup");
+  const disabled =
+    !state ||
+    !myId ||
+    (isSetupPhase
+      ? state.setupReadyPlayerIds.includes(myId)
+      : state.turnPlayerId !== myId);
+
   const legalTargets = useMemo(() => {
-    if (!selected || disabled) return [];
+    if (!state || !myId || !selected || disabled) return [];
+    if (state.phase === "setup") {
+      return getSetupSwapTargets(state, myId, selected, gameRules, gamePieces);
+    }
     return getLegalMovesForUnit(state, myId, selected, gameRules, gamePieces);
   }, [disabled, myId, selected, state]);
+
   const selectablePieceKeys = useMemo(() => {
     if (!state || !myId || disabled) return new Set<string>();
 
-    return new Set(
-      state.units
-        .filter((unit) => unit.ownerId === myId)
-        .filter(
-          (unit) =>
-            getLegalMovesForUnit(
-              state,
-              myId,
-              { x: unit.x, y: unit.y },
-              gameRules,
-              gamePieces,
-            ).length > 0,
-        )
-        .map((unit) => `${unit.x}-${unit.y}`),
-    );
+    const keys =
+      state.phase === "setup"
+        ? state.units
+            .filter((unit) => unit.ownerId === myId)
+            .filter(
+              (unit) =>
+                getSetupSwapTargets(
+                  state,
+                  myId,
+                  { x: unit.x, y: unit.y },
+                  gameRules,
+                  gamePieces,
+                ).length > 0,
+            )
+            .map((unit) => `${unit.x}-${unit.y}`)
+        : state.units
+            .filter((unit) => unit.ownerId === myId)
+            .filter(
+              (unit) =>
+                getLegalMovesForUnit(
+                  state,
+                  myId,
+                  { x: unit.x, y: unit.y },
+                  gameRules,
+                  gamePieces,
+                ).length > 0,
+            )
+            .map((unit) => `${unit.x}-${unit.y}`);
+
+    return new Set(keys);
   }, [disabled, myId, state]);
+
+  const buildGamePath = (sessionId: string) =>
+    `/game/${normalizeSessionId(sessionId)}`;
+
+  const navigateToSession = (sessionId: string, replace = false) => {
+    navigate(
+      {
+        pathname: buildGamePath(sessionId),
+        search: routeSearch,
+      },
+      { replace },
+    );
+  };
+
+  const buildSessionUrl = (sessionId: string) => {
+    if (typeof window === "undefined") {
+      return `${buildGamePath(sessionId)}${routeSearch}`;
+    }
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.pathname = buildGamePath(sessionId);
+    nextUrl.search = routeSearch;
+    return nextUrl.toString();
+  };
+
+  const goToDashboard = () => {
+    setRouteSessionRow(null);
+    setRouteSessionLoading(false);
+    setRouteSessionMissing(false);
+    setState(null);
+    setMyId(null);
+    setRoomCode("");
+    setSelected(null);
+    setError(null);
+    navigate({ pathname: DASHBOARD_ROUTE, search: "" });
+  };
+
+  useEffect(() => {
+    if (!gameMatch?.params.sessionId) return;
+
+    const rawSessionId = gameMatch.params.sessionId;
+    if (rawSessionId === routeSessionId) return;
+
+    navigate(
+      {
+        pathname: buildGamePath(routeSessionId),
+        search: routeSearch,
+      },
+      { replace: true },
+    );
+  }, [gameMatch?.params.sessionId, navigate, routeSearch, routeSessionId]);
+
+  useEffect(() => {
+    if (routeSessionId || !legacySessionId) return;
+    navigate(
+      {
+        pathname: buildGamePath(legacySessionId),
+        search: routeSearch,
+      },
+      { replace: true },
+    );
+  }, [legacySessionId, navigate, routeSearch, routeSessionId]);
 
   useEffect(() => {
     if (!state || !myId || !selected) return;
+
     const stillExists = state.units.some(
       (unit) =>
         unit.x === selected.x && unit.y === selected.y && unit.ownerId === myId,
@@ -139,28 +273,6 @@ export function App() {
   const refreshSavedSessions = async () => {
     const memberships = listStoredSessions();
     setSavedMemberships(memberships);
-    const savedSessionIds = new Set(
-      memberships.map((membership) => membership.sessionId),
-    );
-
-    if (isSupabaseMode && !debugBoardEnabled) {
-      try {
-        const rows = await listOpenSessions(15);
-        setOpenSessions(
-          rows
-            .filter(
-              (row) =>
-                !savedSessionIds.has(row.session_id) &&
-                row.initiator_name !== playerName,
-            )
-            .slice(0, 5),
-        );
-      } catch (err) {
-        setError((err as Error).message);
-      }
-    } else {
-      setOpenSessions([]);
-    }
 
     if (!isSupabaseMode || debugBoardEnabled || memberships.length === 0) {
       setSavedSessionRows({});
@@ -186,10 +298,11 @@ export function App() {
       const session = await getSession(membership.sessionId);
       setRoomCode(session.session_id);
       setMyId(membership.playerId);
-      setPlayerName(membership.playerName);
       setState(session.state ?? null);
+      setRouteSessionRow(session);
+      setRouteSessionMissing(false);
       setSelected(null);
-      setSessionIdInUrl(session.session_id);
+      navigateToSession(session.session_id, true);
       touchStoredSessionMembership(session.session_id);
       setSavedMemberships(listStoredSessions());
       await refreshSavedSessions();
@@ -205,11 +318,14 @@ export function App() {
 
   const leaveCurrentSession = () => {
     setState(null);
-    setRoomCode("");
     setMyId(null);
+    setRoomCode("");
     setSelected(null);
+    setRouteSessionRow(null);
+    setRouteSessionMissing(false);
+    setRouteSessionLoading(false);
     setError(null);
-    setSessionIdInUrl(null);
+    navigate({ pathname: DASHBOARD_ROUTE, search: "" });
   };
 
   const copySessionLink = async (sessionId: string) => {
@@ -227,31 +343,108 @@ export function App() {
   };
 
   useEffect(() => {
-    const profile = getOrCreateStoredProfile(DEFAULT_PLAYER_NAME);
+    const profile = getOrCreateStoredProfile(defaultProfile);
     setPlayerName(profile.playerName);
+    setAvatarId(profile.avatarId);
     setSavedMemberships(listStoredSessions());
-
-    const urlSessionId = getSessionIdFromUrl();
-    if (urlSessionId) setRoomCode(urlSessionId);
+    lastSyncedProfileKey.current = `${profile.playerName}::${profile.avatarId}`;
     setProfileReady(true);
-  }, []);
+  }, [defaultProfile]);
 
   useEffect(() => {
-    if (!profileReady || debugBoardEnabled) return;
-    setStoredPlayerName(playerName);
-  }, [debugBoardEnabled, playerName, profileReady]);
+    if (!profileReady || debugBoardEnabled || !trimmedPlayerName) return;
+
+    const nextProfile = { playerName: trimmedPlayerName, avatarId };
+    setStoredProfile(nextProfile);
+    const nextMemberships = updateStoredSessionMembershipProfile(nextProfile);
+    setSavedMemberships(nextMemberships);
+
+    if (
+      !isSupabaseMode ||
+      nextMemberships.length === 0 ||
+      lastSyncedProfileKey.current === profileKey
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        const updates = await Promise.allSettled(
+          nextMemberships.map((membership) =>
+            updateSessionPlayerProfile(
+              membership.sessionId,
+              membership.playerId,
+              membership.role,
+              nextProfile,
+            ),
+          ),
+        );
+
+        if (cancelled) return;
+
+        const successfulRows = updates
+          .filter(
+            (
+              result,
+            ): result is PromiseFulfilledResult<SessionRow> =>
+              result.status === "fulfilled",
+          )
+          .map((result) => result.value);
+
+        if (successfulRows.length > 0) {
+          setSavedSessionRows((current) => ({
+            ...current,
+            ...Object.fromEntries(
+              successfulRows.map((row) => [row.session_id, row]),
+            ),
+          }));
+          setRouteSessionRow((current) => {
+            if (!current) return current;
+            return (
+              successfulRows.find((row) => row.session_id === current.session_id) ??
+              current
+            );
+          });
+        }
+
+        const failures = updates.filter(
+          (result): result is PromiseRejectedResult =>
+            result.status === "rejected",
+        );
+        if (failures.length > 0) {
+          setError(failures[0].reason?.message ?? "Could not sync profile.");
+          return;
+        }
+
+        lastSyncedProfileKey.current = profileKey;
+      })();
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [avatarId, debugBoardEnabled, profileKey, profileReady, trimmedPlayerName]);
 
   useEffect(() => {
+    if (!profileReady) return;
+
     if (debugBoardEnabled) {
       const debugState = createDebugBoardState(gameRules, gamePieces);
       setMyId(debugState.myId);
       setRoomCode(debugState.state.roomCode);
       setState(debugState.state);
+      setRouteSessionRow(null);
+      setRouteSessionLoading(false);
+      setRouteSessionMissing(false);
       setError("Debug board preview mode.");
       return;
     }
 
     if (!isSupabaseMode) {
+      setRouteSessionLoading(false);
+      setRouteSessionMissing(false);
       setError(
         "Supabase client env vars are missing. Configure Supabase or open ?debugBoard=1 for local board inspection.",
       );
@@ -259,35 +452,84 @@ export function App() {
     }
 
     void refreshSavedSessions();
-
-    const membership = getStoredSessionMembership(getSessionIdFromUrl());
-    if (membership) void resumeSavedSession(membership);
-  }, [debugBoardEnabled]);
+  }, [debugBoardEnabled, profileReady]);
 
   useEffect(() => {
-    if (debugBoardEnabled || !isSupabaseMode || !roomCode) return;
+    if (!profileReady || debugBoardEnabled || !isSupabaseMode) return;
 
-    const unsubscribe = subscribeToSession(roomCode, (next) => {
-      if (!next) return;
+    if (!routeSessionId) {
+      setRouteSessionRow(null);
+      setRouteSessionLoading(false);
+      setRouteSessionMissing(false);
+      return;
+    }
 
-      setState(next);
-      setSavedSessionRows((current) => {
-        const existing = current[roomCode];
-        if (!existing) return current;
+    let cancelled = false;
+    const savedMembership = getStoredSessionMembership(routeSessionId);
 
-        return {
-          ...current,
-          [roomCode]: {
-            ...existing,
-            state: next,
-            updated_at: new Date().toISOString(),
-          },
-        };
-      });
+    setRoomCode(routeSessionId);
+    setSelected(null);
+    setRouteSessionLoading(true);
+    setRouteSessionMissing(false);
+
+    if (savedMembership) {
+      void (async () => {
+        await resumeSavedSession(savedMembership);
+        if (!cancelled) setRouteSessionLoading(false);
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setState(null);
+    setMyId(null);
+
+    void (async () => {
+      try {
+        const session = await getSession(routeSessionId);
+        if (cancelled) return;
+        setRouteSessionRow(session);
+        setRouteSessionMissing(false);
+        setError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setRouteSessionRow(null);
+        setRouteSessionMissing(true);
+        setError((err as Error).message);
+      } finally {
+        if (!cancelled) setRouteSessionLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debugBoardEnabled, profileReady, routeSessionId]);
+
+  useEffect(() => {
+    if (debugBoardEnabled || !isSupabaseMode || !routeSessionId) return;
+
+    const unsubscribe = subscribeToSession(routeSessionId, (nextRow) => {
+      setRouteSessionRow(nextRow);
+      setSavedSessionRows((current) => ({
+        ...current,
+        [routeSessionId]: nextRow,
+      }));
+
+      const membership = getStoredSessionMembership(routeSessionId);
+      if (membership) {
+        setMyId(membership.playerId);
+        setState(nextRow.state ?? null);
+      } else {
+        setMyId(null);
+        setState(null);
+      }
     });
 
     return unsubscribe;
-  }, [debugBoardEnabled, roomCode]);
+  }, [debugBoardEnabled, routeSessionId]);
 
   useEffect(() => {
     if (debugBoardEnabled || !isSupabaseMode || !roomCode || !myId) return;
@@ -310,19 +552,28 @@ export function App() {
       return;
     }
 
+    if (!currentProfile) {
+      setError("Enter a callsign before hosting a session.");
+      return;
+    }
+
     try {
-      const session = await createInitiatedSession(playerName);
+      const session = await createInitiatedSession(currentProfile);
       upsertStoredSessionMembership({
         sessionId: session.session_id,
         playerId: session.initiator_id,
-        playerName,
+        playerName: currentProfile.playerName,
+        avatarId: currentProfile.avatarId,
         role: "initiator",
       });
+      setSavedMemberships(listStoredSessions());
       setRoomCode(session.session_id);
       setMyId(session.initiator_id);
       setState(null);
+      setRouteSessionRow(session);
+      setRouteSessionMissing(false);
       setSelected(null);
-      setSessionIdInUrl(session.session_id);
+      navigateToSession(session.session_id);
       await refreshSavedSessions();
       setError(
         "Session created. Share the link or code and wait for challenger to join.",
@@ -338,25 +589,40 @@ export function App() {
       return;
     }
 
-    const savedMembership = getStoredSessionMembership(roomCode);
+    if (!currentProfile) {
+      setError("Enter a callsign before joining a session.");
+      return;
+    }
+
+    const targetSessionId = normalizeSessionId(routeSessionId || roomCode);
+    if (!targetSessionId) {
+      setError("Enter a session code first.");
+      return;
+    }
+
+    const savedMembership = getStoredSessionMembership(targetSessionId);
     if (savedMembership) {
       await resumeSavedSession(savedMembership);
       return;
     }
 
     try {
-      const joined = await joinAsChallenger(roomCode, playerName);
+      const joined = await joinAsChallenger(targetSessionId, currentProfile);
       upsertStoredSessionMembership({
         sessionId: joined.row.session_id,
         playerId: joined.playerId,
-        playerName,
+        playerName: currentProfile.playerName,
+        avatarId: currentProfile.avatarId,
         role: "challenger",
       });
+      setSavedMemberships(listStoredSessions());
       setRoomCode(joined.row.session_id);
       setMyId(joined.playerId);
-      setState(joined.row.state);
+      setState(joined.row.state ?? null);
+      setRouteSessionRow(joined.row);
+      setRouteSessionMissing(false);
       setSelected(null);
-      setSessionIdInUrl(joined.row.session_id);
+      navigateToSession(joined.row.session_id, true);
       await refreshSavedSessions();
       setError(null);
     } catch (err) {
@@ -385,35 +651,53 @@ export function App() {
         unit.x === target.x && unit.y === target.y && unit.ownerId === myId,
     );
     if (mine) {
-      setSelected(target);
-      setError(null);
-      return;
+      const isLegalSetupSwapTarget = legalTargets.some(
+        (move) => move.x === target.x && move.y === target.y,
+      );
+
+      if (!isSetupPhase || !isLegalSetupSwapTarget) {
+        setSelected(target);
+        setError(null);
+        return;
+      }
     }
 
-    if (
-      !legalTargets.some((move) => move.x === target.x && move.y === target.y)
-    ) {
+    if (!legalTargets.some((move) => move.x === target.x && move.y === target.y)) {
       return;
     }
 
     if (debugBoardEnabled) {
-      const result = applyMoveToState(
-        state,
-        myId,
-        selected,
-        target,
-        gameRules,
-        gamePieces,
-      );
+      const result = isSetupPhase
+        ? applySetupSwapToState(
+            state,
+            myId,
+            selected,
+            target,
+            gameRules,
+            gamePieces,
+          )
+        : applyMoveToState(
+            state,
+            myId,
+            selected,
+            target,
+            gameRules,
+            gamePieces,
+          );
+
       if (result.error || !result.nextState) {
-        setError(result.error ?? "Move rejected.");
+        setError(result.error ?? "Action rejected.");
       } else {
         setState(result.nextState);
         setError("Debug board preview mode.");
       }
     } else {
       try {
-        await applySupabaseMove(state.roomCode, myId, selected, target);
+        if (isSetupPhase) {
+          await applySupabaseSetupSwap(state.roomCode, myId, selected, target);
+        } else {
+          await applySupabaseMove(state.roomCode, myId, selected, target);
+        }
       } catch (err) {
         setError((err as Error).message);
       }
@@ -422,250 +706,196 @@ export function App() {
     setSelected(null);
   };
 
+  const markReady = async () => {
+    if (!state || !myId || state.phase !== "setup") return;
+
+    if (debugBoardEnabled) {
+      const result = markPlayerSetupReady(state, myId);
+      if (result.error || !result.nextState) {
+        setError(result.error ?? "Could not mark ready.");
+      } else {
+        setState(result.nextState);
+        setSelected(null);
+        setError("Debug board preview mode.");
+      }
+      return;
+    }
+
+    try {
+      await markSupabaseSetupReady(state.roomCode, myId);
+      setSelected(null);
+      setError(null);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   const loadExisting = async () => {
     if (!isSupabaseMode) {
       setError("Supabase client env vars are missing.");
       return;
     }
 
-    const membership = getStoredSessionMembership(roomCode);
-    if (membership) {
-      await resumeSavedSession(membership);
+    const targetSessionId = normalizeSessionId(roomCode);
+    if (!targetSessionId) {
+      setError("Enter a session code first.");
       return;
     }
 
-    try {
-      const session = await getSession(roomCode);
-      setRoomCode(session.session_id);
-      setState(session.state);
-      setMyId(null);
-      setSelected(null);
-      setSessionIdInUrl(session.session_id);
-      setError(
-        "Session loaded in read-only mode. Resume from a saved device session or join as challenger to take control.",
-      );
-      await refreshSavedSessions();
-    } catch (err) {
-      setError((err as Error).message);
-    }
+    navigateToSession(targetSessionId);
   };
 
-  const battleText = state?.lastBattle
-    ? `${pieceById.get(state.lastBattle.attackerPieceId)?.label ?? "Attacker"} vs ${pieceById.get(state.lastBattle.defenderPieceId)?.label ?? "Defender"} • ${state.lastBattle.winner.toUpperCase()}!`
-    : "Awaiting clash...";
+  const randomizeAvatar = () => {
+    setAvatarId((current) => pickRandomAvatarId(current));
+  };
+
+  const randomizeName = () => {
+    setPlayerName((current) => generatePlayerName(current.trim() || undefined));
+  };
+
+  const statusText =
+    state?.phase === "setup"
+      ? myId && state.setupReadyPlayerIds.includes(myId)
+        ? "Your deployment is locked in. Waiting for the opposing commander."
+        : `Swap pieces within your first ${gameRules.setupRowsPerPlayer} rows, then mark ready.`
+      : state?.lastBattle
+        ? `${pieceById.get(state.lastBattle.attackerPieceId)?.label ?? "Attacker"} vs ${pieceById.get(state.lastBattle.defenderPieceId)?.label ?? "Defender"} • ${state.lastBattle.winner.toUpperCase()}!`
+        : "Awaiting clash...";
+
+  const showLiveGame =
+    Boolean(routeSessionId) &&
+    Boolean(routeMembership) &&
+    roomCode === routeSessionId &&
+    Boolean(state);
 
   return (
-    <div className="app-shell">
-      <header className="hero">
-        <p className="eyebrow">Welcome briefing</p>
-        <h1>Stratego Online</h1>
-        <p className="hero-intro">
-          A classic hidden-information battlefield where each move is a risk,
-          each reveal matters, and each session is easy to resume from this
-          device.
-        </p>
-        <p className="hero-subtitle">
-          {debugBoardEnabled
-            ? "Local debug board • deterministic preview state"
-            : "Create or join hosted sessions, challenge a second commander in real-time, and keep your matches tied to this device."}
-        </p>
-      </header>
-
-      {!state && (
-        <div className="lobby-stack">
-          <section className="welcome-board">
-            <div className="board demo-board">
-              <ProjectedBoard
-                state={demoState}
-                rules={gameRules}
-                pieces={gamePieces}
-                myId={null}
-                interactive={false}
-                visibilityMode="all"
+    <AppLayout error={error}>
+      <Routes>
+        <Route
+          path={DASHBOARD_ROUTE}
+          element={
+            debugBoardEnabled ? (
+              <Navigate
+                to={{
+                  pathname: GAME_ROUTE,
+                  search: routeSearch,
+                }}
+                replace
               />
-            </div>
-          </section>
-
-          <section className="lobby card">
-            <h2>Start Playing</h2>
-            <label>
-              Callsign
-              <input
-                value={playerName}
-                onChange={(event) => setPlayerName(event.target.value)}
-              />
-            </label>
-            <div className="lobby-actions">
-              <button onClick={createSession}>Create Session</button>
-              <input
-                placeholder="SESSION"
-                maxLength={8}
-                value={roomCode}
-                onChange={(event) =>
-                  setRoomCode(event.target.value.toUpperCase())
+            ) : (
+              <DashboardScreen
+                avatarUrl={profileAvatarUrl}
+                debugBoardEnabled={debugBoardEnabled}
+                demoState={demoState}
+                playerName={playerName}
+                roomCode={roomCode}
+                savedSessionRows={savedSessionRows}
+                trimmedPlayerName={trimmedPlayerName}
+                visibleSavedSessions={visibleSavedSessions}
+                buildSessionUrl={buildSessionUrl}
+                copySessionLink={copySessionLink}
+                createSession={createSession}
+                joinSession={joinSession}
+                loadExisting={loadExisting}
+                onPlayerNameBlur={() =>
+                  setPlayerName(
+                    (current) => current.trim() || DEFAULT_PLAYER_NAME,
+                  )
                 }
+                onPlayerNameChange={setPlayerName}
+                onResumeSavedSession={resumeSavedSession}
+                onRoomCodeChange={setRoomCode}
+                randomizeAvatar={randomizeAvatar}
+                randomizeName={randomizeName}
               />
-              <button onClick={joinSession}>Join or Resume</button>
-              <button className="secondary-button" onClick={loadExisting}>
-                Load From URL/Code
-              </button>
-            </div>
-            {roomCode && (
-              <div className="inline-actions">
-                <small>Current session URL: {buildSessionUrl(roomCode)}</small>
-                <button
-                  className="secondary-button"
-                  onClick={() => copySessionLink(roomCode)}
-                >
-                  Copy Session Link
-                </button>
-              </div>
-            )}
-            <small>
-              Config-loaded ruleset: {gameRules.gameName} (
-              {gameRules.board.width}x{gameRules.board.height})
-            </small>
-          </section>
-
-          {!debugBoardEnabled && openSessions.length > 0 && (
-            <section className="open-session-feed card">
-              <h2>Open Hosted Sessions</h2>
-              <p>
-                Looking for a quick match? These sessions are waiting for a
-                second player.
-              </p>
-              <ul>
-                {openSessions.map((sessionRow) => (
-                  <li key={sessionRow.session_id}>
-                    <strong>{sessionRow.session_id}</strong> • Hosted by{" "}
-                    {sessionRow.initiator_name} • Updated{" "}
-                    {formatSessionTimestamp(sessionRow.updated_at)}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {!debugBoardEnabled && visibleSavedSessions.length > 0 && (
-            <section className="session-dashboard card">
-              <h2>Your Active Sessions</h2>
-              <div className="saved-session-list">
-                {visibleSavedSessions.map((membership) => {
-                  const row = savedSessionRows[membership.sessionId];
-
-                  return (
-                    <article
-                      key={membership.sessionId}
-                      className="saved-session-card"
-                    >
-                      <div>
-                        <strong>{membership.sessionId}</strong>
-                        <p>
-                          {sessionStatusLabel(row)} • {membership.role}
-                        </p>
-                        <small>
-                          {row?.state?.players
-                            .map((player) => player.name)
-                            .join(" vs ") ?? membership.playerName}
-                          {" • "}
-                          Updated{" "}
-                          {formatSessionTimestamp(
-                            row?.updated_at ?? membership.lastOpenedAt,
-                          )}
-                        </small>
-                      </div>
-                      <div className="inline-actions">
-                        <button
-                          className="secondary-button"
-                          onClick={() => void resumeSavedSession(membership)}
-                        >
-                          Resume
-                        </button>
-                        <button
-                          className="secondary-button"
-                          onClick={() =>
-                            void copySessionLink(membership.sessionId)
-                          }
-                        >
-                          Copy Link
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-        </div>
-      )}
-
-      {state && (
-        <main className="arena-layout">
-          <aside className="hud card">
-            <h2>Session {state.roomCode}</h2>
-            <p>
-              Turn:{" "}
-              <strong>
-                {state.players.find(
-                  (player) => player.id === state.turnPlayerId,
-                )?.name ?? "Complete"}
-              </strong>
-            </p>
-            <p>{battleText}</p>
-            {state.winnerId && (
-              <p className="winner">
-                🏆{" "}
-                {
-                  state.players.find((player) => player.id === state.winnerId)
-                    ?.name
-                }{" "}
-                wins!
-              </p>
-            )}
-            <ul>
-              {state.players.map((player) => (
-                <li key={player.id}>
-                  {player.name} {player.connected ? "🟢" : "🔴"}
-                </li>
-              ))}
-            </ul>
-            {!debugBoardEnabled && (
-              <div className="hud-actions">
-                <button
-                  className="secondary-button"
-                  onClick={() => void copySessionLink(state.roomCode)}
-                >
-                  Copy Session Link
-                </button>
-                <button
-                  className="secondary-button"
-                  onClick={leaveCurrentSession}
-                >
-                  Leave Session
-                </button>
-              </div>
-            )}
-          </aside>
-
-          <section className="board">
-            <ProjectedBoard
-              state={state}
-              rules={gameRules}
-              pieces={gamePieces}
-              myId={myId}
-              selected={selected}
-              legalTargets={legalTargets}
-              selectablePieceKeys={selectablePieceKeys}
-              disabled={disabled}
-              onCellClick={onCellClick}
-              interactive
-              visibilityMode="player"
-            />
-          </section>
-        </main>
-      )}
-
-      {error && <div className="error card">{error}</div>}
-    </div>
+            )
+          }
+        />
+        <Route
+          path={GAME_ROUTE}
+          element={
+            debugBoardEnabled ? (
+              state ? (
+                <GameScreen
+                  canMarkReady={
+                    Boolean(myId) &&
+                    state.phase === "setup" &&
+                    !state.setupReadyPlayerIds.includes(myId ?? "")
+                  }
+                  debugBoardEnabled={debugBoardEnabled}
+                  disabled={disabled}
+                  legalTargets={legalTargets}
+                  markReady={markReady}
+                  myId={myId}
+                  selectablePieceKeys={selectablePieceKeys}
+                  selected={selected}
+                  state={state}
+                  statusText={statusText}
+                  copySessionLink={copySessionLink}
+                  leaveCurrentSession={leaveCurrentSession}
+                  onCellClick={onCellClick}
+                />
+              ) : (
+                <main className="session-access">
+                  <section className="session-status-card card">
+                    <p className="eyebrow">Debug Board</p>
+                    <h1>Preparing local preview</h1>
+                  </section>
+                </main>
+              )
+            ) : legacySessionId ? (
+              <main className="session-access">
+                <section className="session-status-card card">
+                  <p className="eyebrow">Redirecting</p>
+                  <h1>Opening session {legacySessionId}</h1>
+                </section>
+              </main>
+            ) : (
+              <Navigate to={DASHBOARD_ROUTE} replace />
+            )
+          }
+        />
+        <Route
+          path="/game/:sessionId"
+          element={
+            showLiveGame ? (
+              <GameScreen
+                canMarkReady={
+                  Boolean(myId) &&
+                  state?.phase === "setup" &&
+                  !state.setupReadyPlayerIds.includes(myId ?? "")
+                }
+                debugBoardEnabled={debugBoardEnabled}
+                disabled={disabled}
+                legalTargets={legalTargets}
+                markReady={markReady}
+                myId={myId}
+                selectablePieceKeys={selectablePieceKeys}
+                selected={selected}
+                state={state!}
+                statusText={statusText}
+                copySessionLink={copySessionLink}
+                leaveCurrentSession={leaveCurrentSession}
+                onCellClick={onCellClick}
+              />
+            ) : (
+              <SessionAccessScreen
+                isLoading={routeSessionLoading}
+                isMissing={routeSessionMissing}
+                isMember={Boolean(routeMembership)}
+                isHost={routeMembership?.role === "initiator"}
+                sessionId={routeSessionId}
+                sessionRow={routeSessionRow}
+                buildSessionUrl={buildSessionUrl}
+                copySessionLink={copySessionLink}
+                goToDashboard={goToDashboard}
+                joinSession={joinSession}
+              />
+            )
+          }
+        />
+        <Route path="*" element={<Navigate to={DASHBOARD_ROUTE} replace />} />
+      </Routes>
+    </AppLayout>
   );
 }

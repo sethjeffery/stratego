@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
 import { GameState, PieceDefinition, PlayerState, Position, RulesConfig, Unit } from '../shared/schema';
+import { PlayerProfile } from './playerProfile';
 
 const buildPieceMap = (pieces: PieceDefinition[]) => new Map(pieces.map((piece) => [piece.id, piece]));
 
@@ -14,12 +15,12 @@ const directions: Position[] = [
   { x: 0, y: -1 },
 ];
 
-const createLineup = (
-  ownerId: string,
-  fromTop: boolean,
-  rules: RulesConfig,
-  pieces: PieceDefinition[],
-): Unit[] => {
+const toAbsoluteSetupPosition = (position: Position, fromTop: boolean, rules: RulesConfig): Position => ({
+  x: position.x,
+  y: fromTop ? position.y : rules.board.height - 1 - position.y,
+});
+
+const getSetupSlots = (rules: RulesConfig, fromTop: boolean): Position[] => {
   const blocked = blockedSet(rules);
   const startY = fromTop ? 0 : rules.board.height - rules.setupRowsPerPlayer;
   const rows = Array.from({ length: rules.setupRowsPerPlayer }, (_, i) => startY + i);
@@ -31,21 +32,75 @@ const createLineup = (
     }
   }
 
+  return slots;
+};
+
+const createLineup = (
+  ownerId: string,
+  fromTop: boolean,
+  rules: RulesConfig,
+  pieces: PieceDefinition[],
+): Unit[] => {
+  const slots = getSetupSlots(rules, fromTop);
+  const availableSlots = new Set(slots.map((slot) => `${slot.x},${slot.y}`));
+  const claimed = new Set<string>();
+  const units: Unit[] = [];
   const bag: PieceDefinition[] = [];
+  const nextIndexByPiece = new Map<string, number>();
+
+  const allocateUnitId = (pieceId: string) => {
+    const nextIndex = nextIndexByPiece.get(pieceId) ?? 0;
+    nextIndexByPiece.set(pieceId, nextIndex + 1);
+    return `${ownerId}-${pieceId}-${nextIndex}`;
+  };
+
   pieces.forEach((piece) => {
-    for (let i = 0; i < piece.count; i += 1) bag.push(piece);
+    const fixedPositions = piece.setup.fixedPositions;
+    if (fixedPositions.length > piece.count) {
+      throw new Error(`Piece '${piece.id}' defines more fixed positions than count.`);
+    }
+
+    fixedPositions.forEach((relativePosition) => {
+      const absolutePosition = toAbsoluteSetupPosition(relativePosition, fromTop, rules);
+      const key = `${absolutePosition.x},${absolutePosition.y}`;
+      if (!availableSlots.has(key)) {
+        throw new Error(`Piece '${piece.id}' fixed position (${absolutePosition.x},${absolutePosition.y}) is invalid.`);
+      }
+      if (claimed.has(key)) {
+        throw new Error(`Two pieces are configured to use setup position (${absolutePosition.x},${absolutePosition.y}).`);
+      }
+      claimed.add(key);
+      units.push({
+        id: allocateUnitId(piece.id),
+        ownerId,
+        pieceId: piece.id,
+        revealedTo: [ownerId],
+        x: absolutePosition.x,
+        y: absolutePosition.y,
+      });
+    });
+
+    const remainingCount = piece.count - fixedPositions.length;
+    for (let i = 0; i < remainingCount; i += 1) bag.push(piece);
   });
 
-  const shuffledSlots = [...slots].sort(() => Math.random() - 0.5);
+  const freeSlots = slots.filter((slot) => !claimed.has(`${slot.x},${slot.y}`));
+  if (bag.length > freeSlots.length) {
+    throw new Error('Piece counts exceed available setup cells.');
+  }
 
-  return bag.map((piece, index) => ({
-    id: `${ownerId}-${piece.id}-${index}`,
+  const shuffledSlots = [...freeSlots].sort(() => Math.random() - 0.5);
+
+  const randomUnits = bag.map((piece, index) => ({
+    id: allocateUnitId(piece.id),
     ownerId,
     pieceId: piece.id,
     revealedTo: [ownerId],
     x: shuffledSlots[index].x,
     y: shuffledSlots[index].y,
   }));
+
+  return [...units, ...randomUnits];
 };
 
 const resolveBattle = (
@@ -67,8 +122,8 @@ const resolveBattle = (
 };
 
 export const createSessionGame = (
-  initiatorName: string,
-  challengerName: string,
+  initiatorProfile: PlayerProfile,
+  challengerProfile: PlayerProfile,
   rules: RulesConfig,
   pieces: PieceDefinition[],
   playerIds?: { initiatorId: string; challengerId: string },
@@ -77,8 +132,18 @@ export const createSessionGame = (
   const challengerId = playerIds?.challengerId ?? nanoid(10);
 
   const players: PlayerState[] = [
-    { id: initiatorId, name: initiatorName, connected: true },
-    { id: challengerId, name: challengerName, connected: true },
+    {
+      id: initiatorId,
+      name: initiatorProfile.playerName,
+      avatarId: initiatorProfile.avatarId,
+      connected: true,
+    },
+    {
+      id: challengerId,
+      name: challengerProfile.playerName,
+      avatarId: challengerProfile.avatarId,
+      connected: true,
+    },
   ];
 
   return {
@@ -86,11 +151,118 @@ export const createSessionGame = (
     challengerId,
     state: {
       roomCode: '',
-      turnPlayerId: players[Math.floor(Math.random() * 2)].id,
+      phase: 'setup',
+      setupReadyPlayerIds: [],
+      turnPlayerId: null,
       winnerId: null,
       players,
       units: [...createLineup(players[0].id, false, rules, pieces), ...createLineup(players[1].id, true, rules, pieces)],
       moveCount: 0,
+    },
+  };
+};
+
+const getSetupRowsForPlayer = (playerId: string, state: GameState, rules: RulesConfig) => {
+  const isTop = state.players[1]?.id === playerId;
+  const startY = isTop ? 0 : rules.board.height - rules.setupRowsPerPlayer;
+  return new Set(Array.from({ length: rules.setupRowsPerPlayer }, (_, index) => startY + index));
+};
+
+const getUnitSequenceNumber = (unitId: string) => {
+  const match = unitId.match(/-(\d+)$/);
+  return match ? Number(match[1]) : null;
+};
+
+const isSetupUnitLocked = (unit: Unit, piece: PieceDefinition) => {
+  if (!piece.setup.playerCanReposition) return true;
+  if (piece.setup.fixedPositions.length === 0) return false;
+
+  const sequenceNumber = getUnitSequenceNumber(unit.id);
+  return sequenceNumber !== null && sequenceNumber < piece.setup.fixedPositions.length;
+};
+
+export const getSetupSwapTargets = (
+  state: GameState,
+  playerId: string,
+  from: Position,
+  rules: RulesConfig,
+  pieces: PieceDefinition[],
+): Position[] => {
+  if (state.phase !== 'setup' || state.winnerId) return [];
+  if (state.setupReadyPlayerIds.includes(playerId)) return [];
+
+  const pieceById = buildPieceMap(pieces);
+  const setupRows = getSetupRowsForPlayer(playerId, state, rules);
+  const sourceUnit = state.units.find((unit) => unit.ownerId === playerId && unit.x === from.x && unit.y === from.y);
+  if (!sourceUnit) return [];
+
+  const sourcePiece = pieceById.get(sourceUnit.pieceId);
+  if (!sourcePiece || isSetupUnitLocked(sourceUnit, sourcePiece)) return [];
+
+  return state.units
+    .filter((unit) => unit.ownerId === playerId)
+    .filter((unit) => setupRows.has(unit.y))
+    .filter((unit) => unit.id !== sourceUnit.id)
+    .filter((unit) => {
+      const piece = pieceById.get(unit.pieceId);
+      return piece ? !isSetupUnitLocked(unit, piece) : false;
+    })
+    .map((unit) => ({ x: unit.x, y: unit.y }));
+};
+
+export const applySetupSwapToState = (
+  state: GameState,
+  playerId: string,
+  from: Position,
+  to: Position,
+  rules: RulesConfig,
+  pieces: PieceDefinition[],
+): { nextState?: GameState; error?: string } => {
+  if (state.phase !== 'setup') return { error: 'Setup is complete.' };
+  if (state.setupReadyPlayerIds.includes(playerId)) return { error: 'You are already marked ready.' };
+
+  const legalTargets = getSetupSwapTargets(state, playerId, from, rules, pieces);
+  if (!legalTargets.some((target) => target.x === to.x && target.y === to.y)) {
+    return { error: 'Invalid setup swap.' };
+  }
+
+  const source = state.units.find((unit) => unit.ownerId === playerId && unit.x === from.x && unit.y === from.y)!;
+  const destination = state.units.find((unit) => unit.ownerId === playerId && unit.x === to.x && unit.y === to.y)!;
+  const nextUnits = state.units.map((unit) => ({ ...unit, revealedTo: [...unit.revealedTo] }));
+  const nextSource = nextUnits.find((unit) => unit.id === source.id)!;
+  const nextDestination = nextUnits.find((unit) => unit.id === destination.id)!;
+
+  nextSource.x = destination.x;
+  nextSource.y = destination.y;
+  nextDestination.x = from.x;
+  nextDestination.y = from.y;
+
+  return {
+    nextState: {
+      ...state,
+      units: nextUnits,
+      players: state.players.map((player) => ({ ...player })),
+    },
+  };
+};
+
+export const markPlayerSetupReady = (
+  state: GameState,
+  playerId: string,
+): { nextState?: GameState; error?: string } => {
+  if (state.phase !== 'setup') return { error: 'Setup is complete.' };
+  if (!state.players.some((player) => player.id === playerId)) return { error: 'Unknown player.' };
+  if (state.setupReadyPlayerIds.includes(playerId)) return { nextState: state };
+
+  const nextReady = [...state.setupReadyPlayerIds, playerId];
+  const everyoneReady = state.players.length > 0 && state.players.every((player) => nextReady.includes(player.id));
+
+  return {
+    nextState: {
+      ...state,
+      setupReadyPlayerIds: nextReady,
+      phase: everyoneReady ? 'battle' : 'setup',
+      turnPlayerId: everyoneReady ? state.players[Math.floor(Math.random() * state.players.length)]?.id ?? null : null,
     },
   };
 };
@@ -103,6 +275,7 @@ export const applyMoveToState = (
   rules: RulesConfig,
   pieces: PieceDefinition[],
 ): { nextState?: GameState; error?: string } => {
+  if (state.phase !== 'battle') return { error: 'Battle has not started yet.' };
   if (state.winnerId) return { error: 'Game already finished.' };
   if (state.turnPlayerId !== playerId) return { error: 'Not your turn.' };
 
@@ -113,6 +286,8 @@ export const applyMoveToState = (
 
   const nextState: GameState = {
     ...state,
+    phase: state.phase,
+    setupReadyPlayerIds: [...state.setupReadyPlayerIds],
     units: state.units.map((u) => ({ ...u, revealedTo: [...u.revealedTo] })),
     players: state.players.map((p) => ({ ...p })),
   };
@@ -164,6 +339,7 @@ export const applyMoveToState = (
 
   const nextPlayer = nextState.players.find((p) => p.id !== playerId);
   nextState.turnPlayerId = nextState.winnerId ? null : nextPlayer?.id ?? null;
+  if (nextState.winnerId) nextState.phase = 'finished';
 
   return { nextState };
 };
@@ -175,6 +351,7 @@ export const getLegalMovesForUnit = (
   rules: RulesConfig,
   pieces: PieceDefinition[],
 ): Position[] => {
+  if (state.phase !== 'battle') return [];
   if (state.winnerId) return [];
 
   const blocked = blockedSet(rules);

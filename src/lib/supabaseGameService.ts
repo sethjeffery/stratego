@@ -1,14 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 import { customAlphabet, nanoid } from 'nanoid';
 import { GameState, Position } from '../shared/schema';
-import { applyMoveToState, createSessionGame } from './engine';
+import {
+  applyMoveToState,
+  applySetupSwapToState,
+  createSessionGame,
+  markPlayerSetupReady,
+} from './engine';
 import { gamePieces, gameRules } from './gameConfig';
+import { DEFAULT_AVATAR_ID, PlayerProfile } from './playerProfile';
 
 export type SessionRow = {
   session_id: string;
   state: GameState | null;
   initiator_name: string;
+  initiator_avatar?: string | null;
   challenger_name: string | null;
+  challenger_avatar?: string | null;
   initiator_id: string;
   challenger_id: string | null;
   created_at: string;
@@ -33,7 +41,28 @@ const TABLE = 'game_sessions';
 const SESSION_CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const createSessionCode = customAlphabet(SESSION_CODE_ALPHABET, 8);
 
-export const createInitiatedSession = async (initiatorName: string) => {
+const withUpdatedPlayerState = (
+  state: GameState | null,
+  playerId: string,
+  profile: PlayerProfile,
+) => {
+  if (!state) return null;
+
+  return {
+    ...state,
+    players: state.players.map((player) =>
+      player.id === playerId
+        ? {
+            ...player,
+            name: profile.playerName,
+            avatarId: profile.avatarId,
+          }
+        : player,
+    ),
+  };
+};
+
+export const createInitiatedSession = async (initiatorProfile: PlayerProfile) => {
   if (!client) throw new Error('Supabase is not configured.');
 
   const sessionId = createSessionCode();
@@ -41,10 +70,12 @@ export const createInitiatedSession = async (initiatorName: string) => {
     .from(TABLE)
     .insert({
       session_id: sessionId,
-      initiator_name: initiatorName,
+      initiator_name: initiatorProfile.playerName,
+      initiator_avatar: initiatorProfile.avatarId,
       state: null,
       initiator_id: nanoid(10),
       challenger_name: null,
+      challenger_avatar: null,
       challenger_id: null,
     })
     .select()
@@ -54,7 +85,10 @@ export const createInitiatedSession = async (initiatorName: string) => {
   return data;
 };
 
-export const joinAsChallenger = async (sessionId: string, challengerName: string) => {
+export const joinAsChallenger = async (
+  sessionId: string,
+  challengerProfile: PlayerProfile,
+) => {
   if (!client) throw new Error('Supabase is not configured.');
 
   const { data: existing, error: getErr } = await client
@@ -67,16 +101,26 @@ export const joinAsChallenger = async (sessionId: string, challengerName: string
   if (existing.challenger_name) throw new Error('Session already full.');
 
   const challengerId = nanoid(10);
-  const initialized = createSessionGame(existing.initiator_name, challengerName, gameRules, gamePieces, {
-    initiatorId: existing.initiator_id,
-    challengerId,
-  });
+  const initialized = createSessionGame(
+    {
+      playerName: existing.initiator_name,
+      avatarId: existing.initiator_avatar ?? DEFAULT_AVATAR_ID,
+    },
+    challengerProfile,
+    gameRules,
+    gamePieces,
+    {
+      initiatorId: existing.initiator_id,
+      challengerId,
+    },
+  );
   initialized.state.roomCode = sessionId;
 
   const { data, error } = await client
     .from(TABLE)
     .update({
-      challenger_name: challengerName,
+      challenger_name: challengerProfile.playerName,
+      challenger_avatar: challengerProfile.avatarId,
       challenger_id: challengerId,
       state: initialized.state,
     })
@@ -87,6 +131,42 @@ export const joinAsChallenger = async (sessionId: string, challengerName: string
 
   if (error || !data) throw new Error('Could not join session.');
   return { row: data, playerId: challengerId };
+};
+
+export const updateSessionPlayerProfile = async (
+  sessionId: string,
+  playerId: string,
+  role: 'initiator' | 'challenger',
+  profile: PlayerProfile,
+) => {
+  if (!client) throw new Error('Supabase is not configured.');
+
+  const row = await getSession(sessionId);
+  const updates =
+    role === 'initiator'
+      ? {
+          initiator_name: profile.playerName,
+          initiator_avatar: profile.avatarId,
+        }
+      : {
+          challenger_name: profile.playerName,
+          challenger_avatar: profile.avatarId,
+        };
+
+  const playerIdColumn = role === 'initiator' ? 'initiator_id' : 'challenger_id';
+  const { data, error } = await client
+    .from(TABLE)
+    .update({
+      ...updates,
+      state: withUpdatedPlayerState(row.state, playerId, profile),
+    })
+    .eq('session_id', sessionId)
+    .eq(playerIdColumn, playerId)
+    .select()
+    .single<SessionRow>();
+
+  if (error || !data) throw error ?? new Error('Could not update player profile.');
+  return data;
 };
 
 export const getSession = async (sessionId: string) => {
@@ -129,7 +209,12 @@ export const listOpenSessions = async (limit = 5) => {
   return data as SessionRow[];
 };
 
-export const applyMove = async (sessionId: string, playerId: string, from: Position, to: Position) => {
+export const applyMove = async (
+  sessionId: string,
+  playerId: string,
+  from: Position,
+  to: Position,
+) => {
   if (!client) throw new Error('Supabase is not configured.');
   const row = await getSession(sessionId);
   if (!row.state) throw new Error('Waiting for challenger to join.');
@@ -137,12 +222,66 @@ export const applyMove = async (sessionId: string, playerId: string, from: Posit
   const result = applyMoveToState(row.state, playerId, from, to, gameRules, gamePieces);
   if (result.error || !result.nextState) throw new Error(result.error ?? 'Move rejected.');
 
-  const { error } = await client.from(TABLE).update({ state: result.nextState }).eq('session_id', sessionId);
+  const { error } = await client
+    .from(TABLE)
+    .update({ state: result.nextState })
+    .eq('session_id', sessionId);
   if (error) throw error;
   return result.nextState;
 };
 
-export const subscribeToSession = (sessionId: string, onState: (next: GameState | null) => void) => {
+export const applySetupSwap = async (
+  sessionId: string,
+  playerId: string,
+  from: Position,
+  to: Position,
+) => {
+  if (!client) throw new Error('Supabase is not configured.');
+  const row = await getSession(sessionId);
+  if (!row.state) throw new Error('Waiting for challenger to join.');
+
+  const result = applySetupSwapToState(
+    row.state,
+    playerId,
+    from,
+    to,
+    gameRules,
+    gamePieces,
+  );
+  if (result.error || !result.nextState) {
+    throw new Error(result.error ?? 'Setup swap rejected.');
+  }
+
+  const { error } = await client
+    .from(TABLE)
+    .update({ state: result.nextState })
+    .eq('session_id', sessionId);
+  if (error) throw error;
+  return result.nextState;
+};
+
+export const markSetupReady = async (sessionId: string, playerId: string) => {
+  if (!client) throw new Error('Supabase is not configured.');
+  const row = await getSession(sessionId);
+  if (!row.state) throw new Error('Waiting for challenger to join.');
+
+  const result = markPlayerSetupReady(row.state, playerId);
+  if (result.error || !result.nextState) {
+    throw new Error(result.error ?? 'Could not mark setup ready.');
+  }
+
+  const { error } = await client
+    .from(TABLE)
+    .update({ state: result.nextState })
+    .eq('session_id', sessionId);
+  if (error) throw error;
+  return result.nextState;
+};
+
+export const subscribeToSession = (
+  sessionId: string,
+  onSession: (next: SessionRow) => void,
+) => {
   if (!client) return () => undefined;
 
   const channel = client
@@ -151,8 +290,8 @@ export const subscribeToSession = (sessionId: string, onState: (next: GameState 
       'postgres_changes',
       { event: '*', schema: 'public', table: TABLE, filter: `session_id=eq.${sessionId}` },
       (payload) => {
-        const state = (payload.new as SessionRow).state ?? null;
-        onState(state);
+        const next = payload.new as SessionRow;
+        onSession(next);
       },
     )
     .subscribe();

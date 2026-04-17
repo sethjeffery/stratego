@@ -8,6 +8,19 @@ export const pieceDefinitionSchema = z.object({
   immovable: z.boolean().default(false),
   canDefuseBomb: z.boolean().default(false),
   canTraverseMany: z.boolean().default(false),
+  setup: z
+    .object({
+      playerCanReposition: z.boolean().default(true),
+      fixedPositions: z
+        .array(
+          z.object({
+            x: z.number().int(),
+            y: z.number().int(),
+          }),
+        )
+        .default([]),
+    })
+    .default({}),
 });
 
 export const piecesConfigSchema = z.object({
@@ -52,11 +65,14 @@ export type Unit = {
 export type PlayerState = {
   id: string;
   name: string;
+  avatarId?: string;
   connected: boolean;
 };
 
 export type GameState = {
   roomCode: string;
+  phase: 'setup' | 'battle' | 'finished';
+  setupReadyPlayerIds: string[];
   turnPlayerId: string | null;
   winnerId: string | null;
   players: PlayerState[];

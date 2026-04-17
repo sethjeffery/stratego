@@ -1,13 +1,21 @@
 create table if not exists public.game_sessions (
   session_id text primary key,
   initiator_name text not null,
+  initiator_avatar text not null default 'char01',
   initiator_id text not null,
   challenger_name text,
+  challenger_avatar text,
   challenger_id text,
   state jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.game_sessions
+add column if not exists initiator_avatar text not null default 'char01';
+
+alter table public.game_sessions
+add column if not exists challenger_avatar text;
 
 create or replace function public.touch_updated_at()
 returns trigger

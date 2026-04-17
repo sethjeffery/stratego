@@ -38,8 +38,18 @@ const createUnits = (
 
 export const createDebugBoardState = (rules: RulesConfig, pieces: PieceDefinition[]): { myId: string; state: GameState } => {
   const players: PlayerState[] = [
-    { id: DEBUG_PLAYER_NEAR_ID, name: 'Commander Depth', connected: true },
-    { id: DEBUG_PLAYER_FAR_ID, name: 'Commander Horizon', connected: true },
+    {
+      id: DEBUG_PLAYER_NEAR_ID,
+      name: 'Commander Depth',
+      avatarId: 'char08',
+      connected: true,
+    },
+    {
+      id: DEBUG_PLAYER_FAR_ID,
+      name: 'Commander Horizon',
+      avatarId: 'char33',
+      connected: true,
+    },
   ];
   const revealedTo = players.map((player) => player.id);
   const nearUnits = createUnits(DEBUG_PLAYER_NEAR_ID, rules, pieces, false, revealedTo);
@@ -49,6 +59,8 @@ export const createDebugBoardState = (rules: RulesConfig, pieces: PieceDefinitio
     myId: DEBUG_PLAYER_NEAR_ID,
     state: {
       roomCode: 'DEBUGBRD',
+      phase: 'battle',
+      setupReadyPlayerIds: players.map((player) => player.id),
       turnPlayerId: DEBUG_PLAYER_NEAR_ID,
       winnerId: null,
       players,

@@ -160,7 +160,7 @@ export function ProjectedBoard({
                 !disabled &&
                 unit.ownerId === myId &&
                 (selected
-                  ? isSelected
+                  ? isSelected || legalTargetKeys.has(`${unit.x}-${unit.y}`)
                   : selectablePieceKeys.has(`${unit.x}-${unit.y}`));
               const pieceShellUrl =
                 pieceColor === "player-one" ? redPieceUrl : bluePieceUrl;
