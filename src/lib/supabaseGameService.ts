@@ -115,6 +115,20 @@ export const listSessions = async (sessionIds: string[]) => {
   return data as SessionRow[];
 };
 
+export const listOpenSessions = async (limit = 5) => {
+  if (!client) throw new Error('Supabase is not configured.');
+
+  const { data, error } = await client
+    .from(TABLE)
+    .select('*')
+    .is('challenger_id', null)
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+
+  if (error || !data) throw error ?? new Error('Could not load open sessions.');
+  return data as SessionRow[];
+};
+
 export const applyMove = async (sessionId: string, playerId: string, from: Position, to: Position) => {
   if (!client) throw new Error('Supabase is not configured.');
   const row = await getSession(sessionId);
