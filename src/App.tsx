@@ -82,6 +82,7 @@ export function App() {
   const [myId, setMyId] = useState<string | null>(null);
   const [state, setState] = useState<GameState | null>(null);
   const [selected, setSelected] = useState<Position | null>(null);
+  const [hoveredPiecePosition, setHoveredPiecePosition] = useState<Position | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedMemberships, setSavedMemberships] = useState<
     StoredSessionMembership[]
@@ -100,6 +101,19 @@ export function App() {
     () => new Map(gamePieces.map((piece) => [piece.id, piece])),
     [],
   );
+  const pieceIconById = useMemo(() => {
+    const pieceIconModules = import.meta.glob("./assets/pieces/*.svg", {
+      eager: true,
+      import: "default",
+    }) as Record<string, string>;
+
+    return Object.fromEntries(
+      Object.entries(pieceIconModules).flatMap(([path, url]) => {
+        const match = path.match(/stratego-([a-z]+)\.svg$/);
+        return match ? [[match[1], url]] : [];
+      }),
+    ) as Record<string, string>;
+  }, []);
   const disabled = !state || !myId || state.turnPlayerId !== myId;
   const legalTargets = useMemo(() => {
     if (!selected || disabled) return [];
@@ -133,6 +147,7 @@ export function App() {
     );
     if (disabled || !stillExists) {
       setSelected(null);
+      setHoveredPiecePosition(null);
     }
   }, [disabled, myId, selected, state]);
 
@@ -208,6 +223,7 @@ export function App() {
     setRoomCode("");
     setMyId(null);
     setSelected(null);
+    setHoveredPiecePosition(null);
     setError(null);
     setSessionIdInUrl(null);
   };
@@ -322,6 +338,7 @@ export function App() {
       setMyId(session.initiator_id);
       setState(null);
       setSelected(null);
+      setHoveredPiecePosition(null);
       setSessionIdInUrl(session.session_id);
       await refreshSavedSessions();
       setError(
@@ -356,6 +373,7 @@ export function App() {
       setMyId(joined.playerId);
       setState(joined.row.state);
       setSelected(null);
+      setHoveredPiecePosition(null);
       setSessionIdInUrl(joined.row.session_id);
       await refreshSavedSessions();
       setError(null);
@@ -420,6 +438,7 @@ export function App() {
     }
 
     setSelected(null);
+    setHoveredPiecePosition(null);
   };
 
   const loadExisting = async () => {
@@ -440,6 +459,7 @@ export function App() {
       setState(session.state);
       setMyId(null);
       setSelected(null);
+      setHoveredPiecePosition(null);
       setSessionIdInUrl(session.session_id);
       setError(
         "Session loaded in read-only mode. Resume from a saved device session or join as challenger to take control.",
@@ -453,6 +473,45 @@ export function App() {
   const battleText = state?.lastBattle
     ? `${pieceById.get(state.lastBattle.attackerPieceId)?.label ?? "Attacker"} vs ${pieceById.get(state.lastBattle.defenderPieceId)?.label ?? "Defender"} • ${state.lastBattle.winner.toUpperCase()}!`
     : "Awaiting clash...";
+  const turnPlayerName =
+    state?.players.find((player) => player.id === state.turnPlayerId)?.name ??
+    "Commander";
+  const otherPlayerName =
+    state?.players.find((player) => player.id !== myId)?.name ?? "other player";
+  const isMyTurn = Boolean(state && myId && state.turnPlayerId === myId);
+  const statusText = isMyTurn ? "Your turn" : `Waiting for ${otherPlayerName}…`;
+  const hoveredUnit =
+    state && hoveredPiecePosition
+      ? state.units.find(
+          (unit) =>
+            unit.x === hoveredPiecePosition.x &&
+            unit.y === hoveredPiecePosition.y,
+        )
+      : null;
+  const selectedUnit =
+    state && selected
+      ? state.units.find((unit) => unit.x === selected.x && unit.y === selected.y)
+      : null;
+  const inspectedUnit = hoveredUnit ?? selectedUnit;
+  const inspectedPiece = inspectedUnit
+    ? pieceById.get(inspectedUnit.pieceId)
+    : null;
+  const inspectedVisible =
+    Boolean(inspectedUnit) &&
+    (debugBoardEnabled ||
+      inspectedUnit?.ownerId === myId ||
+      inspectedUnit?.revealedTo.includes(myId ?? ""));
+  const inspectedPieceTraits = inspectedVisible && inspectedPiece
+    ? [
+        inspectedPiece.canTraverseMany
+          ? "Can move multiple open squares in a straight line."
+          : null,
+        inspectedPiece.canDefuseBomb
+          ? "Defuses bombs when attacking."
+          : null,
+        inspectedPiece.immovable ? "Cannot move once deployed." : null,
+      ].filter(Boolean)
+    : [];
 
   return (
     <div className="app-shell">
@@ -601,15 +660,29 @@ export function App() {
 
       {state && (
         <main className="arena-layout">
+          <section className="board">
+            <ProjectedBoard
+              state={state}
+              rules={gameRules}
+              pieces={gamePieces}
+              myId={myId}
+              selected={selected}
+              legalTargets={legalTargets}
+              selectablePieceKeys={selectablePieceKeys}
+              disabled={disabled}
+              onCellClick={onCellClick}
+              onPieceHover={setHoveredPiecePosition}
+              interactive
+              visibilityMode="player"
+            />
+          </section>
+
           <aside className="hud card">
+            <p className={`turn-status ${isMyTurn ? "is-active" : ""}`}>{statusText}</p>
             <h2>Session {state.roomCode}</h2>
             <p>
               Turn:{" "}
-              <strong>
-                {state.players.find(
-                  (player) => player.id === state.turnPlayerId,
-                )?.name ?? "Complete"}
-              </strong>
+              <strong>{turnPlayerName}</strong>
             </p>
             <p>{battleText}</p>
             {state.winnerId && (
@@ -629,6 +702,54 @@ export function App() {
                 </li>
               ))}
             </ul>
+            <section className="piece-intel">
+              <h3>Piece Intel</h3>
+              {inspectedUnit ? (
+                <>
+                  <div className="piece-intel-header">
+                    <div className="piece-intel-icon" aria-hidden="true">
+                      {inspectedVisible && inspectedPiece ? (
+                        pieceIconById[inspectedPiece.id] ? (
+                          <img
+                            src={pieceIconById[inspectedPiece.id]}
+                            alt=""
+                          />
+                        ) : (
+                          inspectedPiece.label.slice(0, 2)
+                        )
+                      ) : (
+                        "?"
+                      )}
+                    </div>
+                    <div>
+                      <strong>
+                        {inspectedVisible && inspectedPiece
+                          ? inspectedPiece.label
+                          : "Unknown enemy unit"}
+                      </strong>
+                      {inspectedVisible && inspectedPiece && (
+                        <p>Rank {inspectedPiece.rank}</p>
+                      )}
+                    </div>
+                  </div>
+                  {inspectedVisible && inspectedPiece ? (
+                    inspectedPieceTraits.length > 0 ? (
+                      <ul>
+                        {inspectedPieceTraits.map((trait) => (
+                          <li key={trait}>{trait}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No special abilities or restrictions.</p>
+                    )
+                  ) : (
+                    <p>Identity remains hidden until revealed in battle.</p>
+                  )}
+                </>
+              ) : (
+                <p>Hover over or select a piece to inspect it.</p>
+              )}
+            </section>
             {!debugBoardEnabled && (
               <div className="hud-actions">
                 <button
@@ -646,22 +767,6 @@ export function App() {
               </div>
             )}
           </aside>
-
-          <section className="board">
-            <ProjectedBoard
-              state={state}
-              rules={gameRules}
-              pieces={gamePieces}
-              myId={myId}
-              selected={selected}
-              legalTargets={legalTargets}
-              selectablePieceKeys={selectablePieceKeys}
-              disabled={disabled}
-              onCellClick={onCellClick}
-              interactive
-              visibilityMode="player"
-            />
-          </section>
         </main>
       )}
 
