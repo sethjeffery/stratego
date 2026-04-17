@@ -38,7 +38,7 @@ type ProjectedBoardProps = {
   selected?: Position | null;
   legalTargets?: Position[];
   selectablePieceKeys?: Set<string>;
-  canAct?: boolean;
+  disabled?: boolean;
   onCellClick?: (target: Position) => void | Promise<void>;
   interactive?: boolean;
   visibilityMode?: "player" | "all";
@@ -52,7 +52,7 @@ export function ProjectedBoard({
   selected = null,
   legalTargets = [],
   selectablePieceKeys = new Set<string>(),
-  canAct = false,
+  disabled = false,
   onCellClick,
   interactive = true,
   visibilityMode = "player",
@@ -90,6 +90,8 @@ export function ProjectedBoard({
   const boardRows = rules.board.height;
   const playerOneId = state.players[0]?.id ?? null;
   const isPerspectiveFlipped = myId !== null && state.players[1]?.id === myId;
+  const shouldShowRank = (pieceId: string) =>
+    pieceId !== "flag" && pieceId !== "bomb";
   const legalTargetKeys = useMemo(
     () => new Set(legalTargets.map((target) => `${target.x}-${target.y}`)),
     [legalTargets],
@@ -101,7 +103,6 @@ export function ProjectedBoard({
 
   return (
     <div className="board-stage">
-      <div className="board-floor-shadow" aria-hidden="true" />
       <div className="board-plane">
         <img
           src={boardMapUrl}
@@ -156,7 +157,7 @@ export function ProjectedBoard({
               const pieceIcon = pieceIconById[unit.pieceId];
               const pieceColor = colorForOwner(unit.ownerId, playerOneId);
               const isSelectable =
-                canAct &&
+                !disabled &&
                 unit.ownerId === myId &&
                 (selected
                   ? isSelected
@@ -194,15 +195,23 @@ export function ProjectedBoard({
                     />
                     <span className="piece-face">
                       {visible ? (
-                        pieceIcon ? (
-                          <img
-                            className="piece-icon"
-                            src={pieceIcon}
-                            alt={piece?.label ?? unit.pieceId}
-                          />
-                        ) : (
-                          piece?.label.slice(0, 2)
-                        )
+                        <>
+                          {piece?.rank !== undefined &&
+                            shouldShowRank(unit.pieceId) && (
+                              <span className="piece-rank" aria-hidden="true">
+                                {piece.rank}
+                              </span>
+                            )}
+                          {pieceIcon ? (
+                            <img
+                              className="piece-icon"
+                              src={pieceIcon}
+                              alt={piece?.label ?? unit.pieceId}
+                            />
+                          ) : (
+                            piece?.label.slice(0, 2)
+                          )}
+                        </>
                       ) : (
                         <span className="piece-mask">?</span>
                       )}

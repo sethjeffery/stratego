@@ -100,13 +100,13 @@ export function App() {
     () => new Map(gamePieces.map((piece) => [piece.id, piece])),
     [],
   );
-  const canAct = !!state && !!myId && state.turnPlayerId === myId;
+  const disabled = !state || !myId || state.turnPlayerId !== myId;
   const legalTargets = useMemo(() => {
-    if (!state || !myId || !selected || !canAct) return [];
+    if (!selected || disabled) return [];
     return getLegalMovesForUnit(state, myId, selected, gameRules, gamePieces);
-  }, [canAct, myId, selected, state]);
+  }, [disabled, myId, selected, state]);
   const selectablePieceKeys = useMemo(() => {
-    if (!state || !myId || !canAct) return new Set<string>();
+    if (!state || !myId || disabled) return new Set<string>();
 
     return new Set(
       state.units
@@ -123,7 +123,7 @@ export function App() {
         )
         .map((unit) => `${unit.x}-${unit.y}`),
     );
-  }, [canAct, myId, state]);
+  }, [disabled, myId, state]);
 
   useEffect(() => {
     if (!state || !myId || !selected) return;
@@ -131,10 +131,10 @@ export function App() {
       (unit) =>
         unit.x === selected.x && unit.y === selected.y && unit.ownerId === myId,
     );
-    if (!canAct || !stillExists) {
+    if (disabled || !stillExists) {
       setSelected(null);
     }
-  }, [canAct, myId, selected, state]);
+  }, [disabled, myId, selected, state]);
 
   const refreshSavedSessions = async () => {
     const memberships = listStoredSessions();
@@ -365,8 +365,7 @@ export function App() {
   };
 
   const onCellClick = async (target: Position) => {
-    if (!state || !myId) return;
-    if (!canAct) return;
+    if (!state || !myId || disabled) return;
 
     if (!selected) {
       if (selectablePieceKeys.has(`${target.x}-${target.y}`)) {
@@ -391,7 +390,9 @@ export function App() {
       return;
     }
 
-    if (!legalTargets.some((move) => move.x === target.x && move.y === target.y)) {
+    if (
+      !legalTargets.some((move) => move.x === target.x && move.y === target.y)
+    ) {
       return;
     }
 
@@ -472,12 +473,7 @@ export function App() {
 
       {!state && (
         <div className="lobby-stack">
-          <section className="welcome-board card">
-            <h2>Battlefield</h2>
-            <p>
-              Study the current theater layout, then launch a hosted session to
-              begin your own command.
-            </p>
+          <section className="welcome-board">
             <div className="board demo-board">
               <ProjectedBoard
                 state={demoState}
@@ -531,26 +527,22 @@ export function App() {
             </small>
           </section>
 
-          {!debugBoardEnabled && (
+          {!debugBoardEnabled && openSessions.length > 0 && (
             <section className="open-session-feed card">
               <h2>Open Hosted Sessions</h2>
               <p>
                 Looking for a quick match? These sessions are waiting for a
                 second player.
               </p>
-              {openSessions.length === 0 ? (
-                <small>No open sessions right now that need a challenger.</small>
-              ) : (
-                <ul>
-                  {openSessions.map((sessionRow) => (
-                    <li key={sessionRow.session_id}>
-                      <strong>{sessionRow.session_id}</strong> • Hosted by{" "}
-                      {sessionRow.initiator_name} • Updated{" "}
-                      {formatSessionTimestamp(sessionRow.updated_at)}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <ul>
+                {openSessions.map((sessionRow) => (
+                  <li key={sessionRow.session_id}>
+                    <strong>{sessionRow.session_id}</strong> • Hosted by{" "}
+                    {sessionRow.initiator_name} • Updated{" "}
+                    {formatSessionTimestamp(sessionRow.updated_at)}
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
 
@@ -664,7 +656,7 @@ export function App() {
               selected={selected}
               legalTargets={legalTargets}
               selectablePieceKeys={selectablePieceKeys}
-              canAct={canAct}
+              disabled={disabled}
               onCellClick={onCellClick}
               interactive
               visibilityMode="player"
