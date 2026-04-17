@@ -1,4 +1,10 @@
-import { CSSProperties, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  CSSProperties,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import boardMapUrl from "../assets/map.png";
 import bluePieceUrl from "../assets/pieces/blue-piece.svg";
 import redPieceUrl from "../assets/pieces/red-piece.svg";
@@ -139,7 +145,9 @@ export function ProjectedBoard({
 
   useLayoutEffect(() => {
     if (!pendingBoardAction || !state.lastBattle) return;
-    if (animatedActionKeyRef.current === pendingBoardAction.optimisticStateKey) {
+    if (
+      animatedActionKeyRef.current === pendingBoardAction.optimisticStateKey
+    ) {
       return;
     }
 
@@ -148,7 +156,8 @@ export function ProjectedBoard({
         unit.x === pendingBoardAction.previousSelection.x &&
         unit.y === pendingBoardAction.previousSelection.y,
     );
-    if (!attacker || state.units.some((unit) => unit.id === attacker.id)) return;
+    if (!attacker || state.units.some((unit) => unit.id === attacker.id))
+      return;
 
     animatedActionKeyRef.current = pendingBoardAction.optimisticStateKey;
     setGhostResolving(false);
@@ -179,7 +188,11 @@ export function ProjectedBoard({
     const previousState = previousStateRef.current;
     previousStateRef.current = state;
 
-    if (previousState === state || state.lastBattle || state.moveCount === previousState.moveCount) {
+    if (
+      previousState === state ||
+      state.lastBattle ||
+      state.moveCount === previousState.moveCount
+    ) {
       return;
     }
 
@@ -191,7 +204,9 @@ export function ProjectedBoard({
       if (!previousUnit) return false;
       if (previousUnit.x === unit.x && previousUnit.y === unit.y) return false;
 
-      return !isUnitVisibleToViewer(previousUnit) && !isUnitVisibleToViewer(unit);
+      return (
+        !isUnitVisibleToViewer(previousUnit) && !isUnitVisibleToViewer(unit)
+      );
     });
 
     if (!movedHiddenUnit) return;
@@ -256,6 +271,8 @@ export function ProjectedBoard({
                   interactive && onCellClick?.({ x: cell.x, y: cell.y })
                 }
                 disabled={!interactive}
+                data-x={cell.x}
+                data-y={cell.y}
                 aria-label={`Board cell ${cell.x + 1}, ${cell.y + 1}`}
               >
                 <span className="board-cell-highlight" />
@@ -289,7 +306,8 @@ export function ProjectedBoard({
                   ? isSelected || legalTargetKeys.has(`${unit.x}-${unit.y}`)
                   : selectablePieceKeys.has(`${unit.x}-${unit.y}`));
               const isFriendlyClickable = !disabled && unit.ownerId === myId;
-              const isAttackTarget = !disabled && legalTargetKeys.has(`${unit.x}-${unit.y}`);
+              const isAttackTarget =
+                !disabled && legalTargetKeys.has(`${unit.x}-${unit.y}`);
               const isPieceInteractive = interactive;
               const isPieceActionable =
                 interactive && (isFriendlyClickable || isAttackTarget);
@@ -312,7 +330,8 @@ export function ProjectedBoard({
                   className={`piece-hit ${interactive ? "can-hover" : ""} ${isPieceActionable ? "is-interactive" : ""} ${isSelectable ? "is-selectable" : ""} ${isSelected ? "is-selected" : ""} ${isPicked ? "is-picked" : ""}`}
                   style={buttonStyle}
                   onClick={() =>
-                    isPieceInteractive && onCellClick?.({ x: unit.x, y: unit.y })
+                    isPieceInteractive &&
+                    onCellClick?.({ x: unit.x, y: unit.y })
                   }
                   onMouseEnter={() => onPieceHover?.({ x: unit.x, y: unit.y })}
                   onMouseLeave={() => onPieceHover?.(null)}
@@ -379,103 +398,108 @@ export function ProjectedBoard({
                 </button>
               );
             })}
-          {ghostUnit && (() => {
-            const piece = pieceById.get(ghostUnit.unit.pieceId);
-            const pieceIcon = pieceIconById[ghostUnit.unit.pieceId];
-            const pieceColor = colorForOwner(ghostUnit.unit.ownerId, playerOneId);
-            const pieceShellUrl =
-              pieceColor === "player-one" ? redPieceUrl : bluePieceUrl;
-            const visible = isUnitVisibleToViewer(ghostUnit.unit);
-            const display = ghostResolving
-              ? ghostUnit.endDisplay
-              : ghostUnit.startDisplay;
-            const buttonStyle: CSSProperties = {
-              left: `${((display.x + 0.5) / boardColumns) * 100}%`,
-              top: `${((display.y + 1) / boardRows) * 100}%`,
-              width: `${(0.76 / boardColumns) * 100}%`,
-              height: `${(1 / boardRows) * 100}%`,
-              zIndex: 10 + ghostUnit.endDisplay.y,
-            };
+          {ghostUnit &&
+            (() => {
+              const piece = pieceById.get(ghostUnit.unit.pieceId);
+              const pieceIcon = pieceIconById[ghostUnit.unit.pieceId];
+              const pieceColor = colorForOwner(
+                ghostUnit.unit.ownerId,
+                playerOneId,
+              );
+              const pieceShellUrl =
+                pieceColor === "player-one" ? redPieceUrl : bluePieceUrl;
+              const visible = isUnitVisibleToViewer(ghostUnit.unit);
+              const display = ghostResolving
+                ? ghostUnit.endDisplay
+                : ghostUnit.startDisplay;
+              const buttonStyle: CSSProperties = {
+                left: `${((display.x + 0.5) / boardColumns) * 100}%`,
+                top: `${((display.y + 1) / boardRows) * 100}%`,
+                width: `${(0.76 / boardColumns) * 100}%`,
+                height: `${(1 / boardRows) * 100}%`,
+                zIndex: 10 + ghostUnit.endDisplay.y,
+              };
 
-            return (
-              <span
-                key={ghostUnit.key}
-                className={`piece-hit is-ghost ${ghostResolving ? "is-resolving" : ""}`}
-                style={buttonStyle}
-                aria-hidden="true"
-              >
-                <span className={`piece ${pieceColor}`}>
-                  <img
-                    className="piece-shell"
-                    src={pieceShellUrl}
-                    alt=""
-                    aria-hidden="true"
-                  />
-                  <span className="piece-face">
-                    {visible ? (
-                      <>
-                        {piece?.rank !== undefined &&
-                          shouldShowRank(ghostUnit.unit.pieceId) && (
-                            <span className="piece-rank" aria-hidden="true">
-                              {piece.rank}
-                            </span>
+              return (
+                <span
+                  key={ghostUnit.key}
+                  className={`piece-hit is-ghost ${ghostResolving ? "is-resolving" : ""}`}
+                  style={buttonStyle}
+                  aria-hidden="true"
+                >
+                  <span className={`piece ${pieceColor}`}>
+                    <img
+                      className="piece-shell"
+                      src={pieceShellUrl}
+                      alt=""
+                      aria-hidden="true"
+                    />
+                    <span className="piece-face">
+                      {visible ? (
+                        <>
+                          {piece?.rank !== undefined &&
+                            shouldShowRank(ghostUnit.unit.pieceId) && (
+                              <span className="piece-rank" aria-hidden="true">
+                                {piece.rank}
+                              </span>
+                            )}
+                          {pieceIcon ? (
+                            <img
+                              className="piece-icon"
+                              src={pieceIcon}
+                              alt=""
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            piece?.label.slice(0, 2)
                           )}
-                        {pieceIcon ? (
-                          <img
-                            className="piece-icon"
-                            src={pieceIcon}
-                            alt=""
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          piece?.label.slice(0, 2)
-                        )}
-                      </>
-                    ) : (
-                      <span className="piece-mask">?</span>
-                    )}
+                        </>
+                      ) : (
+                        <span className="piece-mask">?</span>
+                      )}
+                    </span>
                   </span>
                 </span>
-              </span>
-            );
-          })()}
-          {state.lastBattle?.winner === "both" && (() => {
-            const display = toDisplayPosition(state.lastBattle.at);
-            const burstStyle: CSSProperties = {
-              left: `${((display.x + 0.5) / boardColumns) * 100}%`,
-              top: `${((display.y + 1) / boardRows) * 100}%`,
-              width: `${(0.76 / boardColumns) * 100}%`,
-              height: `${(1 / boardRows) * 100}%`,
-              zIndex: 14 + display.y,
-            };
+              );
+            })()}
+          {state.lastBattle?.winner === "both" &&
+            (() => {
+              const display = toDisplayPosition(state.lastBattle.at);
+              const burstStyle: CSSProperties = {
+                left: `${((display.x + 0.5) / boardColumns) * 100}%`,
+                top: `${((display.y + 1) / boardRows) * 100}%`,
+                width: `${(0.76 / boardColumns) * 100}%`,
+                height: `${(1 / boardRows) * 100}%`,
+                zIndex: 14 + display.y,
+              };
 
-            return (
-              <span
-                key={`battle-burst-${state.moveCount}`}
-                className="piece-hit is-battle-burst"
-                style={burstStyle}
-                aria-hidden="true"
-              >
-                <span className="piece-impact-burst is-both">
-                  <span className="piece-impact-flash" />
-                  {impactParticles.map((particle, index) => (
-                    <span
-                      key={`battle-burst-particle-${state.moveCount}-${index}`}
-                      className="piece-impact-particle"
-                      style={
-                        {
-                          "--impact-angle": `${particle.angle}deg`,
-                          "--impact-delay": `${particle.delay}ms`,
-                          "--impact-distance": `${particle.distance}px`,
-                          "--impact-size": `${particle.size}px`,
-                        } as CSSProperties
-                      }
-                    />
-                  ))}
+              return (
+                <span
+                  key={`battle-burst-${state.moveCount}`}
+                  className="piece-hit is-battle-burst"
+                  style={burstStyle}
+                  aria-hidden="true"
+                >
+                  <span className="piece-impact-burst is-both">
+                    <span className="piece-impact-flash" />
+                    {impactParticles.map((particle, index) => (
+                      <span
+                        key={`battle-burst-particle-${state.moveCount}-${index}`}
+                        className="piece-impact-particle"
+                        style={
+                          {
+                            "--impact-angle": `${particle.angle}deg`,
+                            "--impact-delay": `${particle.delay}ms`,
+                            "--impact-distance": `${particle.distance}px`,
+                            "--impact-size": `${particle.size}px`,
+                          } as CSSProperties
+                        }
+                      />
+                    ))}
+                  </span>
                 </span>
-              </span>
-            );
-          })()}
+              );
+            })()}
         </div>
       </div>
     </div>

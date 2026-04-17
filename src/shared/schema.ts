@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const pieceDefinitionSchema = z.object({
   id: z.string(),
@@ -8,6 +8,7 @@ export const pieceDefinitionSchema = z.object({
   immovable: z.boolean().default(false),
   canDefuseBomb: z.boolean().default(false),
   canTraverseMany: z.boolean().default(false),
+  canKillMarshal: z.boolean().default(false),
   setup: z
     .object({
       playerCanReposition: z.boolean().default(true),
@@ -74,12 +75,12 @@ export type BattleChatMessage = {
   defenderOwnerId: string;
   attackerPieceId: string;
   defenderPieceId: string;
-  winner: 'attacker' | 'defender' | 'both';
+  winner: "attacker" | "defender" | "both";
 };
 
 export type GameChatMessage = {
   id: string;
-  type?: 'player' | 'battle';
+  type?: "player" | "battle";
   playerId?: string;
   senderName?: string;
   text?: string;
@@ -89,7 +90,7 @@ export type GameChatMessage = {
 
 export type GameState = {
   roomCode: string;
-  phase: 'setup' | 'battle' | 'finished';
+  phase: "setup" | "battle" | "finished";
   setupReadyPlayerIds: string[];
   turnPlayerId: string | null;
   winnerId: string | null;
@@ -101,18 +102,21 @@ export type GameState = {
     at: Position;
     attackerPieceId: string;
     defenderPieceId: string;
-    winner: 'attacker' | 'defender' | 'both';
+    winner: "attacker" | "defender" | "both";
     winnerOwnerId: string | null;
   };
 };
 
 export const getChatMessages = (state: GameState) => {
-  const maybeMessages = (state as GameState & { chatMessages?: GameChatMessage[] })
-    .chatMessages;
+  const maybeMessages = (
+    state as GameState & { chatMessages?: GameChatMessage[] }
+  ).chatMessages;
   return Array.isArray(maybeMessages) ? maybeMessages : [];
 };
 
-export const normalizeGameState = (state: GameState | null): GameState | null => {
+export const normalizeGameState = (
+  state: GameState | null,
+): GameState | null => {
   if (!state) return null;
 
   return {

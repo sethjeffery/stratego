@@ -4,6 +4,8 @@ import { DEFAULT_AVATAR_ID, resolveAvatarUrl } from "../lib/playerProfile";
 import { StoredSessionMembership } from "../lib/localSessionStore";
 import { SessionRow } from "../lib/supabaseGameService";
 import { PlayerState, GameState } from "../shared/schema";
+import Avatar from "../components/Avatar";
+import background from "../assets/battle-bg.webp";
 
 const formatSessionTimestamp = (timestamp?: string | number) => {
   if (!timestamp) return "Unknown activity";
@@ -126,14 +128,13 @@ export function DashboardScreen({
             </div>
           </div>
           <div className="profile-card-body">
-            <button
+            <Avatar
               className="avatar-button"
               onClick={randomizeAvatar}
-              aria-label="Randomize avatar"
+              avatarUrl={avatarUrl}
+              alt={trimmedPlayerName}
               title="Randomize avatar"
-            >
-              <img src={avatarUrl} alt={trimmedPlayerName || "Avatar"} />
-            </button>
+            />
             <div className="profile-fields">
               <label>
                 Callsign
@@ -228,12 +229,14 @@ export function DashboardScreen({
                   >
                     <div className="saved-session-summary">
                       <div className="player-strip">
-                        {players.map((player) => (
-                          <img
+                        {players.map((player, index) => (
+                          <Avatar
                             key={`${membership.sessionId}-${player.id}`}
                             className="player-avatar"
-                            src={resolveAvatarUrl(player.avatarId)}
+                            avatarUrl={resolveAvatarUrl(player.avatarId)}
                             alt={player.name}
+                            title={player.name}
+                            color={index === 0 ? "red" : "blue"}
                           />
                         ))}
                       </div>
@@ -243,7 +246,13 @@ export function DashboardScreen({
                           {sessionStatusLabel(row)} • {membership.role}
                         </p>
                         <small>
-                          {players.map((player) => player.name).join(" vs ")}
+                          <strong>{players[0]?.name}</strong>
+                          {players[1] ? (
+                            <>
+                              {" "}
+                              vs <strong>{players[1].name}</strong>
+                            </>
+                          ) : null}
                           {" • "}
                           Updated{" "}
                           {formatSessionTimestamp(
@@ -288,6 +297,11 @@ export function DashboardScreen({
           </div>
         </section>
       </div>
+      <img
+        src={background}
+        alt="Battle background"
+        className="background-image"
+      />
     </>
   );
 }

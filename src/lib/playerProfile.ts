@@ -3,7 +3,7 @@ export type PlayerProfile = {
   avatarId: string;
 };
 
-const avatarModules = import.meta.glob("../assets/avatars/*.jpg", {
+const avatarModules = import.meta.glob("../assets/avatars/*.png", {
   eager: true,
   import: "default",
 }) as Record<string, string>;
@@ -65,7 +65,7 @@ const surnames = [
   "Kestrel",
 ];
 
-const pickRandom = <T,>(items: T[]) =>
+const pickRandom = <T>(items: T[]) =>
   items[Math.floor(Math.random() * items.length)];
 
 export const DEFAULT_AVATAR_ID = avatarCatalog[0]?.id ?? "char01";

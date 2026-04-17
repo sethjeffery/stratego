@@ -3,6 +3,7 @@ import { ProjectedBoard } from "../components/ProjectedBoard";
 import { gamePieces, gameRules } from "../lib/gameConfig";
 import { resolveAvatarUrl } from "../lib/playerProfile";
 import { GameChatMessage, GameState, Position } from "../shared/schema";
+import Avatar from "../components/Avatar";
 
 const pieceIconModules = import.meta.glob("../assets/pieces/*.svg", {
   eager: true,
@@ -15,10 +16,8 @@ const pieceIconById = Object.fromEntries(
   }),
 ) as Record<string, string>;
 const pieceById = new Map(gamePieces.map((piece) => [piece.id, piece]));
-const getPlayerColorClass = (
-  playerId: string,
-  playerOneId: string | null,
-) => (playerId === playerOneId ? "player-one" : "player-two");
+const getPlayerColorClass = (playerId: string, playerOneId: string | null) =>
+  playerId === playerOneId ? "player-one" : "player-two";
 
 type GameScreenProps = {
   canMarkReady: boolean;
@@ -79,10 +78,13 @@ export function GameScreen({
     inspectedVisible && inspectedPiece
       ? [
           inspectedPiece.canTraverseMany
-            ? "Can move multiple open squares in a straight line."
+            ? "Moves multiple spaces in a line."
             : null,
           inspectedPiece.canDefuseBomb ? "Defuses bombs when attacking." : null,
           inspectedPiece.immovable ? "Cannot move once deployed." : null,
+          inspectedPiece.canKillMarshal
+            ? "Kills the Marshal if attacking."
+            : null,
         ].filter(Boolean)
       : [];
   const mainStatus = state.winnerId
@@ -282,17 +284,14 @@ export function GameScreen({
               <div key={player.id} className="game-faceoff-slot">
                 {index === 1 && <div className="game-versus">vs</div>}
                 <div className="game-player">
-                  <div className="game-player-avatar-frame">
-                    <img
-                      className="game-player-avatar"
-                      src={resolveAvatarUrl(player.avatarId)}
-                      alt={player.name}
-                    />
-                    <span
-                      className={`player-presence ${player.connected ? "is-online" : "is-away"} ${player.id === state.turnPlayerId ? "is-pulsing" : ""}`}
-                      aria-hidden="true"
-                    />
-                  </div>
+                  <Avatar
+                    avatarUrl={resolveAvatarUrl(player.avatarId)}
+                    alt={player.name}
+                    title={player.name}
+                    pulsing={player.id === state.turnPlayerId}
+                    color={index === 0 ? "red" : "blue"}
+                    className="game-player-avatar"
+                  />
                   <div className="game-player-name">{player.name}</div>
                 </div>
               </div>
@@ -321,17 +320,17 @@ export function GameScreen({
                         : "Unknown unit"}
                     </strong>
                     {inspectedVisible && inspectedPiece && (
-                      <p>Rank {inspectedPiece.rank}</p>
+                      <>
+                        <p>Rank {inspectedPiece.rank}</p>
+                        {inspectedPieceTraits.map((trait) => (
+                          <div className="game-piece-trait" key={trait}>
+                            {trait}
+                          </div>
+                        ))}
+                      </>
                     )}
                   </div>
                 </div>
-                {inspectedVisible && inspectedPieceTraits.length > 0 && (
-                  <ul className="game-piece-traits">
-                    {inspectedPieceTraits.map((trait) => (
-                      <li key={trait}>{trait}</li>
-                    ))}
-                  </ul>
-                )}
               </>
             ) : null}
           </section>

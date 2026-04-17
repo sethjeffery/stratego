@@ -1,0 +1,75 @@
+.avatarWrapper {
+  aspect-ratio: 23 / 30;
+  position: relative;
+  display: flex;
+}
+
+.avatarWrapper::after {
+  content: "";
+  aspect-ratio: 1;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgb(202, 206, 184);
+  border: solid 0.125rem rgb(115, 121, 87);
+  border-radius: 1000px;
+  position: absolute;
+  box-sizing: border-box;
+  z-index: 0;
+}
+
+.avatar {
+  border-bottom-left-radius: 1000px;
+  border-bottom-right-radius: 1000px;
+  margin: 0.125rem;
+  display: block;
+  width: calc(100% - 0.25rem);
+  position: relative;
+  z-index: 1;
+  position: relative;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.online::after {
+  border-color: rgb(90, 126, 71);
+}
+
+.pulsing::before {
+  animation: ping 2s infinite;
+  content: "";
+  aspect-ratio: 1;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border: solid 0.25rem rgb(223, 228, 197);
+  border-radius: 1000px;
+  position: absolute;
+  box-sizing: border-box;
+  z-index: 0;
+}
+
+.red::after {
+  border-color: rgb(170, 51, 51);
+}
+
+.blue::after {
+  border-color: rgb(52, 54, 160);
+}
+
+@keyframes ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  70% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
