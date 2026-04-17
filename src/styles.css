@@ -1,12 +1,7 @@
 :root {
-  font-family: "Rajdhani", sans-serif;
-  color: #ecf7ff;
-  background: radial-gradient(
-    circle at 10% 0%,
-    #1e2d5a 0%,
-    #0a0f1f 55%,
-    #05060d 100%
-  );
+  font-family: "Rajdhani", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: #e6dfc9;
+  background: linear-gradient(180deg, #2b3124 0%, #1c2017 45%, #12150f 100%);
 }
 
 * {
@@ -15,58 +10,80 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background: transparent;
 }
 
 .app-shell {
   min-height: 100vh;
-  padding: 1.2rem;
+  padding: 1rem;
   position: relative;
   overflow-x: hidden;
   overflow-y: auto;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.hero {
+  margin-bottom: 1rem;
 }
 
 header h1 {
   margin: 0;
-  font-family: "Orbitron", sans-serif;
-  letter-spacing: 0.08em;
+  font-family: "PT Serif", "Times New Roman", serif;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  text-shadow: 0 0 20px rgba(0, 245, 255, 0.45);
+  color: #f2ebd6;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  color: #c6ba97;
+}
+
+.hero-intro {
+  margin: 0.4rem 0 0.25rem;
+  max-width: 70ch;
+  line-height: 1.5;
+}
+
+.hero-subtitle {
+  margin: 0;
+  color: #b8ae92;
 }
 
 .card {
-  background: linear-gradient(
-    145deg,
-    rgba(20, 27, 46, 0.88),
-    rgba(15, 19, 32, 0.82)
-  );
-  border: 1px solid rgba(137, 244, 255, 0.22);
-  border-radius: 16px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  background: rgba(31, 36, 26, 0.86);
+  border: 1px solid rgba(197, 177, 127, 0.34);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
 }
 
 .lobby {
-  padding: 1rem;
-  max-width: 720px;
+  padding: 1rem 1.1rem;
 }
 .lobby-stack {
   display: grid;
-  gap: 1rem;
+  gap: 0.8rem;
 }
 
 input,
 button {
   font: inherit;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  padding: 0.62rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid rgba(209, 191, 145, 0.36);
+  padding: 0.58rem 0.75rem;
 }
 input {
-  background: rgba(0, 0, 0, 0.28);
-  color: #eaf6ff;
+  background: rgba(13, 16, 11, 0.72);
+  color: #efe7d0;
 }
 button {
-  background: linear-gradient(90deg, #35dbff, #856bff);
-  color: white;
+  background: linear-gradient(180deg, #7b6b3f, #5c4e2f);
+  color: #fbf5e3;
   font-weight: 700;
   cursor: pointer;
 }
@@ -84,13 +101,12 @@ button {
 }
 
 .secondary-button {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(137, 244, 255, 0.22);
+  background: rgba(46, 52, 37, 0.7);
+  border-color: rgba(209, 191, 145, 0.22);
 }
 
 .session-dashboard {
   padding: 1rem;
-  max-width: 920px;
 }
 .saved-session-list {
   display: grid;
@@ -103,9 +119,9 @@ button {
   gap: 1rem;
   align-items: center;
   padding: 0.9rem 1rem;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(137, 244, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(20, 24, 17, 0.7);
+  border: 1px solid rgba(192, 173, 125, 0.18);
 }
 
 .saved-session-card p,
@@ -129,8 +145,46 @@ button {
 }
 
 .winner {
-  color: #ffe372;
+  color: #eac66a;
   font-size: 1.1rem;
+}
+
+.welcome-board {
+  padding: 0.9rem 1rem 0.5rem;
+}
+
+.welcome-board h2,
+.lobby h2,
+.open-session-feed h2,
+.session-dashboard h2,
+.hud h2 {
+  margin: 0 0 0.35rem;
+  font-family: "PT Serif", "Times New Roman", serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.welcome-board p,
+.open-session-feed p {
+  margin: 0.2rem 0 0.5rem;
+  color: #cdc2a4;
+}
+
+.demo-board {
+  padding-top: 1.8rem;
+  padding-bottom: 2rem;
+  margin-top: 0.35rem;
+}
+
+.open-session-feed {
+  padding: 0.9rem 1rem;
+}
+
+.open-session-feed ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
 }
 
 .board {
@@ -401,7 +455,7 @@ button {
 .error {
   margin-top: 0.75rem;
   padding: 0.7rem;
-  color: #ffd2d2;
+  color: #ffdbdb;
 }
 
 @media (max-width: 900px) {
