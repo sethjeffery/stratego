@@ -1,5 +1,5 @@
 :root {
-  font-family: "Merriweather", "Times New Roman", serif;
+  font-family: "Rajdhani", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   color: #e6dfc9;
   background: linear-gradient(180deg, #2b3124 0%, #1c2017 45%, #12150f 100%);
 }
@@ -29,7 +29,7 @@ body {
 
 header h1 {
   margin: 0;
-  font-family: "Cinzel", "Times New Roman", serif;
+  font-family: "PT Serif", "Times New Roman", serif;
   font-size: clamp(2rem, 4vw, 3.2rem);
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -159,7 +159,7 @@ button {
 .session-dashboard h2,
 .hud h2 {
   margin: 0 0 0.35rem;
-  font-family: "Cinzel", "Times New Roman", serif;
+  font-family: "PT Serif", "Times New Roman", serif;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }

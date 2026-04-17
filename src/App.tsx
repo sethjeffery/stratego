@@ -466,17 +466,17 @@ export function App() {
         <p className="hero-subtitle">
           {debugBoardEnabled
             ? "Local debug board • deterministic preview state"
-            : "Create or join hosted sessions and challenge a second commander in real-time."}
+            : "Create or join hosted sessions, challenge a second commander in real-time, and keep your matches tied to this device."}
         </p>
       </header>
 
       {!state && (
         <div className="lobby-stack">
           <section className="welcome-board card">
-            <h2>Field Preview</h2>
+            <h2>Battlefield</h2>
             <p>
-              The board below is a static demonstration. Start a hosted session
-              to play with full turns, hidden enemy ranks, and live updates.
+              Study the current theater layout, then launch a hosted session to
+              begin your own command.
             </p>
             <div className="board demo-board">
               <ProjectedBoard
@@ -484,11 +484,8 @@ export function App() {
                 rules={gameRules}
                 pieces={gamePieces}
                 myId={null}
-                selected={null}
-                legalTargets={[]}
-                selectablePieceKeys={new Set<string>()}
-                canAct={false}
-                onCellClick={() => undefined}
+                interactive={false}
+                visibilityMode="all"
               />
             </div>
           </section>
@@ -669,6 +666,8 @@ export function App() {
               selectablePieceKeys={selectablePieceKeys}
               canAct={canAct}
               onCellClick={onCellClick}
+              interactive
+              visibilityMode="player"
             />
           </section>
         </main>

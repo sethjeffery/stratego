@@ -35,11 +35,13 @@ type ProjectedBoardProps = {
   rules: RulesConfig;
   pieces: PieceDefinition[];
   myId: string | null;
-  selected: Position | null;
-  legalTargets: Position[];
-  selectablePieceKeys: Set<string>;
-  canAct: boolean;
-  onCellClick: (target: Position) => void | Promise<void>;
+  selected?: Position | null;
+  legalTargets?: Position[];
+  selectablePieceKeys?: Set<string>;
+  canAct?: boolean;
+  onCellClick?: (target: Position) => void | Promise<void>;
+  interactive?: boolean;
+  visibilityMode?: "player" | "all";
 };
 
 export function ProjectedBoard({
@@ -47,11 +49,13 @@ export function ProjectedBoard({
   rules,
   pieces,
   myId,
-  selected,
-  legalTargets,
-  selectablePieceKeys,
-  canAct,
+  selected = null,
+  legalTargets = [],
+  selectablePieceKeys = new Set<string>(),
+  canAct = false,
   onCellClick,
+  interactive = true,
+  visibilityMode = "player",
 }: ProjectedBoardProps) {
   const unitByPosition = useMemo(
     () => new Map(state.units.map((unit) => [`${unit.x}-${unit.y}`, unit])),
@@ -123,9 +127,11 @@ export function ProjectedBoard({
                 className={`board-cell-hit ${isLegalTarget ? "is-target" : ""} ${isSelected ? "is-selected" : ""}`}
                 style={buttonStyle}
                 onClick={() =>
-                  isLegalTarget && onCellClick({ x: cell.x, y: cell.y })
+                  interactive &&
+                  isLegalTarget &&
+                  onCellClick?.({ x: cell.x, y: cell.y })
                 }
-                disabled={!isLegalTarget}
+                disabled={!interactive || !isLegalTarget}
                 aria-label={`Board cell ${cell.x + 1}, ${cell.y + 1}`}
               >
                 <span className="board-cell-highlight" />
@@ -143,7 +149,9 @@ export function ProjectedBoard({
               const isSelected =
                 selected?.x === unit.x && selected?.y === unit.y;
               const visible =
-                unit.ownerId === myId || unit.revealedTo.includes(myId || "");
+                visibilityMode === "all" ||
+                unit.ownerId === myId ||
+                unit.revealedTo.includes(myId || "");
               const piece = pieceById.get(unit.pieceId);
               const pieceIcon = pieceIconById[unit.pieceId];
               const pieceColor = colorForOwner(unit.ownerId, playerOneId);
@@ -168,9 +176,11 @@ export function ProjectedBoard({
                   className={`piece-hit ${isSelectable ? "is-selectable" : ""} ${isSelected ? "is-selected" : ""}`}
                   style={buttonStyle}
                   onClick={() =>
-                    isSelectable && onCellClick({ x: unit.x, y: unit.y })
+                    interactive &&
+                    isSelectable &&
+                    onCellClick?.({ x: unit.x, y: unit.y })
                   }
-                  disabled={!isSelectable}
+                  disabled={!interactive || !isSelectable}
                   aria-label={piece?.label ?? unit.pieceId}
                 >
                   <span
