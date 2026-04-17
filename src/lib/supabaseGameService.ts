@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { customAlphabet, nanoid } from 'nanoid';
-import { GameState, Position } from '../shared/schema';
+import {
+  appendChatMessage,
+  GameState,
+  normalizeGameState,
+  Position,
+} from '../shared/schema';
 import {
   applyMoveToState,
   applySetupSwapToState,
@@ -40,6 +45,12 @@ const client = isSupabaseMode ? createClient(supabaseUrl!, supabaseAnonKey!) : n
 const TABLE = 'game_sessions';
 const SESSION_CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const createSessionCode = customAlphabet(SESSION_CODE_ALPHABET, 8);
+const MAX_SESSION_UPDATE_ATTEMPTS = 4;
+
+const normalizeSessionRow = (row: SessionRow): SessionRow => ({
+  ...row,
+  state: normalizeGameState(row.state),
+});
 
 const withUpdatedPlayerState = (
   state: GameState | null,
@@ -62,6 +73,36 @@ const withUpdatedPlayerState = (
   };
 };
 
+const updateSessionState = async (
+  sessionId: string,
+  buildNextState: (
+    row: SessionRow,
+  ) => { nextState?: GameState; error?: string },
+) => {
+  if (!client) throw new Error('Supabase is not configured.');
+
+  for (let attempt = 0; attempt < MAX_SESSION_UPDATE_ATTEMPTS; attempt += 1) {
+    const row = await getSession(sessionId);
+    const result = buildNextState(row);
+    if (result.error || !result.nextState) {
+      throw new Error(result.error ?? 'Could not update session state.');
+    }
+
+    const { data, error } = await client
+      .from(TABLE)
+      .update({ state: result.nextState })
+      .eq('session_id', sessionId)
+      .eq('updated_at', row.updated_at)
+      .select('*')
+      .maybeSingle<SessionRow>();
+
+    if (error) throw error;
+    if (data) return normalizeSessionRow(data);
+  }
+
+  throw new Error('Session changed before the update could be saved. Try again.');
+};
+
 export const createInitiatedSession = async (initiatorProfile: PlayerProfile) => {
   if (!client) throw new Error('Supabase is not configured.');
 
@@ -82,7 +123,7 @@ export const createInitiatedSession = async (initiatorProfile: PlayerProfile) =>
     .single<SessionRow>();
 
   if (error) throw error;
-  return data;
+  return normalizeSessionRow(data);
 };
 
 export const joinAsChallenger = async (
@@ -130,7 +171,7 @@ export const joinAsChallenger = async (
     .single<SessionRow>();
 
   if (error || !data) throw new Error('Could not join session.');
-  return { row: data, playerId: challengerId };
+  return { row: normalizeSessionRow(data), playerId: challengerId };
 };
 
 export const updateSessionPlayerProfile = async (
@@ -166,7 +207,7 @@ export const updateSessionPlayerProfile = async (
     .single<SessionRow>();
 
   if (error || !data) throw error ?? new Error('Could not update player profile.');
-  return data;
+  return normalizeSessionRow(data);
 };
 
 export const getSession = async (sessionId: string) => {
@@ -178,7 +219,7 @@ export const getSession = async (sessionId: string) => {
     .single<SessionRow>();
 
   if (error || !data) throw new Error('Session not found.');
-  return data;
+  return normalizeSessionRow(data);
 };
 
 export const listSessions = async (sessionIds: string[]) => {
@@ -192,7 +233,7 @@ export const listSessions = async (sessionIds: string[]) => {
     .order('updated_at', { ascending: false });
 
   if (error || !data) throw error ?? new Error('Could not load sessions.');
-  return data as SessionRow[];
+  return (data as SessionRow[]).map(normalizeSessionRow);
 };
 
 export const listOpenSessions = async (limit = 5) => {
@@ -206,7 +247,7 @@ export const listOpenSessions = async (limit = 5) => {
     .limit(limit);
 
   if (error || !data) throw error ?? new Error('Could not load open sessions.');
-  return data as SessionRow[];
+  return (data as SessionRow[]).map(normalizeSessionRow);
 };
 
 export const applyMove = async (
@@ -215,19 +256,19 @@ export const applyMove = async (
   from: Position,
   to: Position,
 ) => {
-  if (!client) throw new Error('Supabase is not configured.');
-  const row = await getSession(sessionId);
-  if (!row.state) throw new Error('Waiting for challenger to join.');
+  const row = await updateSessionState(sessionId, (currentRow) => {
+    if (!currentRow.state) return { error: 'Waiting for challenger to join.' };
+    return applyMoveToState(
+      currentRow.state,
+      playerId,
+      from,
+      to,
+      gameRules,
+      gamePieces,
+    );
+  });
 
-  const result = applyMoveToState(row.state, playerId, from, to, gameRules, gamePieces);
-  if (result.error || !result.nextState) throw new Error(result.error ?? 'Move rejected.');
-
-  const { error } = await client
-    .from(TABLE)
-    .update({ state: result.nextState })
-    .eq('session_id', sessionId);
-  if (error) throw error;
-  return result.nextState;
+  return row.state!;
 };
 
 export const applySetupSwap = async (
@@ -236,46 +277,62 @@ export const applySetupSwap = async (
   from: Position,
   to: Position,
 ) => {
-  if (!client) throw new Error('Supabase is not configured.');
-  const row = await getSession(sessionId);
-  if (!row.state) throw new Error('Waiting for challenger to join.');
+  const row = await updateSessionState(sessionId, (currentRow) => {
+    if (!currentRow.state) return { error: 'Waiting for challenger to join.' };
 
-  const result = applySetupSwapToState(
-    row.state,
-    playerId,
-    from,
-    to,
-    gameRules,
-    gamePieces,
-  );
-  if (result.error || !result.nextState) {
-    throw new Error(result.error ?? 'Setup swap rejected.');
-  }
+    return applySetupSwapToState(
+      currentRow.state,
+      playerId,
+      from,
+      to,
+      gameRules,
+      gamePieces,
+    );
+  });
 
-  const { error } = await client
-    .from(TABLE)
-    .update({ state: result.nextState })
-    .eq('session_id', sessionId);
-  if (error) throw error;
-  return result.nextState;
+  return row.state!;
 };
 
 export const markSetupReady = async (sessionId: string, playerId: string) => {
-  if (!client) throw new Error('Supabase is not configured.');
-  const row = await getSession(sessionId);
-  if (!row.state) throw new Error('Waiting for challenger to join.');
+  const row = await updateSessionState(sessionId, (currentRow) => {
+    if (!currentRow.state) return { error: 'Waiting for challenger to join.' };
+    return markPlayerSetupReady(currentRow.state, playerId);
+  });
 
-  const result = markPlayerSetupReady(row.state, playerId);
-  if (result.error || !result.nextState) {
-    throw new Error(result.error ?? 'Could not mark setup ready.');
-  }
+  return row.state!;
+};
 
-  const { error } = await client
-    .from(TABLE)
-    .update({ state: result.nextState })
-    .eq('session_id', sessionId);
-  if (error) throw error;
-  return result.nextState;
+export const sendChatMessage = async (
+  sessionId: string,
+  playerId: string,
+  text: string,
+  options?: {
+    messageId?: string;
+    sentAt?: string;
+  },
+) => {
+  const trimmedText = text.trim();
+  if (!trimmedText) throw new Error('Enter a message first.');
+
+  const row = await updateSessionState(sessionId, (currentRow) => {
+    if (!currentRow.state) return { error: 'Waiting for challenger to join.' };
+
+    const sender = currentRow.state.players.find((player) => player.id === playerId);
+    if (!sender) return { error: 'Unknown player.' };
+
+    return {
+      nextState: appendChatMessage(currentRow.state, {
+        id: options?.messageId ?? nanoid(10),
+        type: 'player',
+        playerId,
+        senderName: sender.name,
+        text: trimmedText,
+        sentAt: options?.sentAt ?? new Date().toISOString(),
+      }),
+    };
+  });
+
+  return row.state!;
 };
 
 export const subscribeToSession = (
@@ -290,7 +347,7 @@ export const subscribeToSession = (
       'postgres_changes',
       { event: '*', schema: 'public', table: TABLE, filter: `session_id=eq.${sessionId}` },
       (payload) => {
-        const next = payload.new as SessionRow;
+        const next = normalizeSessionRow(payload.new as SessionRow);
         onSession(next);
       },
     )

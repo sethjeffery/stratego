@@ -69,6 +69,24 @@ export type PlayerState = {
   connected: boolean;
 };
 
+export type BattleChatMessage = {
+  attackerOwnerId: string;
+  defenderOwnerId: string;
+  attackerPieceId: string;
+  defenderPieceId: string;
+  winner: 'attacker' | 'defender' | 'both';
+};
+
+export type GameChatMessage = {
+  id: string;
+  type?: 'player' | 'battle';
+  playerId?: string;
+  senderName?: string;
+  text?: string;
+  sentAt: string;
+  battle?: BattleChatMessage;
+};
+
 export type GameState = {
   roomCode: string;
   phase: 'setup' | 'battle' | 'finished';
@@ -78,10 +96,36 @@ export type GameState = {
   players: PlayerState[];
   units: Unit[];
   moveCount: number;
+  chatMessages: GameChatMessage[];
   lastBattle?: {
     at: Position;
     attackerPieceId: string;
     defenderPieceId: string;
     winner: 'attacker' | 'defender' | 'both';
+    winnerOwnerId: string | null;
   };
 };
+
+export const getChatMessages = (state: GameState) => {
+  const maybeMessages = (state as GameState & { chatMessages?: GameChatMessage[] })
+    .chatMessages;
+  return Array.isArray(maybeMessages) ? maybeMessages : [];
+};
+
+export const normalizeGameState = (state: GameState | null): GameState | null => {
+  if (!state) return null;
+
+  return {
+    ...state,
+    chatMessages: getChatMessages(state),
+  };
+};
+
+export const appendChatMessage = (
+  state: GameState,
+  message: GameChatMessage,
+  maxMessages = 12,
+): GameState => ({
+  ...state,
+  chatMessages: [...getChatMessages(state), message].slice(-maxMessages),
+});

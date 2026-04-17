@@ -65,7 +65,7 @@ When adjusting the board renderer, visually inspect it in a browser rather than 
 ## Working Rules For Agents
 
 1. Prefer small, testable changes over broad rewrites.
-2. When touching the board renderer, use the local debug route and capture screenshots.
+2. When touching the board renderer, use the local debug route and capture screenshots through the Playwright MCP server when available.
 3. When changing session logic, test refresh/resume behavior and local player identity.
 4. Preserve data-driven configuration instead of hardcoding piece or ruleset logic into UI code.
 5. Do not expose Supabase secret/service keys to client code.
@@ -84,4 +84,4 @@ Then open:
 http://127.0.0.1:4173/?debugBoard=1
 ```
 
-For browser-based visual inspection, use Playwright against the local preview server.
+For browser-based visual inspection, use Playwright against the local preview server. Prefer the Playwright MCP server for navigation, interaction, and screenshots; keep direct `playwright` scripts as fallback only.

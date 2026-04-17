@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { GameState, PieceDefinition, PlayerState, Position, RulesConfig, Unit } from '../shared/schema';
+import { appendChatMessage, GameState, PieceDefinition, PlayerState, Position, RulesConfig, Unit } from '../shared/schema';
 import { PlayerProfile } from './playerProfile';
 
 const buildPieceMap = (pieces: PieceDefinition[]) => new Map(pieces.map((piece) => [piece.id, piece]));
@@ -8,6 +8,12 @@ const inBounds = (p: Position, rules: RulesConfig) =>
   p.x >= 0 && p.x < rules.board.width && p.y >= 0 && p.y < rules.board.height;
 
 const blockedSet = (rules: RulesConfig) => new Set(rules.board.blockedCells.map((c) => `${c.x},${c.y}`));
+const revealUnitToPlayers = (unit: Unit, players: PlayerState[]) => {
+  unit.revealedTo = Array.from(new Set([...unit.revealedTo, ...players.map((player) => player.id)]));
+};
+
+const moveDistance = (from: Position, to: Position) => Math.abs(from.x - to.x) + Math.abs(from.y - to.y);
+
 const directions: Position[] = [
   { x: 1, y: 0 },
   { x: -1, y: 0 },
@@ -121,6 +127,24 @@ const resolveBattle = (
   return 'both';
 };
 
+const createBattleChatMessage = (
+  state: GameState,
+  attacker: Unit,
+  defender: Unit,
+  winner: 'attacker' | 'defender' | 'both',
+) => ({
+  id: `system-battle-${state.moveCount + 1}`,
+  type: 'battle' as const,
+  sentAt: new Date().toISOString(),
+  battle: {
+    attackerOwnerId: attacker.ownerId,
+    defenderOwnerId: defender.ownerId,
+    attackerPieceId: attacker.pieceId,
+    defenderPieceId: defender.pieceId,
+    winner,
+  },
+});
+
 export const createSessionGame = (
   initiatorProfile: PlayerProfile,
   challengerProfile: PlayerProfile,
@@ -158,6 +182,7 @@ export const createSessionGame = (
       players,
       units: [...createLineup(players[0].id, false, rules, pieces), ...createLineup(players[1].id, true, rules, pieces)],
       moveCount: 0,
+      chatMessages: [],
     },
   };
 };
@@ -304,14 +329,16 @@ export const applyMoveToState = (
   }
 
   const defender = nextState.units.find((u) => u.x === to.x && u.y === to.y && u.ownerId !== playerId);
-  moving.revealedTo = Array.from(new Set([...moving.revealedTo, ...nextState.players.map((p) => p.id)]));
+  const movementProvesIdentity = movingPiece.canTraverseMany && moveDistance(from, to) > 1;
 
   if (!defender) {
+    if (movementProvesIdentity) revealUnitToPlayers(moving, nextState.players);
     moving.x = to.x;
     moving.y = to.y;
     nextState.lastBattle = undefined;
   } else {
-    defender.revealedTo = Array.from(new Set([...defender.revealedTo, ...nextState.players.map((p) => p.id)]));
+    revealUnitToPlayers(moving, nextState.players);
+    revealUnitToPlayers(defender, nextState.players);
     const winner = resolveBattle(moving, defender, pieceById, rules);
 
     if (winner === 'attacker') {
@@ -330,7 +357,17 @@ export const applyMoveToState = (
       attackerPieceId: moving.pieceId,
       defenderPieceId: defender.pieceId,
       winner,
+      winnerOwnerId:
+        winner === 'attacker'
+          ? playerId
+          : winner === 'defender'
+            ? defender.ownerId
+            : null,
     };
+    Object.assign(
+      nextState,
+      appendChatMessage(nextState, createBattleChatMessage(state, moving, defender, winner)),
+    );
   }
 
   nextState.moveCount += 1;

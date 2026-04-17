@@ -66,6 +66,7 @@ export const createDebugBoardState = (rules: RulesConfig, pieces: PieceDefinitio
       players,
       units: [...farUnits, ...nearUnits],
       moveCount: 12,
+      chatMessages: [],
     },
   };
 };

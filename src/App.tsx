@@ -47,11 +47,12 @@ import {
   joinAsChallenger,
   listSessions,
   markSetupReady as markSupabaseSetupReady,
+  sendChatMessage as sendSupabaseChatMessage,
   SessionRow,
   subscribeToSession,
   updateSessionPlayerProfile,
 } from "./lib/supabaseGameService";
-import { GameState, Position } from "./shared/schema";
+import { appendChatMessage, GameState, Position } from "./shared/schema";
 
 const DEFAULT_PLAYER_NAME = "Commander Nova";
 const SESSION_QUERY_PARAM = "session";
@@ -76,6 +77,19 @@ const isDebugBoardEnabled = (search: string) => {
   const value = new URLSearchParams(search).get(DEBUG_BOARD_PARAM);
   return value === "1" || value === "true";
 };
+
+type PendingBoardAction = {
+  optimisticStateKey: string;
+  previousSelection: Position;
+  previousState: GameState;
+};
+
+const serializeGameState = (state: GameState) => JSON.stringify(state);
+const serializeBoardActionState = (state: GameState) =>
+  serializeGameState({
+    ...state,
+    chatMessages: [],
+  });
 
 export function App() {
   const location = useLocation();
@@ -113,6 +127,8 @@ export function App() {
   const [routeSessionLoading, setRouteSessionLoading] = useState(false);
   const [routeSessionMissing, setRouteSessionMissing] = useState(false);
   const [profileReady, setProfileReady] = useState(false);
+  const [pendingBoardAction, setPendingBoardAction] =
+    useState<PendingBoardAction | null>(null);
 
   const debugBoardEnabled = useMemo(
     () => isDebugBoardEnabled(location.search),
@@ -122,6 +138,7 @@ export function App() {
     () => createDebugBoardState(gameRules, gamePieces).state,
     [],
   );
+  const committedOptimisticStateKey = useRef<string | null>(null);
   const lastSyncedProfileKey = useRef<string | null>(null);
   const trimmedPlayerName = playerName.trim();
   const currentProfile = trimmedPlayerName
@@ -145,6 +162,7 @@ export function App() {
   const disabled =
     !state ||
     !myId ||
+    Boolean(pendingBoardAction) ||
     (isSetupPhase
       ? state.setupReadyPlayerIds.includes(myId)
       : state.turnPlayerId !== myId);
@@ -217,12 +235,14 @@ export function App() {
   };
 
   const goToDashboard = () => {
+    committedOptimisticStateKey.current = null;
     setRouteSessionRow(null);
     setRouteSessionLoading(false);
     setRouteSessionMissing(false);
     setState(null);
     setMyId(null);
     setRoomCode("");
+    setPendingBoardAction(null);
     setSelected(null);
     setError(null);
     navigate({ pathname: DASHBOARD_ROUTE, search: "" });
@@ -291,9 +311,11 @@ export function App() {
 
     try {
       const session = await getSession(membership.sessionId);
+      committedOptimisticStateKey.current = null;
       setRoomCode(session.session_id);
       setMyId(membership.playerId);
       setState(session.state ?? null);
+      setPendingBoardAction(null);
       setRouteSessionRow(session);
       setRouteSessionMissing(false);
       setSelected(null);
@@ -312,9 +334,11 @@ export function App() {
   };
 
   const leaveCurrentSession = () => {
+    committedOptimisticStateKey.current = null;
     setState(null);
     setMyId(null);
     setRoomCode("");
+    setPendingBoardAction(null);
     setSelected(null);
     setRouteSessionRow(null);
     setRouteSessionMissing(false);
@@ -427,9 +451,11 @@ export function App() {
 
     if (debugBoardEnabled) {
       const debugState = createDebugBoardState(gameRules, gamePieces);
+      committedOptimisticStateKey.current = null;
       setMyId(debugState.myId);
       setRoomCode(debugState.state.roomCode);
       setState(debugState.state);
+      setPendingBoardAction(null);
       setRouteSessionRow(null);
       setRouteSessionLoading(false);
       setRouteSessionMissing(false);
@@ -463,6 +489,8 @@ export function App() {
     const savedMembership = getStoredSessionMembership(routeSessionId);
 
     setRoomCode(routeSessionId);
+    committedOptimisticStateKey.current = null;
+    setPendingBoardAction(null);
     setSelected(null);
     setRouteSessionLoading(true);
     setRouteSessionMissing(false);
@@ -513,6 +541,15 @@ export function App() {
         [routeSessionId]: nextRow,
       }));
 
+      if (
+        pendingBoardAction &&
+        nextRow.state &&
+        serializeBoardActionState(nextRow.state) === pendingBoardAction.optimisticStateKey
+      ) {
+        committedOptimisticStateKey.current = pendingBoardAction.optimisticStateKey;
+        setPendingBoardAction(null);
+      }
+
       const membership = getStoredSessionMembership(routeSessionId);
       if (membership) {
         setMyId(membership.playerId);
@@ -524,7 +561,7 @@ export function App() {
     });
 
     return unsubscribe;
-  }, [debugBoardEnabled, routeSessionId]);
+  }, [debugBoardEnabled, pendingBoardAction, routeSessionId]);
 
   useEffect(() => {
     if (debugBoardEnabled || !isSupabaseMode || !roomCode || !myId) return;
@@ -554,6 +591,7 @@ export function App() {
 
     try {
       const session = await createInitiatedSession(currentProfile);
+      committedOptimisticStateKey.current = null;
       upsertStoredSessionMembership({
         sessionId: session.session_id,
         playerId: session.initiator_id,
@@ -565,6 +603,7 @@ export function App() {
       setRoomCode(session.session_id);
       setMyId(session.initiator_id);
       setState(null);
+      setPendingBoardAction(null);
       setRouteSessionRow(session);
       setRouteSessionMissing(false);
       setSelected(null);
@@ -603,6 +642,7 @@ export function App() {
 
     try {
       const joined = await joinAsChallenger(targetSessionId, currentProfile);
+      committedOptimisticStateKey.current = null;
       upsertStoredSessionMembership({
         sessionId: joined.row.session_id,
         playerId: joined.playerId,
@@ -614,6 +654,7 @@ export function App() {
       setRoomCode(joined.row.session_id);
       setMyId(joined.playerId);
       setState(joined.row.state ?? null);
+      setPendingBoardAction(null);
       setRouteSessionRow(joined.row);
       setRouteSessionMissing(false);
       setSelected(null);
@@ -638,8 +679,10 @@ export function App() {
         setSelected((current) =>
           current?.x === target.x && current.y === target.y ? null : target,
         );
-        setError(null);
+      } else if (selected) {
+        setSelected(null);
       }
+      setError(null);
       return;
     }
 
@@ -673,51 +716,87 @@ export function App() {
     }
 
     if (!legalTargets.some((move) => move.x === target.x && move.y === target.y)) {
+      setSelected(null);
+      setError(null);
+      return;
+    }
+
+    const previousState = state;
+    const previousSelection = selected;
+    const result = isSetupPhase
+      ? applySetupSwapToState(
+          previousState,
+          myId,
+          previousSelection,
+          target,
+          gameRules,
+          gamePieces,
+        )
+      : applyMoveToState(
+          previousState,
+          myId,
+          previousSelection,
+          target,
+          gameRules,
+          gamePieces,
+        );
+
+    if (result.error || !result.nextState) {
+      setError(result.error ?? "Action rejected.");
       return;
     }
 
     if (debugBoardEnabled) {
-      const result = isSetupPhase
-        ? applySetupSwapToState(
-            state,
-            myId,
-            selected,
-            target,
-            gameRules,
-            gamePieces,
-          )
-        : applyMoveToState(
-            state,
-            myId,
-            selected,
-            target,
-            gameRules,
-            gamePieces,
-          );
-
-      if (result.error || !result.nextState) {
-        setError(result.error ?? "Action rejected.");
-      } else {
-        setState(result.nextState);
-        setError("Debug board preview mode.");
-      }
-    } else {
-      try {
-        if (isSetupPhase) {
-          await applySupabaseSetupSwap(state.roomCode, myId, selected, target);
-        } else {
-          await applySupabaseMove(state.roomCode, myId, selected, target);
-        }
-      } catch (err) {
-        setError((err as Error).message);
-      }
+      setState(result.nextState);
+      setSelected(null);
+      setError("Debug board preview mode.");
+      return;
     }
 
+    const optimisticStateKey = serializeBoardActionState(result.nextState);
+    committedOptimisticStateKey.current = null;
+    setPendingBoardAction({
+      optimisticStateKey,
+      previousSelection,
+      previousState,
+    });
+    setState(result.nextState);
     setSelected(null);
+    setError(null);
+
+    try {
+      if (isSetupPhase) {
+        await applySupabaseSetupSwap(
+          previousState.roomCode,
+          myId,
+          previousSelection,
+          target,
+        );
+      } else {
+        await applySupabaseMove(
+          previousState.roomCode,
+          myId,
+          previousSelection,
+          target,
+        );
+      }
+      setPendingBoardAction(null);
+      committedOptimisticStateKey.current = null;
+    } catch (err) {
+      if (committedOptimisticStateKey.current === optimisticStateKey) {
+        committedOptimisticStateKey.current = null;
+        return;
+      }
+      committedOptimisticStateKey.current = null;
+      setPendingBoardAction(null);
+      setState(previousState);
+      setSelected(previousSelection);
+      setError((err as Error).message);
+    }
   };
 
   const markReady = async () => {
-    if (!state || !myId || state.phase !== "setup") return;
+    if (!state || !myId || state.phase !== "setup" || pendingBoardAction) return;
 
     if (debugBoardEnabled) {
       const result = markPlayerSetupReady(state, myId);
@@ -737,6 +816,72 @@ export function App() {
       setError(null);
     } catch (err) {
       setError((err as Error).message);
+    }
+  };
+
+  const sendChatMessage = async (message: string) => {
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage || !state || !myId) return;
+
+    const sender = state.players.find((player) => player.id === myId);
+    if (!sender) {
+      const nextError = "Unknown player.";
+      setError(nextError);
+      throw new Error(nextError);
+    }
+
+    const messageId = `${myId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const sentAt = new Date().toISOString();
+
+    if (debugBoardEnabled) {
+      setState((current) =>
+        current
+          ? appendChatMessage(current, {
+              id: messageId,
+              type: "player",
+              playerId: myId,
+              senderName: sender.name,
+              text: trimmedMessage,
+              sentAt,
+            })
+          : current,
+      );
+      setError("Debug board preview mode.");
+      return;
+    }
+
+    setState((current) =>
+      current
+        ? appendChatMessage(current, {
+            id: messageId,
+            type: "player",
+            playerId: myId,
+            senderName: sender.name,
+            text: trimmedMessage,
+            sentAt,
+          })
+        : current,
+    );
+
+    try {
+      await sendSupabaseChatMessage(state.roomCode, myId, trimmedMessage, {
+        messageId,
+        sentAt,
+      });
+      setError(null);
+    } catch (err) {
+      setState((current) =>
+        current
+          ? {
+              ...current,
+              chatMessages: current.chatMessages.filter(
+                (chatMessage) => chatMessage.id !== messageId,
+              ),
+            }
+          : current,
+      );
+      setError((err as Error).message);
+      throw err;
     }
   };
 
@@ -824,6 +969,7 @@ export function App() {
                   canMarkReady={
                     Boolean(myId) &&
                     state.phase === "setup" &&
+                    !pendingBoardAction &&
                     !state.setupReadyPlayerIds.includes(myId ?? "")
                   }
                   debugBoardEnabled={debugBoardEnabled}
@@ -831,11 +977,13 @@ export function App() {
                   legalTargets={legalTargets}
                   markReady={markReady}
                   myId={myId}
+                  pendingBoardAction={pendingBoardAction}
                   selectablePieceKeys={selectablePieceKeys}
                   selected={selected}
                   state={state}
                   leaveCurrentSession={leaveCurrentSession}
                   onCellClick={onCellClick}
+                  sendChatMessage={sendChatMessage}
                 />
               ) : (
                 <main className="session-access">
@@ -865,6 +1013,7 @@ export function App() {
                 canMarkReady={
                   Boolean(myId) &&
                   state?.phase === "setup" &&
+                  !pendingBoardAction &&
                   !state.setupReadyPlayerIds.includes(myId ?? "")
                 }
                 debugBoardEnabled={debugBoardEnabled}
@@ -872,11 +1021,13 @@ export function App() {
                 legalTargets={legalTargets}
                 markReady={markReady}
                 myId={myId}
+                pendingBoardAction={pendingBoardAction}
                 selectablePieceKeys={selectablePieceKeys}
                 selected={selected}
                 state={state!}
                 leaveCurrentSession={leaveCurrentSession}
                 onCellClick={onCellClick}
+                sendChatMessage={sendChatMessage}
               />
             ) : (
               <SessionAccessScreen
