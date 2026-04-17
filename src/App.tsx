@@ -122,10 +122,6 @@ export function App() {
     () => createDebugBoardState(gameRules, gamePieces).state,
     [],
   );
-  const pieceById = useMemo(
-    () => new Map(gamePieces.map((piece) => [piece.id, piece])),
-    [],
-  );
   const lastSyncedProfileKey = useRef<string | null>(null);
   const trimmedPlayerName = playerName.trim();
   const currentProfile = trimmedPlayerName
@@ -259,16 +255,15 @@ export function App() {
   }, [legacySessionId, navigate, routeSearch, routeSessionId]);
 
   useEffect(() => {
-    if (!state || !myId || !selected) return;
+    if (!state || !selected) return;
 
     const stillExists = state.units.some(
-      (unit) =>
-        unit.x === selected.x && unit.y === selected.y && unit.ownerId === myId,
+      (unit) => unit.x === selected.x && unit.y === selected.y,
     );
-    if (disabled || !stillExists) {
+    if (!stillExists) {
       setSelected(null);
     }
-  }, [disabled, myId, selected, state]);
+  }, [selected, state]);
 
   const refreshSavedSessions = async () => {
     const memberships = listStoredSessions();
@@ -631,10 +626,28 @@ export function App() {
   };
 
   const onCellClick = async (target: Position) => {
-    if (!state || !myId || disabled) return;
+    if (!state) return;
+
+    const clickedUnit = state.units.find(
+      (unit) => unit.x === target.x && unit.y === target.y,
+    );
+    const targetKey = `${target.x}-${target.y}`;
+
+    if (!myId || disabled) {
+      if (clickedUnit) {
+        setSelected((current) =>
+          current?.x === target.x && current.y === target.y ? null : target,
+        );
+        setError(null);
+      }
+      return;
+    }
 
     if (!selected) {
-      if (selectablePieceKeys.has(`${target.x}-${target.y}`)) {
+      if (selectablePieceKeys.has(targetKey)) {
+        setSelected(target);
+        setError(null);
+      } else if (clickedUnit) {
         setSelected(target);
         setError(null);
       }
@@ -646,10 +659,7 @@ export function App() {
       return;
     }
 
-    const mine = state.units.find(
-      (unit) =>
-        unit.x === target.x && unit.y === target.y && unit.ownerId === myId,
-    );
+    const mine = clickedUnit?.ownerId === myId ? clickedUnit : null;
     if (mine) {
       const isLegalSetupSwapTarget = legalTargets.some(
         (move) => move.x === target.x && move.y === target.y,
@@ -753,23 +763,17 @@ export function App() {
     setPlayerName((current) => generatePlayerName(current.trim() || undefined));
   };
 
-  const statusText =
-    state?.phase === "setup"
-      ? myId && state.setupReadyPlayerIds.includes(myId)
-        ? "Your deployment is locked in. Waiting for the opposing commander."
-        : `Swap pieces within your first ${gameRules.setupRowsPerPlayer} rows, then mark ready.`
-      : state?.lastBattle
-        ? `${pieceById.get(state.lastBattle.attackerPieceId)?.label ?? "Attacker"} vs ${pieceById.get(state.lastBattle.defenderPieceId)?.label ?? "Defender"} • ${state.lastBattle.winner.toUpperCase()}!`
-        : "Awaiting clash...";
-
   const showLiveGame =
     Boolean(routeSessionId) &&
     Boolean(routeMembership) &&
     roomCode === routeSessionId &&
     Boolean(state);
+  const isGameLayout =
+    showLiveGame ||
+    (debugBoardEnabled && location.pathname === GAME_ROUTE && Boolean(state));
 
   return (
-    <AppLayout error={error}>
+    <AppLayout error={error} mode={isGameLayout ? "game" : "default"}>
       <Routes>
         <Route
           path={DASHBOARD_ROUTE}
@@ -830,8 +834,6 @@ export function App() {
                   selectablePieceKeys={selectablePieceKeys}
                   selected={selected}
                   state={state}
-                  statusText={statusText}
-                  copySessionLink={copySessionLink}
                   leaveCurrentSession={leaveCurrentSession}
                   onCellClick={onCellClick}
                 />
@@ -873,8 +875,6 @@ export function App() {
                 selectablePieceKeys={selectablePieceKeys}
                 selected={selected}
                 state={state!}
-                statusText={statusText}
-                copySessionLink={copySessionLink}
                 leaveCurrentSession={leaveCurrentSession}
                 onCellClick={onCellClick}
               />

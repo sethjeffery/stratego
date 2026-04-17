@@ -40,6 +40,7 @@ type ProjectedBoardProps = {
   selectablePieceKeys?: Set<string>;
   disabled?: boolean;
   onCellClick?: (target: Position) => void | Promise<void>;
+  onPieceHover?: (position: Position | null) => void;
   interactive?: boolean;
   visibilityMode?: "player" | "all";
 };
@@ -54,6 +55,7 @@ export function ProjectedBoard({
   selectablePieceKeys = new Set<string>(),
   disabled = false,
   onCellClick,
+  onPieceHover,
   interactive = true,
   visibilityMode = "player",
 }: ProjectedBoardProps) {
@@ -162,6 +164,11 @@ export function ProjectedBoard({
                 (selected
                   ? isSelected || legalTargetKeys.has(`${unit.x}-${unit.y}`)
                   : selectablePieceKeys.has(`${unit.x}-${unit.y}`));
+              const isFriendlyClickable = !disabled && unit.ownerId === myId;
+              const isAttackTarget = !disabled && legalTargetKeys.has(`${unit.x}-${unit.y}`);
+              const isPieceInteractive = interactive;
+              const isPieceActionable =
+                interactive && (isFriendlyClickable || isAttackTarget);
               const pieceShellUrl =
                 pieceColor === "player-one" ? redPieceUrl : bluePieceUrl;
               const buttonStyle: CSSProperties = {
@@ -174,14 +181,16 @@ export function ProjectedBoard({
               return (
                 <button
                   key={unit.id}
-                  className={`piece-hit ${isSelectable ? "is-selectable" : ""} ${isSelected ? "is-selected" : ""}`}
+                  className={`piece-hit ${interactive ? "can-hover" : ""} ${isPieceActionable ? "is-interactive" : ""} ${isSelectable ? "is-selectable" : ""} ${isSelected ? "is-selected" : ""}`}
                   style={buttonStyle}
                   onClick={() =>
-                    interactive &&
-                    isSelectable &&
-                    onCellClick?.({ x: unit.x, y: unit.y })
+                    isPieceInteractive && onCellClick?.({ x: unit.x, y: unit.y })
                   }
-                  disabled={!interactive || !isSelectable}
+                  onMouseEnter={() => onPieceHover?.({ x: unit.x, y: unit.y })}
+                  onMouseLeave={() => onPieceHover?.(null)}
+                  onFocus={() => onPieceHover?.({ x: unit.x, y: unit.y })}
+                  onBlur={() => onPieceHover?.(null)}
+                  disabled={!interactive}
                   aria-label={piece?.label ?? unit.pieceId}
                 >
                   <span
