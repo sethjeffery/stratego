@@ -6,13 +6,6 @@
   margin: 0 auto;
 }
 
-.gameMode {
-  max-width: none;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
 .error {
   margin: var(--space-4);
   padding: var(--space-4) var(--space-5);

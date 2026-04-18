@@ -1,8 +1,3 @@
-export type PlayerProfile = {
-  playerName: string;
-  avatarId: string;
-};
-
 const avatarModules = import.meta.glob("../assets/avatars/*.png", {
   eager: true,
   import: "default",
@@ -18,9 +13,7 @@ export const avatarCatalog = Object.entries(avatarModules)
   })
   .sort((left, right) => left.id.localeCompare(right.id));
 
-const avatarUrlById = new Map(
-  avatarCatalog.map((avatar) => [avatar.id, avatar.url]),
-);
+const avatarUrlById = new Map(avatarCatalog.map((avatar) => [avatar.id, avatar.url]));
 
 const titles = [
   "Commander",
@@ -65,16 +58,13 @@ const surnames = [
   "Kestrel",
 ];
 
-const pickRandom = <T>(items: T[]) =>
-  items[Math.floor(Math.random() * items.length)];
-
-export const DEFAULT_AVATAR_ID = avatarCatalog[0]?.id ?? "char01";
+const pickRandom = <T>(items: T[]) => items[Math.floor(Math.random() * items.length)];
 
 export const resolveAvatarUrl = (avatarId?: string) =>
   avatarUrlById.get(avatarId ?? "") ?? avatarCatalog[0]?.url ?? "";
 
 export const pickRandomAvatarId = (exceptId?: string) => {
-  if (avatarCatalog.length === 0) return DEFAULT_AVATAR_ID;
+  if (avatarCatalog.length === 0) return "";
   if (avatarCatalog.length === 1) return avatarCatalog[0].id;
 
   let nextId = pickRandom(avatarCatalog).id;
@@ -97,10 +87,3 @@ export const generatePlayerName = (exceptName?: string) => {
 
   return nextName;
 };
-
-export const createRandomPlayerProfile = (
-  currentProfile?: Partial<PlayerProfile>,
-): PlayerProfile => ({
-  playerName: generatePlayerName(currentProfile?.playerName),
-  avatarId: pickRandomAvatarId(currentProfile?.avatarId),
-});

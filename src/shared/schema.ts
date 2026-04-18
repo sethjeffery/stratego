@@ -112,20 +112,20 @@ export type GameState = {
 };
 
 export const getChatMessages = (state: GameState) => {
-  const maybeMessages = (
-    state as GameState & { chatMessages?: GameChatMessage[] }
-  ).chatMessages;
+  const maybeMessages = (state as GameState & { chatMessages?: GameChatMessage[] })
+    .chatMessages;
   return Array.isArray(maybeMessages) ? maybeMessages : [];
 };
 
-export const normalizeGameState = (
-  state: GameState | null,
-): GameState | null => {
+export const normalizeGameState = (state: GameState | null): GameState | null => {
   if (!state) return null;
 
   const phase = (state as GameState & { phase?: string }).phase;
   const normalizedPhase =
-    phase === "setup" || phase === "battle" || phase === "finished" || phase === "closed"
+    phase === "setup" ||
+    phase === "battle" ||
+    phase === "finished" ||
+    phase === "closed"
       ? phase
       : "setup";
 
@@ -139,7 +139,8 @@ export const normalizeGameState = (
       (state as GameState & { surrenderedById?: string | null }).surrenderedById ??
       null,
     startedAt: (state as GameState & { startedAt?: string | null }).startedAt ?? null,
-    finishedAt: (state as GameState & { finishedAt?: string | null }).finishedAt ?? null,
+    finishedAt:
+      (state as GameState & { finishedAt?: string | null }).finishedAt ?? null,
     chatMessages: getChatMessages(state),
   };
 };

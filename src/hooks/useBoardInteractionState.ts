@@ -1,8 +1,9 @@
 import { useMemo } from "react";
+
 import { getLegalMovesForUnit, getSetupSwapTargets } from "../lib/engine";
 import { gamePieces, gameRules } from "../lib/gameConfig";
-import { GameState, Position } from "../shared/schema";
-import { PendingBoardAction } from "../types/ui";
+import type { GameState, Position } from "../shared/schema";
+import type { PendingBoardAction } from "../types/ui";
 
 type UseBoardInteractionStateArgs = {
   state: GameState | null;

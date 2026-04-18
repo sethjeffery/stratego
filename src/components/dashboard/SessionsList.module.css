@@ -1,0 +1,31 @@
+.emptyState {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.sessionSummary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.playerStrip {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.playerAvatar {
+  width: 40px;
+}
+
+.inlineActions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}

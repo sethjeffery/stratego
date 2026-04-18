@@ -167,11 +167,7 @@ input {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(
-      circle at top right,
-      rgba(255, 222, 133, 0.16),
-      transparent 38%
-    ),
+    radial-gradient(circle at top right, rgba(255, 222, 133, 0.16), transparent 38%),
     linear-gradient(135deg, rgba(88, 98, 71, 0.12), transparent 60%);
   pointer-events: none;
 }
@@ -258,8 +254,7 @@ input {
   text-transform: uppercase;
   border-color: rgba(245, 227, 173, 0.38);
   background:
-    linear-gradient(180deg, #a69058, #776133),
-    linear-gradient(180deg, #7b6b3f, #5c4e2f);
+    linear-gradient(180deg, #a69058, #776133), linear-gradient(180deg, #7b6b3f, #5c4e2f);
   box-shadow:
     inset 0 1px 0 rgba(255, 241, 198, 0.26),
     0 10px 24px rgba(0, 0, 0, 0.24);
@@ -1492,8 +1487,8 @@ input {
   }
   100% {
     opacity: 0;
-    transform: rotate(var(--impact-angle))
-      translateY(calc(var(--impact-distance) * -1)) scale(1);
+    transform: rotate(var(--impact-angle)) translateY(calc(var(--impact-distance) * -1))
+      scale(1);
   }
 }
 

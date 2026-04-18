@@ -1,0 +1,6 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll.ts": "always",
+    "source.organizeImports": "always"
+  }
+}

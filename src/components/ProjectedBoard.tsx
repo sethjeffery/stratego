@@ -1,15 +1,17 @@
-import { CSSProperties, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties} from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+
 import boardMapUrl from "../assets/map.png";
 import bluePieceUrl from "../assets/pieces/blue-piece.svg";
 import redPieceUrl from "../assets/pieces/red-piece.svg";
-import { pieceIconById } from "./board/pieceIcons";
-import {
+import type {
   GameState,
   PieceDefinition,
   Position,
   RulesConfig,
   Unit,
 } from "../shared/schema";
+import { pieceIconById } from "./board/pieceIcons";
 
 type BoardCell = {
   key: string;

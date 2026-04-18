@@ -1,80 +1,141 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ProjectedBoard } from "../components/ProjectedBoard";
-import { gamePieces, gameRules } from "../lib/gameConfig";
-import { resolveAvatarUrl } from "../lib/playerProfile";
-import { GameChatMessage, GameState, Position } from "../shared/schema";
+import { useNavigate } from "react-router-dom";
+
 import Avatar from "../components/Avatar";
 import { pieceIconById } from "../components/board/pieceIcons";
+import { ProjectedBoard } from "../components/ProjectedBoard";
+import { useBoardInteractionState } from "../hooks/useBoardInteractionState";
+import { useTouchSessionMembership } from "../hooks/useGameService";
+import { useCurrentUser } from "../hooks/useProfile";
+import {
+  applyMoveToState,
+  applySetupSwapToState,
+  createRematchState,
+  markPlayerSetupReady,
+} from "../lib/engine";
+import { gamePieces, gameRules } from "../lib/gameConfig";
+import { resolveAvatarUrl } from "../lib/playerProfile";
+import {
+  applyMove as applySessionMove,
+  applySetupSwap as applySessionSetupSwap,
+  closeFinishedGame as closeSessionFinishedGame,
+  markSetupReady as markSessionSetupReady,
+  resetFinishedGame as resetSessionFinishedGame,
+  sendChatMessage as sendSessionChatMessage,
+  type SessionRow,
+  surrenderGame as surrenderSessionGame,
+} from "../lib/supabaseGameService";
+import type { GameChatMessage, GameState, Position } from "../shared/schema";
+import type { PendingBoardAction } from "../types/ui";
+import { serializeBoardActionState } from "../types/ui";
 
 const pieceById = new Map(gamePieces.map((piece) => [piece.id, piece]));
+
 const getPlayerColorClass = (playerId: string, playerOneId: string | null) =>
   playerId === playerOneId ? "player-one" : "player-two";
 
-type GameScreenProps = {
-  archived: boolean;
-  canMarkReady: boolean;
-  debugBoardEnabled: boolean;
-  disabled: boolean;
-  legalTargets: Position[];
-  markReady: () => Promise<void>;
-  myId: string | null;
-  pendingBoardAction?: {
-    optimisticStateKey: string;
-    previousSelection: Position;
-    previousState: GameState;
-  } | null;
-  selectablePieceKeys: Set<string>;
-  selected: Position | null;
-  state: GameState;
-  leaveCurrentSession: () => void;
-  onCellClick: (target: Position) => Promise<void>;
-  onFinish: () => Promise<void>;
-  onPlayAgain: () => Promise<void>;
-  onSurrender: () => Promise<void>;
-  sendChatMessage: (message: string) => Promise<void>;
-};
-
-export function GameScreen({
-  archived,
-  canMarkReady,
-  debugBoardEnabled,
-  disabled,
-  leaveCurrentSession,
-  legalTargets,
-  markReady,
-  myId,
-  onCellClick,
-  onFinish,
-  onPlayAgain,
-  onSurrender,
-  pendingBoardAction = null,
-  selectablePieceKeys,
-  selected,
-  sendChatMessage,
-  state,
-}: GameScreenProps) {
+export function GameScreen({ session }: { session: SessionRow }) {
+  const navigate = useNavigate();
+  const { data: currentUser } = useCurrentUser();
+  const { trigger: touchSessionMembership } = useTouchSessionMembership();
+  const [state, setState] = useState<GameState | null>(session.state);
+  const [selected, setSelected] = useState<Position | null>(null);
   const [chatDraft, setChatDraft] = useState("");
   const [completionActionPending, setCompletionActionPending] = useState(false);
+  const [pendingBoardAction, setPendingBoardAction] =
+    useState<PendingBoardAction | null>(null);
   const [surrenderConfirmVisible, setSurrenderConfirmVisible] = useState(false);
   const [surrenderActionPending, setSurrenderActionPending] = useState(false);
   const chatInputRef = useRef<HTMLInputElement | null>(null);
   const chatStackRef = useRef<HTMLDivElement | null>(null);
+  const committedOptimisticStateKey = useRef<string | null>(null);
+
+  const myMembership =
+    session.memberships?.find(
+      (membership) => membership.device_id === currentUser?.device_id,
+    ) ?? null;
+  const myId = myMembership?.device_id ?? null;
+  const archived = Boolean(myMembership?.archived_at);
+  const currentMoveCount = state?.moveCount ?? null;
+
+  const { disabled, isSetupPhase, legalTargets, selectablePieceKeys } =
+    useBoardInteractionState({
+      state,
+      myId,
+      selected,
+      pendingBoardAction,
+      isCurrentSessionArchived: archived,
+    });
+
+  useEffect(() => {
+    setSelected(null);
+    setPendingBoardAction(null);
+    committedOptimisticStateKey.current = null;
+    setState(session.state);
+  }, [session.session_id, session.state]);
+
+  useEffect(() => {
+    if (!session.state) {
+      if (!pendingBoardAction) {
+        setState(null);
+      }
+      return;
+    }
+
+    if (
+      pendingBoardAction &&
+      serializeBoardActionState(session.state) ===
+        pendingBoardAction.optimisticStateKey
+    ) {
+      committedOptimisticStateKey.current = pendingBoardAction.optimisticStateKey;
+      setPendingBoardAction(null);
+    }
+
+    if (!pendingBoardAction) {
+      setState(session.state);
+    }
+  }, [pendingBoardAction, session.state, session.updated_at]);
+
+  useEffect(() => {
+    if (!state || !selected) return;
+
+    const stillExists = state.units.some(
+      (unit) => unit.x === selected.x && unit.y === selected.y,
+    );
+    if (!stillExists) {
+      setSelected(null);
+    }
+  }, [selected, state]);
+
+  useEffect(() => {
+    if (!session.session_id || !myMembership || currentMoveCount === null) return;
+    void touchSessionMembership(session.session_id).catch(() => undefined);
+  }, [currentMoveCount, myMembership, session.session_id, touchSessionMembership]);
+
+  const leaveCurrentSession = () => {
+    navigate("/");
+  };
+
+  const canMarkReady =
+    Boolean(myId) &&
+    state?.phase === "setup" &&
+    !pendingBoardAction &&
+    !archived &&
+    !state?.setupReadyPlayerIds.includes(myId ?? "");
   const otherPlayerName =
-    state.players.find((player) => player.id !== myId)?.name ?? "the opponent";
-  const isMyTurn = Boolean(myId && state.turnPlayerId === myId);
+    state?.players.find((player) => player.id !== myId)?.name ?? "the opponent";
+  const isMyTurn = Boolean(myId && state?.turnPlayerId === myId);
   const selectedUnit = selected
-    ? (state.units.find((unit) => unit.x === selected.x && unit.y === selected.y) ??
+    ? (state?.units.find((unit) => unit.x === selected.x && unit.y === selected.y) ??
       null)
     : null;
   const inspectedUnit = selectedUnit;
   const inspectedPiece = inspectedUnit
     ? (pieceById.get(inspectedUnit.pieceId) ?? null)
     : null;
-  const inspectedVisible =
-    Boolean(inspectedUnit) &&
-    (debugBoardEnabled ||
-      inspectedUnit?.ownerId === myId ||
-      inspectedUnit?.revealedTo.includes(myId ?? ""));
+  const inspectedVisible = inspectedUnit
+    ? inspectedUnit.ownerId === myId || inspectedUnit.revealedTo.includes(myId ?? "")
+    : false;
   const inspectedPieceTraits =
     inspectedVisible && inspectedPiece
       ? [
@@ -86,26 +147,27 @@ export function GameScreen({
       : [];
   const mainStatus = archived
     ? "This game is archived"
-    : state.winnerId
+    : state?.winnerId
       ? `${state.players.find((player) => player.id === state.winnerId)?.name ?? "Commander"} wins`
-      : state.phase === "setup"
+      : state?.phase === "setup"
         ? canMarkReady
           ? "Organize your army"
           : `Waiting on ${otherPlayerName}...`
         : isMyTurn
           ? "Your turn..."
           : `Waiting on ${otherPlayerName}...`;
-  const playerOneId = state.players[0]?.id ?? null;
-  const visibleChatMessages = useMemo(() => state.chatMessages, [state]);
-  const canSendChat = Boolean(myId) && !archived && !state.winnerId;
-  const winner = state.players.find((player) => player.id === state.winnerId) ?? null;
-  const completionVisible = state.phase === "finished" && Boolean(winner);
-  const isClosed = state.phase === "closed";
+  const playerOneId = state?.players[0]?.id ?? null;
+  const visibleChatMessages = useMemo(() => state?.chatMessages ?? [], [state?.chatMessages]);
+  const canSendChat = Boolean(myId) && !archived && !state?.winnerId;
+  const winner =
+    state?.players.find((player) => player.id === state.winnerId) ?? null;
+  const completionVisible = state?.phase === "finished" && Boolean(winner);
+  const isClosed = state?.phase === "closed";
   const surrenderedPlayer =
-    state.players.find((player) => player.id === state.surrenderedById) ?? null;
+    state?.players.find((player) => player.id === state.surrenderedById) ?? null;
 
   const completionStats = useMemo(() => {
-    const battleMessages = state.chatMessages.filter(
+    const battleMessages = (state?.chatMessages ?? []).filter(
       (message) => message.type === "battle" && message.battle,
     );
 
@@ -115,8 +177,8 @@ export function GameScreen({
     >();
 
     battleMessages.forEach((message) => {
-      const battle = message.battle!;
-      if (battle.winner === "both") return;
+      const battle = message.battle;
+      if (!battle || battle.winner === "both") return;
 
       const killerPieceId =
         battle.winner === "attacker" ? battle.attackerPieceId : battle.defenderPieceId;
@@ -144,10 +206,10 @@ export function GameScreen({
 
     const mvp =
       [...killsByPiece.values()].sort(
-        (a, b) => b.score - a.score || b.value - a.value,
+        (left, right) => right.score - left.score || right.value - left.value,
       )[0] ?? null;
-    const startTime = state.startedAt ? new Date(state.startedAt) : null;
-    const endTime = state.finishedAt ? new Date(state.finishedAt) : null;
+    const startTime = state?.startedAt ? new Date(state.startedAt) : null;
+    const endTime = state?.finishedAt ? new Date(state.finishedAt) : null;
     const matchTimeMs =
       startTime && endTime
         ? Math.max(0, endTime.getTime() - startTime.getTime())
@@ -158,7 +220,7 @@ export function GameScreen({
       battleCount: battleMessages.length,
       matchTimeMs,
     };
-  }, [state.chatMessages, state.finishedAt, state.startedAt]);
+  }, [state?.chatMessages, state?.finishedAt, state?.startedAt]);
 
   const formatDuration = (durationMs: number | null) => {
     if (durationMs === null) return "Unknown";
@@ -169,18 +231,18 @@ export function GameScreen({
   };
 
   const completionTitle =
-    state.completionReason === "surrender" && surrenderedPlayer
+    state?.completionReason === "surrender" && surrenderedPlayer
       ? `${surrenderedPlayer.name} surrendered`
       : `${winner?.name ?? "Commander"} wins!`;
 
   const completionDescription =
-    state.completionReason === "surrender"
+    state?.completionReason === "surrender"
       ? `${surrenderedPlayer?.name ?? "A player"} surrendered.`
       : "Flag secured. Match complete.";
 
   useEffect(() => {
     setChatDraft("");
-  }, [state.roomCode]);
+  }, [state?.roomCode]);
 
   useEffect(() => {
     const chatStack = chatStackRef.current;
@@ -188,6 +250,252 @@ export function GameScreen({
 
     chatStack.scrollTop = chatStack.scrollHeight;
   }, [visibleChatMessages]);
+
+  if (!state) {
+    return (
+      <main className="session-access">
+        <section className="session-status-card card">
+          <p className="eyebrow">Preparing Match</p>
+          <h1>Session {session.session_id}</h1>
+          <p>Waiting for both players to be ready.</p>
+          <button className="secondary-button" onClick={leaveCurrentSession}>
+            Back To Dashboard
+          </button>
+        </section>
+      </main>
+    );
+  }
+
+  const onCellClick = async (target: Position) => {
+    const clickedUnit = state.units.find(
+      (unit) => unit.x === target.x && unit.y === target.y,
+    );
+    const targetKey = `${target.x}-${target.y}`;
+
+    if (!myId || disabled) {
+      if (clickedUnit) {
+        setSelected((current) =>
+          current?.x === target.x && current.y === target.y ? null : target,
+        );
+      } else if (selected) {
+        setSelected(null);
+      }
+      return;
+    }
+
+    if (!selected) {
+      if (selectablePieceKeys.has(targetKey) || clickedUnit) {
+        setSelected(target);
+      }
+      return;
+    }
+
+    if (selected.x === target.x && selected.y === target.y) {
+      setSelected(null);
+      return;
+    }
+
+    const mine = clickedUnit?.ownerId === myId ? clickedUnit : null;
+    if (mine) {
+      const isLegalSetupSwapTarget = legalTargets.some(
+        (move) => move.x === target.x && move.y === target.y,
+      );
+
+      if (!isSetupPhase || !isLegalSetupSwapTarget) {
+        setSelected(target);
+        return;
+      }
+    }
+
+    if (!legalTargets.some((move) => move.x === target.x && move.y === target.y)) {
+      setSelected(null);
+      return;
+    }
+
+    const previousState = state;
+    const previousSelection = selected;
+    const result = isSetupPhase
+      ? applySetupSwapToState(
+          previousState,
+          myId,
+          previousSelection,
+          target,
+          gameRules,
+          gamePieces,
+        )
+      : applyMoveToState(
+          previousState,
+          myId,
+          previousSelection,
+          target,
+          gameRules,
+          gamePieces,
+        );
+
+    if (result.error || !result.nextState) {
+      return;
+    }
+
+    const optimisticStateKey = serializeBoardActionState(result.nextState);
+    committedOptimisticStateKey.current = null;
+    setPendingBoardAction({
+      optimisticStateKey,
+      previousSelection,
+      previousState,
+    });
+    setState(result.nextState);
+    setSelected(null);
+
+    try {
+      const nextState = isSetupPhase
+        ? await applySessionSetupSwap(
+            previousState.roomCode,
+            myId,
+            previousSelection,
+            target,
+          )
+        : await applySessionMove(previousState.roomCode, myId, previousSelection, target);
+
+      setPendingBoardAction(null);
+      committedOptimisticStateKey.current = null;
+      setState(nextState);
+    } catch {
+      if (committedOptimisticStateKey.current === optimisticStateKey) {
+        committedOptimisticStateKey.current = null;
+        return;
+      }
+      committedOptimisticStateKey.current = null;
+      setPendingBoardAction(null);
+      setState(previousState);
+      setSelected(previousSelection);
+    }
+  };
+
+  const markReady = async () => {
+    if (!canMarkReady || !myId) return;
+
+    const result = markPlayerSetupReady(state, myId);
+    if (result.nextState) {
+      setState(result.nextState);
+      setSelected(null);
+    }
+
+    try {
+      const nextState = await markSessionSetupReady(state.roomCode, myId);
+      setState(nextState);
+      setSelected(null);
+    } catch {
+      setState(state);
+    }
+  };
+
+  const onPlayAgain = async () => {
+    if (!myId || state.phase !== "finished") return;
+
+    const nextState = createRematchState(state, gameRules, gamePieces);
+    setState(nextState);
+    setSelected(null);
+
+    try {
+      const serverState = await resetSessionFinishedGame(state.roomCode, myId);
+      setState(serverState);
+    } catch {
+      setState(state);
+    }
+  };
+
+  const onFinish = async () => {
+    if (!myId || state.phase !== "finished") return;
+
+    const nextState = {
+      ...state,
+      phase: "closed" as const,
+      turnPlayerId: null,
+    };
+    setState(nextState);
+    setSelected(null);
+
+    try {
+      const serverState = await closeSessionFinishedGame(state.roomCode, myId);
+      setState(serverState);
+    } catch {
+      setState(state);
+    }
+  };
+
+  const onSurrender = async () => {
+    if (!myId || pendingBoardAction) return;
+    if (state.phase === "finished" || state.phase === "closed") return;
+
+    const winnerAfterSurrender = state.players.find((player) => player.id !== myId);
+    const nextState = {
+      ...state,
+      phase: "finished" as const,
+      turnPlayerId: null,
+      winnerId: winnerAfterSurrender?.id ?? null,
+      completionReason: "surrender" as const,
+      surrenderedById: myId,
+      finishedAt: new Date().toISOString(),
+    };
+    setState(nextState);
+    setSelected(null);
+
+    try {
+      const serverState = await surrenderSessionGame(state.roomCode, myId);
+      setState(serverState);
+    } catch {
+      setState(state);
+    }
+  };
+
+  const sendChatMessage = async (message: string) => {
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage || !myId) return;
+
+    const sender = state.players.find((player) => player.id === myId);
+    if (!sender) return;
+
+    const messageId = `${myId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const sentAt = new Date().toISOString();
+
+    setState((current) =>
+      current
+        ? {
+            ...current,
+            chatMessages: [
+              ...current.chatMessages,
+              {
+                id: messageId,
+                type: "player",
+                playerId: myId,
+                senderName: sender.name,
+                text: trimmedMessage,
+                sentAt,
+              },
+            ],
+          }
+        : current,
+    );
+
+    try {
+      await sendSessionChatMessage(state.roomCode, myId, trimmedMessage, {
+        messageId,
+        sentAt,
+      });
+    } catch {
+      setState((current) =>
+        current
+          ? {
+              ...current,
+              chatMessages: current.chatMessages.filter(
+                (chatMessage) => chatMessage.id !== messageId,
+              ),
+            }
+          : current,
+      );
+      throw new Error("Could not send message.");
+    }
+  };
 
   const handleChatSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -331,9 +639,7 @@ export function GameScreen({
               onClick={() => setSurrenderConfirmVisible(true)}
               aria-label="Surrender"
               title="Surrender"
-              disabled={
-                archived || state.phase === "finished" || state.phase === "closed"
-              }
+              disabled={archived || state.phase === "finished" || state.phase === "closed"}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path
@@ -399,42 +705,40 @@ export function GameScreen({
 
           <section className="game-piece-panel">
             {inspectedUnit ? (
-              <>
-                <div className="game-piece-hero">
-                  <div className="game-piece-icon" aria-hidden="true">
-                    {inspectedVisible && inspectedPiece ? (
-                      pieceIconById[inspectedPiece.id] ? (
-                        <img src={pieceIconById[inspectedPiece.id]} alt="" />
-                      ) : (
-                        inspectedPiece.label.slice(0, 2)
-                      )
+              <div className="game-piece-hero">
+                <div className="game-piece-icon" aria-hidden="true">
+                  {inspectedVisible && inspectedPiece ? (
+                    pieceIconById[inspectedPiece.id] ? (
+                      <img src={pieceIconById[inspectedPiece.id]} alt="" />
                     ) : (
-                      "?"
-                    )}
-                  </div>
-                  <div className="game-piece-copy">
-                    <strong>
-                      {inspectedVisible && inspectedPiece
-                        ? inspectedPiece.label
-                        : "Unknown unit"}
-                    </strong>
-                    {inspectedVisible && inspectedPiece && (
-                      <>
-                        <p>Rank {inspectedPiece.rank}</p>
-                        {inspectedPieceTraits.map((trait) => (
-                          <div className="game-piece-trait" key={trait}>
-                            {trait}
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </div>
+                      inspectedPiece.label.slice(0, 2)
+                    )
+                  ) : (
+                    "?"
+                  )}
                 </div>
-              </>
+                <div className="game-piece-copy">
+                  <strong>
+                    {inspectedVisible && inspectedPiece
+                      ? inspectedPiece.label
+                      : "Unknown unit"}
+                  </strong>
+                  {inspectedVisible && inspectedPiece && (
+                    <>
+                      <p>Rank {inspectedPiece.rank}</p>
+                      {inspectedPieceTraits.map((trait) => (
+                        <div className="game-piece-trait" key={trait}>
+                          {trait}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </div>
             ) : null}
           </section>
 
-          {canMarkReady && !debugBoardEnabled && (
+          {canMarkReady && (
             <button className="game-ready-button" onClick={() => void markReady()}>
               Ready
             </button>
@@ -448,7 +752,7 @@ export function GameScreen({
                 Open channel. Keep it brief and tactical.
               </p>
             ) : (
-              visibleChatMessages.map((message, index) => {
+              visibleChatMessages.map((message) => {
                 if (message.type === "battle") {
                   return renderBattleMessage(message);
                 }

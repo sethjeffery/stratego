@@ -1,4 +1,4 @@
-import { GameState, Position } from "../shared/schema";
+import type { GameState, Position } from "../shared/schema";
 
 export type PendingBoardAction = {
   optimisticStateKey: string;

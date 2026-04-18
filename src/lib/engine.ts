@@ -1,18 +1,33 @@
-import { nanoid } from 'nanoid';
-import { appendChatMessage, GameState, PieceDefinition, PlayerState, Position, RulesConfig, Unit } from '../shared/schema';
-import { DEFAULT_AVATAR_ID, PlayerProfile } from './playerProfile';
+import { nanoid } from "nanoid";
 
-const buildPieceMap = (pieces: PieceDefinition[]) => new Map(pieces.map((piece) => [piece.id, piece]));
+import type {
+  GameState,
+  PieceDefinition,
+  PlayerState,
+  Position,
+  RulesConfig,
+  Unit,
+} from "../shared/schema";
+import { appendChatMessage } from "../shared/schema";
+import { pickRandomAvatarId } from "./playerProfile";
+import type { UserProfile } from "./supabaseGameService";
+
+const buildPieceMap = (pieces: PieceDefinition[]) =>
+  new Map(pieces.map((piece) => [piece.id, piece]));
 
 const inBounds = (p: Position, rules: RulesConfig) =>
   p.x >= 0 && p.x < rules.board.width && p.y >= 0 && p.y < rules.board.height;
 
-const blockedSet = (rules: RulesConfig) => new Set(rules.board.blockedCells.map((c) => `${c.x},${c.y}`));
+const blockedSet = (rules: RulesConfig) =>
+  new Set(rules.board.blockedCells.map((c) => `${c.x},${c.y}`));
 const revealUnitToPlayers = (unit: Unit, players: PlayerState[]) => {
-  unit.revealedTo = Array.from(new Set([...unit.revealedTo, ...players.map((player) => player.id)]));
+  unit.revealedTo = Array.from(
+    new Set([...unit.revealedTo, ...players.map((player) => player.id)]),
+  );
 };
 
-const moveDistance = (from: Position, to: Position) => Math.abs(from.x - to.x) + Math.abs(from.y - to.y);
+const moveDistance = (from: Position, to: Position) =>
+  Math.abs(from.x - to.x) + Math.abs(from.y - to.y);
 
 const directions: Position[] = [
   { x: 1, y: 0 },
@@ -21,7 +36,11 @@ const directions: Position[] = [
   { x: 0, y: -1 },
 ];
 
-const toAbsoluteSetupPosition = (position: Position, fromTop: boolean, rules: RulesConfig): Position => ({
+const toAbsoluteSetupPosition = (
+  position: Position,
+  fromTop: boolean,
+  rules: RulesConfig,
+): Position => ({
   x: position.x,
   y: fromTop ? position.y : rules.board.height - 1 - position.y,
 });
@@ -67,13 +86,21 @@ const createLineup = (
     }
 
     fixedPositions.forEach((relativePosition) => {
-      const absolutePosition = toAbsoluteSetupPosition(relativePosition, fromTop, rules);
+      const absolutePosition = toAbsoluteSetupPosition(
+        relativePosition,
+        fromTop,
+        rules,
+      );
       const key = `${absolutePosition.x},${absolutePosition.y}`;
       if (!availableSlots.has(key)) {
-        throw new Error(`Piece '${piece.id}' fixed position (${absolutePosition.x},${absolutePosition.y}) is invalid.`);
+        throw new Error(
+          `Piece '${piece.id}' fixed position (${absolutePosition.x},${absolutePosition.y}) is invalid.`,
+        );
       }
       if (claimed.has(key)) {
-        throw new Error(`Two pieces are configured to use setup position (${absolutePosition.x},${absolutePosition.y}).`);
+        throw new Error(
+          `Two pieces are configured to use setup position (${absolutePosition.x},${absolutePosition.y}).`,
+        );
       }
       claimed.add(key);
       units.push({
@@ -92,7 +119,7 @@ const createLineup = (
 
   const freeSlots = slots.filter((slot) => !claimed.has(`${slot.x},${slot.y}`));
   if (bag.length > freeSlots.length) {
-    throw new Error('Piece counts exceed available setup cells.');
+    throw new Error("Piece counts exceed available setup cells.");
   }
 
   const shuffledSlots = [...freeSlots].sort(() => Math.random() - 0.5);
@@ -114,27 +141,27 @@ const resolveBattle = (
   defender: Unit,
   pieceById: Map<string, PieceDefinition>,
   rules: RulesConfig,
-): 'attacker' | 'defender' | 'both' => {
+): "attacker" | "defender" | "both" => {
   const a = pieceById.get(attacker.pieceId)!;
   const d = pieceById.get(defender.pieceId)!;
 
-  if (d.id === rules.attack.flagId) return 'attacker';
-  if (d.id === rules.attack.bombId) return a.canDefuseBomb ? 'attacker' : 'defender';
-  if (a.id === rules.attack.spyId && d.id === rules.attack.marshalId) return 'attacker';
+  if (d.id === rules.attack.flagId) return "attacker";
+  if (d.id === rules.attack.bombId) return a.canDefuseBomb ? "attacker" : "defender";
+  if (a.id === rules.attack.spyId && d.id === rules.attack.marshalId) return "attacker";
 
-  if (a.rank > d.rank) return 'attacker';
-  if (a.rank < d.rank) return 'defender';
-  return 'both';
+  if (a.rank > d.rank) return "attacker";
+  if (a.rank < d.rank) return "defender";
+  return "both";
 };
 
 const createBattleChatMessage = (
   state: GameState,
   attacker: Unit,
   defender: Unit,
-  winner: 'attacker' | 'defender' | 'both',
+  winner: "attacker" | "defender" | "both",
 ) => ({
   id: `system-battle-${state.moveCount + 1}`,
-  type: 'battle' as const,
+  type: "battle" as const,
   sentAt: new Date().toISOString(),
   battle: {
     attackerOwnerId: attacker.ownerId,
@@ -146,8 +173,8 @@ const createBattleChatMessage = (
 });
 
 export const createSessionGame = (
-  initiatorProfile: PlayerProfile,
-  challengerProfile: PlayerProfile,
+  initiatorProfile: UserProfile,
+  challengerProfile: UserProfile,
   rules: RulesConfig,
   pieces: PieceDefinition[],
   playerIds?: { initiatorId: string; challengerId: string },
@@ -158,14 +185,14 @@ export const createSessionGame = (
   const players: PlayerState[] = [
     {
       id: initiatorId,
-      name: initiatorProfile.playerName,
-      avatarId: initiatorProfile.avatarId,
+      name: initiatorProfile.player_name,
+      avatarId: initiatorProfile.avatar_id,
       connected: true,
     },
     {
       id: challengerId,
-      name: challengerProfile.playerName,
-      avatarId: challengerProfile.avatarId,
+      name: challengerProfile.player_name,
+      avatarId: challengerProfile.avatar_id,
       connected: true,
     },
   ];
@@ -174,9 +201,9 @@ export const createSessionGame = (
     initiatorId,
     challengerId,
     state: {
-      roomCode: '',
-      phase: 'setup',
-      completionReason: 'flag_capture',
+      roomCode: "",
+      phase: "setup",
+      completionReason: "flag_capture",
       surrenderedById: null,
       setupReadyPlayerIds: [],
       turnPlayerId: null,
@@ -184,17 +211,26 @@ export const createSessionGame = (
       startedAt: null,
       finishedAt: null,
       players,
-      units: [...createLineup(players[0].id, false, rules, pieces), ...createLineup(players[1].id, true, rules, pieces)],
+      units: [
+        ...createLineup(players[0].id, false, rules, pieces),
+        ...createLineup(players[1].id, true, rules, pieces),
+      ],
       moveCount: 0,
       chatMessages: [],
     },
   };
 };
 
-const getSetupRowsForPlayer = (playerId: string, state: GameState, rules: RulesConfig) => {
+const getSetupRowsForPlayer = (
+  playerId: string,
+  state: GameState,
+  rules: RulesConfig,
+) => {
   const isTop = state.players[1]?.id === playerId;
   const startY = isTop ? 0 : rules.board.height - rules.setupRowsPerPlayer;
-  return new Set(Array.from({ length: rules.setupRowsPerPlayer }, (_, index) => startY + index));
+  return new Set(
+    Array.from({ length: rules.setupRowsPerPlayer }, (_, index) => startY + index),
+  );
 };
 
 const getUnitSequenceNumber = (unitId: string) => {
@@ -217,12 +253,14 @@ export const getSetupSwapTargets = (
   rules: RulesConfig,
   pieces: PieceDefinition[],
 ): Position[] => {
-  if (state.phase !== 'setup' || state.winnerId) return [];
+  if (state.phase !== "setup" || state.winnerId) return [];
   if (state.setupReadyPlayerIds.includes(playerId)) return [];
 
   const pieceById = buildPieceMap(pieces);
   const setupRows = getSetupRowsForPlayer(playerId, state, rules);
-  const sourceUnit = state.units.find((unit) => unit.ownerId === playerId && unit.x === from.x && unit.y === from.y);
+  const sourceUnit = state.units.find(
+    (unit) => unit.ownerId === playerId && unit.x === from.x && unit.y === from.y,
+  );
   if (!sourceUnit) return [];
 
   const sourcePiece = pieceById.get(sourceUnit.pieceId);
@@ -247,17 +285,25 @@ export const applySetupSwapToState = (
   rules: RulesConfig,
   pieces: PieceDefinition[],
 ): { nextState?: GameState; error?: string } => {
-  if (state.phase !== 'setup') return { error: 'Setup is complete.' };
-  if (state.setupReadyPlayerIds.includes(playerId)) return { error: 'You are already marked ready.' };
+  if (state.phase !== "setup") return { error: "Setup is complete." };
+  if (state.setupReadyPlayerIds.includes(playerId))
+    return { error: "You are already marked ready." };
 
   const legalTargets = getSetupSwapTargets(state, playerId, from, rules, pieces);
   if (!legalTargets.some((target) => target.x === to.x && target.y === to.y)) {
-    return { error: 'Invalid setup swap.' };
+    return { error: "Invalid setup swap." };
   }
 
-  const source = state.units.find((unit) => unit.ownerId === playerId && unit.x === from.x && unit.y === from.y)!;
-  const destination = state.units.find((unit) => unit.ownerId === playerId && unit.x === to.x && unit.y === to.y)!;
-  const nextUnits = state.units.map((unit) => ({ ...unit, revealedTo: [...unit.revealedTo] }));
+  const source = state.units.find(
+    (unit) => unit.ownerId === playerId && unit.x === from.x && unit.y === from.y,
+  )!;
+  const destination = state.units.find(
+    (unit) => unit.ownerId === playerId && unit.x === to.x && unit.y === to.y,
+  )!;
+  const nextUnits = state.units.map((unit) => ({
+    ...unit,
+    revealedTo: [...unit.revealedTo],
+  }));
   const nextSource = nextUnits.find((unit) => unit.id === source.id)!;
   const nextDestination = nextUnits.find((unit) => unit.id === destination.id)!;
 
@@ -279,19 +325,24 @@ export const markPlayerSetupReady = (
   state: GameState,
   playerId: string,
 ): { nextState?: GameState; error?: string } => {
-  if (state.phase !== 'setup') return { error: 'Setup is complete.' };
-  if (!state.players.some((player) => player.id === playerId)) return { error: 'Unknown player.' };
+  if (state.phase !== "setup") return { error: "Setup is complete." };
+  if (!state.players.some((player) => player.id === playerId))
+    return { error: "Unknown player." };
   if (state.setupReadyPlayerIds.includes(playerId)) return { nextState: state };
 
   const nextReady = [...state.setupReadyPlayerIds, playerId];
-  const everyoneReady = state.players.length > 0 && state.players.every((player) => nextReady.includes(player.id));
+  const everyoneReady =
+    state.players.length > 0 &&
+    state.players.every((player) => nextReady.includes(player.id));
 
   return {
     nextState: {
       ...state,
       setupReadyPlayerIds: nextReady,
-      phase: everyoneReady ? 'battle' : 'setup',
-      turnPlayerId: everyoneReady ? state.players[Math.floor(Math.random() * state.players.length)]?.id ?? null : null,
+      phase: everyoneReady ? "battle" : "setup",
+      turnPlayerId: everyoneReady
+        ? (state.players[Math.floor(Math.random() * state.players.length)]?.id ?? null)
+        : null,
       startedAt: everyoneReady ? new Date().toISOString() : state.startedAt,
       finishedAt: everyoneReady ? null : state.finishedAt,
     },
@@ -306,19 +357,23 @@ export const applyMoveToState = (
   rules: RulesConfig,
   pieces: PieceDefinition[],
 ): { nextState?: GameState; error?: string } => {
-  if (state.phase !== 'battle') return { error: 'Battle has not started yet.' };
-  if (state.winnerId) return { error: 'Game already finished.' };
-  if (state.turnPlayerId !== playerId) return { error: 'Not your turn.' };
+  if (state.phase !== "battle") return { error: "Battle has not started yet." };
+  if (state.winnerId) return { error: "Game already finished." };
+  if (state.turnPlayerId !== playerId) return { error: "Not your turn." };
 
   const blocked = blockedSet(rules);
-  if (!inBounds(from, rules) || !inBounds(to, rules) || blocked.has(`${to.x},${to.y}`)) {
-    return { error: 'Invalid target cell.' };
+  if (
+    !inBounds(from, rules) ||
+    !inBounds(to, rules) ||
+    blocked.has(`${to.x},${to.y}`)
+  ) {
+    return { error: "Invalid target cell." };
   }
 
   const nextState: GameState = {
     ...state,
     phase: state.phase,
-    completionReason: state.completionReason ?? 'flag_capture',
+    completionReason: state.completionReason ?? "flag_capture",
     surrenderedById: state.surrenderedById ?? null,
     setupReadyPlayerIds: [...state.setupReadyPlayerIds],
     units: state.units.map((u) => ({ ...u, revealedTo: [...u.revealedTo] })),
@@ -326,18 +381,23 @@ export const applyMoveToState = (
   };
 
   const pieceById = buildPieceMap(pieces);
-  const moving = nextState.units.find((u) => u.x === from.x && u.y === from.y && u.ownerId === playerId);
-  if (!moving) return { error: 'No controllable unit at source.' };
+  const moving = nextState.units.find(
+    (u) => u.x === from.x && u.y === from.y && u.ownerId === playerId,
+  );
+  if (!moving) return { error: "No controllable unit at source." };
 
   const movingPiece = pieceById.get(moving.pieceId)!;
   if (movingPiece.immovable) return { error: `${movingPiece.label} cannot move.` };
   const legalMoves = getLegalMovesForUnit(state, playerId, from, rules, pieces);
   if (!legalMoves.some((move) => move.x === to.x && move.y === to.y)) {
-    return { error: 'Illegal movement vector.' };
+    return { error: "Illegal movement vector." };
   }
 
-  const defender = nextState.units.find((u) => u.x === to.x && u.y === to.y && u.ownerId !== playerId);
-  const movementProvesIdentity = movingPiece.canTraverseMany && moveDistance(from, to) > 1;
+  const defender = nextState.units.find(
+    (u) => u.x === to.x && u.y === to.y && u.ownerId !== playerId,
+  );
+  const movementProvesIdentity =
+    movingPiece.canTraverseMany && moveDistance(from, to) > 1;
 
   if (!defender) {
     if (movementProvesIdentity) revealUnitToPlayers(moving, nextState.players);
@@ -349,15 +409,17 @@ export const applyMoveToState = (
     revealUnitToPlayers(defender, nextState.players);
     const winner = resolveBattle(moving, defender, pieceById, rules);
 
-    if (winner === 'attacker') {
+    if (winner === "attacker") {
       if (defender.pieceId === rules.attack.flagId) nextState.winnerId = playerId;
       nextState.units = nextState.units.filter((u) => u.id !== defender.id);
       moving.x = to.x;
       moving.y = to.y;
-    } else if (winner === 'defender') {
+    } else if (winner === "defender") {
       nextState.units = nextState.units.filter((u) => u.id !== moving.id);
     } else {
-      nextState.units = nextState.units.filter((u) => u.id !== moving.id && u.id !== defender.id);
+      nextState.units = nextState.units.filter(
+        (u) => u.id !== moving.id && u.id !== defender.id,
+      );
     }
 
     nextState.lastBattle = {
@@ -366,27 +428,32 @@ export const applyMoveToState = (
       defenderPieceId: defender.pieceId,
       winner,
       winnerOwnerId:
-        winner === 'attacker'
+        winner === "attacker"
           ? playerId
-          : winner === 'defender'
+          : winner === "defender"
             ? defender.ownerId
             : null,
     };
     Object.assign(
       nextState,
-      appendChatMessage(nextState, createBattleChatMessage(state, moving, defender, winner)),
+      appendChatMessage(
+        nextState,
+        createBattleChatMessage(state, moving, defender, winner),
+      ),
     );
   }
 
   nextState.moveCount += 1;
-  const alivePlayers = nextState.players.filter((player) => nextState.units.some((u) => u.ownerId === player.id));
+  const alivePlayers = nextState.players.filter((player) =>
+    nextState.units.some((u) => u.ownerId === player.id),
+  );
   if (alivePlayers.length === 1) nextState.winnerId = alivePlayers[0].id;
 
   const nextPlayer = nextState.players.find((p) => p.id !== playerId);
-  nextState.turnPlayerId = nextState.winnerId ? null : nextPlayer?.id ?? null;
+  nextState.turnPlayerId = nextState.winnerId ? null : (nextPlayer?.id ?? null);
   if (nextState.winnerId) {
-    nextState.phase = 'finished';
-    nextState.completionReason = 'flag_capture';
+    nextState.phase = "finished";
+    nextState.completionReason = "flag_capture";
     nextState.surrenderedById = null;
     nextState.finishedAt = new Date().toISOString();
   }
@@ -400,17 +467,17 @@ export const createRematchState = (
   pieces: PieceDefinition[],
 ): GameState => {
   if (state.players.length < 2) {
-    throw new Error('Cannot reset without both players.');
+    throw new Error("Cannot reset without both players.");
   }
 
   const next = createSessionGame(
     {
-      playerName: state.players[0].name,
-      avatarId: state.players[0].avatarId ?? DEFAULT_AVATAR_ID,
+      player_name: state.players[0].name,
+      avatar_id: state.players[0].avatarId ?? pickRandomAvatarId(),
     },
     {
-      playerName: state.players[1].name,
-      avatarId: state.players[1].avatarId ?? DEFAULT_AVATAR_ID,
+      player_name: state.players[1].name,
+      avatar_id: state.players[1].avatarId ?? pickRandomAvatarId(),
     },
     rules,
     pieces,
@@ -430,14 +497,16 @@ export const getLegalMovesForUnit = (
   rules: RulesConfig,
   pieces: PieceDefinition[],
 ): Position[] => {
-  if (state.phase !== 'battle') return [];
+  if (state.phase !== "battle") return [];
   if (state.winnerId) return [];
 
   const blocked = blockedSet(rules);
   if (!inBounds(from, rules) || blocked.has(`${from.x},${from.y}`)) return [];
 
   const pieceById = buildPieceMap(pieces);
-  const moving = state.units.find((u) => u.x === from.x && u.y === from.y && u.ownerId === playerId);
+  const moving = state.units.find(
+    (u) => u.x === from.x && u.y === from.y && u.ownerId === playerId,
+  );
   if (!moving) return [];
 
   const movingPiece = pieceById.get(moving.pieceId);
@@ -453,11 +522,12 @@ export const getLegalMovesForUnit = (
   if (!movingPiece.canTraverseMany) {
     return directions
       .map((direction) => ({ x: from.x + direction.x, y: from.y + direction.y }))
-      .filter((target) => (
-        inBounds(target, rules)
-        && !blocked.has(`${target.x},${target.y}`)
-        && !occupiedBySelf.has(`${target.x},${target.y}`)
-      ));
+      .filter(
+        (target) =>
+          inBounds(target, rules) &&
+          !blocked.has(`${target.x},${target.y}`) &&
+          !occupiedBySelf.has(`${target.x},${target.y}`),
+      );
   }
 
   const legalMoves: Position[] = [];

@@ -2,11 +2,6 @@ import { DEBUG_BOARD_PARAM, SESSION_QUERY_PARAM } from "./constants";
 
 export const normalizeSessionId = (sessionId: string) => sessionId.trim().toUpperCase();
 
-export const getSessionIdFromSearch = (search: string) => {
-  const value = new URLSearchParams(search).get(SESSION_QUERY_PARAM);
-  return value ? normalizeSessionId(value) : "";
-};
-
 export const buildSearchWithoutLegacySession = (search: string) => {
   const nextParams = new URLSearchParams(search);
   nextParams.delete(SESSION_QUERY_PARAM);
@@ -20,3 +15,13 @@ export const isDebugBoardEnabled = (search: string) => {
 
 export const buildGamePath = (sessionId: string) =>
   `/game/${normalizeSessionId(sessionId)}`;
+
+export const buildSessionUrl = (sessionId: string) => {
+  if (typeof window === "undefined") {
+    return `${buildGamePath(sessionId)}`;
+  }
+
+  const nextUrl = new URL(window.location.href);
+  nextUrl.pathname = buildGamePath(sessionId);
+  return nextUrl.toString();
+};

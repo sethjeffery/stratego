@@ -1,50 +1,57 @@
+import { useState } from "react";
+
 import Avatar from "../../components/Avatar";
+import {
+  generatePlayerName,
+  pickRandomAvatarId,
+  resolveAvatarUrl,
+} from "../../lib/playerProfile";
 import styles from "../../screens/DashboardScreen.module.css";
 
 type DashboardTopbarProps = {
-  avatarUrl: string;
+  avatarId: string;
   createSession: () => Promise<void>;
-  joinSession: () => Promise<void>;
-  onPlayerNameBlur: () => void;
+  onPlayerAvatarChange: (value: string) => void;
   onPlayerNameChange: (value: string) => void;
-  onRoomCodeChange: (value: string) => void;
   playerName: string;
-  randomizeAvatar: () => void;
-  randomizeName: () => void;
-  roomCode: string;
-  trimmedPlayerName: string;
 };
 
 export function DashboardTopbar({
-  avatarUrl,
+  avatarId,
   createSession,
-  joinSession,
-  onPlayerNameBlur,
   onPlayerNameChange,
-  onRoomCodeChange,
+  onPlayerAvatarChange,
   playerName,
-  randomizeAvatar,
-  randomizeName,
-  roomCode,
-  trimmedPlayerName,
 }: DashboardTopbarProps) {
+  const [name, setName] = useState(playerName);
+
+  const randomizeName = () => {
+    const name = generatePlayerName(playerName);
+    setName(name);
+    onPlayerNameChange(name);
+  };
+
+  const randomizeAvatar = () => {
+    onPlayerAvatarChange(pickRandomAvatarId(avatarId));
+  };
+
   return (
     <header className={`${styles.topbar} card`}>
       <div className={styles.identityHero}>
         <Avatar
           className={styles.avatarButton}
           onClick={randomizeAvatar}
-          avatarUrl={avatarUrl}
-          alt={trimmedPlayerName}
+          avatarUrl={resolveAvatarUrl(avatarId)}
+          alt={playerName}
           title="Randomize avatar"
         />
         <div className={styles.identityCopy}>
           <p className="eyebrow">Commander profile</p>
           <input
             className={styles.nameInput}
-            value={playerName}
-            onBlur={onPlayerNameBlur}
-            onChange={(event) => onPlayerNameChange(event.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => onPlayerNameChange(name)}
             placeholder="Commander Name"
             aria-label="Player name"
           />
@@ -54,19 +61,6 @@ export function DashboardTopbar({
         </div>
       </div>
       <div className={styles.topbarActions}>
-        <div className={styles.joinControl}>
-          <input
-            placeholder="Session code"
-            maxLength={8}
-            value={roomCode}
-            onChange={(event) =>
-              onRoomCodeChange(event.target.value.trim().toUpperCase())
-            }
-          />
-          <button className="secondary-button" onClick={() => void joinSession()}>
-            Join
-          </button>
-        </div>
         <button
           className={`primary-cta ${styles.hostButton}`}
           onClick={() => void createSession()}

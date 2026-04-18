@@ -1,38 +1,75 @@
 import clsx from "clsx";
-import { resolveAvatarUrl } from "../lib/playerProfile";
-import { SessionRow } from "../lib/supabaseGameService";
-import styles from "./SessionAccessScreen.module.css";
+import { Link, useParams } from "react-router";
 
-type SessionAccessScreenProps = {
-  isLoading: boolean;
-  isMissing: boolean;
-  isMember: boolean;
-  isHost: boolean;
-  sessionId: string;
-  sessionRow: SessionRow | null;
-  buildSessionUrl: (sessionId: string) => string;
-  copySessionLink: (sessionId: string) => Promise<void>;
-  goToDashboard: () => void;
-  joinSession: () => Promise<void>;
-};
+import { buildSessionUrl } from "../app/sessionRouting";
+import { useJoinSession, useSession } from "../hooks/useGameService";
+import { useCurrentUser } from "../hooks/useProfile";
+import { resolveAvatarUrl } from "../lib/playerProfile";
+import { GameScreen } from "./GameScreen";
+import styles from "./SessionAccessScreen.module.css";
 
 const formatUpdatedAt = (timestamp?: string) => {
   if (!timestamp) return "Unknown";
   return new Date(timestamp).toLocaleString();
 };
 
-export function SessionAccessScreen({
-  buildSessionUrl,
-  copySessionLink,
-  goToDashboard,
-  isHost,
-  isLoading,
-  isMember,
-  isMissing,
-  joinSession,
-  sessionId,
-  sessionRow,
-}: SessionAccessScreenProps) {
+export function SessionAccessScreen() {
+  const { sessionId: rawSessionId } = useParams();
+  const sessionId = rawSessionId ? rawSessionId.toUpperCase() : "";
+  const { data: session, isLoading: isLoadingSession } = useSession(sessionId);
+  const { data: currentUser, isLoading: isLoadingUser } = useCurrentUser();
+  const { trigger: joinSession } = useJoinSession();
+
+  const handleJoinSession = async () => {
+    await joinSession({ sessionId });
+  };
+
+  // const [error, setError] = useState<string | null>(null);
+
+  // const {
+  //   data: routeAccess,
+  //   error: routeAccessError,
+  //   isLoading,
+  // } = useSessionAccess(sessionId);
+
+  // const {
+  //   disabled,
+  //   finishGame,
+  //   isCurrentSessionArchived: isArchived,
+  //   legalTargets,
+  //   markReady,
+  //   myId,
+  //   onCellClick,
+  //   pendingBoardAction,
+  //   playAgain,
+  //   reset,
+  //   selectablePieceKeys,
+  //   selected,
+  //   sendChatMessage,
+  //   state,
+  //   surrenderGame,
+  // } = useSessionGameState({
+  //   debugBoardEnabled: isDebugBoardEnabled(location.search),
+  //   routeSessionId: sessionId,
+  //   sessionAccess: routeAccess,
+  //   setError,
+  // });
+
+  const copySessionLink = async (sessionId: string) => {
+    // if (typeof navigator === "undefined" || !navigator.clipboard) {
+    // setUiError(`Share this link: ${buildSessionUrl(sessionId)}`);
+    // return;
+    // }
+
+    // try {
+    await navigator.clipboard.writeText(buildSessionUrl(sessionId));
+    // setUiError("Session link copied.");
+    // } catch {
+    // setUiError(`Share this link: ${buildSessionUrl(sessionId)}`);
+    // }
+  };
+
+  const isLoading = isLoadingSession || isLoadingUser;
   if (isLoading) {
     return (
       <main className={styles.sessionAccess}>
@@ -45,7 +82,8 @@ export function SessionAccessScreen({
     );
   }
 
-  if (isMissing || !sessionRow) {
+  const isMissing = !session;
+  if (isMissing) {
     return (
       <main className={styles.sessionAccess}>
         <section className={clsx("card", styles.statusCard)}>
@@ -56,34 +94,54 @@ export function SessionAccessScreen({
             incorrect.
           </p>
           <div className={styles.statusActions}>
-            <button className="secondary-button" onClick={goToDashboard}>
-              Back To Dashboard
-            </button>
+            <Link to="/">
+              <button className="secondary-button">Back To Dashboard</button>
+            </Link>
           </div>
         </section>
       </main>
     );
   }
 
-  const hasOpenSlot = !sessionRow.challenger_id;
-  const isFull = Boolean(sessionRow.challenger_id);
-  const isClosed = sessionRow.state?.phase === "closed";
+  const { initiator, challenger } = session;
+  const isHost = Boolean(initiator?.device_id === currentUser?.device_id);
+  const isMember = [challenger?.device_id, initiator?.device_id].includes(
+    currentUser?.device_id,
+  );
+  const isReady = Boolean(challenger?.device_id && initiator?.device_id);
+
+  if (session.challenger && session.initiator && isMember) {
+    return <GameScreen session={session} />;
+  }
+
+  const hasOpenSlot = !challenger;
+  const isFull = !isMember && isReady;
+  const isClosed = session.state?.phase === "closed";
+  const isArchived = Boolean(
+    session.memberships?.some(
+      ({ archived_at, device_id }) =>
+        archived_at && device_id === currentUser?.device_id,
+    ),
+  );
 
   let eyebrow = "Session Access";
-  let title = `Session ${sessionRow.session_id}`;
+  let title = `Session ${session.session_id}`;
   let description =
     "This session is available from a link, but your device does not control a seat in it.";
 
   if (isClosed) {
     eyebrow = "Match Closed";
-    title = `Session ${sessionRow.session_id}`;
     description = "This match has been finished and permanently closed by a player.";
+  } else if (isArchived && isMember) {
+    eyebrow = "Session Archived";
+    description =
+      "This device is already a participant, but the session is archived for now. Reopen it to keep playing.";
   } else if (isMember && hasOpenSlot && isHost) {
     eyebrow = "Waiting For Opponent";
-    description = `You are hosting this session as ${sessionRow.initiator_name}. Share the link and wait for a challenger to join.`;
+    description = `You are hosting this session as ${initiator?.player_name}. Share the link and wait for a challenger to join.`;
   } else if (!isMember && hasOpenSlot) {
     eyebrow = "Open Seat";
-    title = `${sessionRow.initiator_name} is waiting`;
+    title = `${initiator?.player_name} is waiting`;
     description =
       "This session has one open seat. Join from this device to become the challenger.";
   } else if (!isMember && isFull) {
@@ -107,32 +165,34 @@ export function SessionAccessScreen({
           <span className={`status-pill ${hasOpenSlot ? "is-open" : "is-full"}`}>
             {isClosed ? "Closed" : hasOpenSlot ? "Open Seat" : "Two Players Joined"}
           </span>
-          <small>Updated {formatUpdatedAt(sessionRow.updated_at)}</small>
+          <small>Updated {formatUpdatedAt(session.updated_at)}</small>
         </div>
 
         <div className={styles.playerList}>
-          <article className={styles.playerRow}>
-            <img
-              className="player-avatar"
-              src={resolveAvatarUrl(sessionRow.initiator_avatar ?? undefined)}
-              alt={sessionRow.initiator_name}
-            />
-            <div>
-              <strong>{sessionRow.initiator_name}</strong>
-              <p>{hasOpenSlot ? "Host" : "Player 1"}</p>
-            </div>
-          </article>
-
-          {sessionRow.challenger_name ? (
+          {initiator ? (
             <article className={styles.playerRow}>
               <img
                 className="player-avatar"
-                src={resolveAvatarUrl(sessionRow.challenger_avatar ?? undefined)}
-                alt={sessionRow.challenger_name}
+                src={resolveAvatarUrl(initiator.avatar_id)}
+                alt={initiator.player_name}
               />
               <div>
-                <strong>{sessionRow.challenger_name}</strong>
-                <p>Player 2</p>
+                <strong>{initiator.player_name}</strong>
+                <p>Host</p>
+              </div>
+            </article>
+          ) : null}
+
+          {challenger ? (
+            <article className={styles.playerRow}>
+              <img
+                className="player-avatar"
+                src={resolveAvatarUrl(challenger.avatar_id)}
+                alt={challenger.player_name}
+              />
+              <div>
+                <strong>{challenger.player_name}</strong>
+                <p>Challenger</p>
               </div>
             </article>
           ) : (
@@ -140,7 +200,7 @@ export function SessionAccessScreen({
               <div className={styles.emptyAvatar}>?</div>
               <div>
                 <strong>Open Challenger Seat</strong>
-                <p>Waiting for a second player</p>
+                <p>Waiting for a challenger</p>
               </div>
             </article>
           )}
@@ -148,26 +208,26 @@ export function SessionAccessScreen({
 
         <div className={styles.linkBlock}>
           <small>Share link</small>
-          <code>{buildSessionUrl(sessionRow.session_id)}</code>
+          <code>{buildSessionUrl(session.session_id)}</code>
         </div>
 
         <div className={styles.statusActions}>
-          {hasOpenSlot && !isMember && !isClosed && (
-            <button className="primary-cta" onClick={() => void joinSession()}>
-              Join Session
+          {((hasOpenSlot && !isMember) || isArchived) && !isClosed && (
+            <button className="primary-cta" onClick={() => handleJoinSession}>
+              {isArchived ? "Reopen Session" : "Join Session"}
             </button>
           )}
-          {isMember && hasOpenSlot && !isClosed && (
+          {isMember && hasOpenSlot && !isClosed && !isArchived && (
             <button
               className="secondary-button"
-              onClick={() => void copySessionLink(sessionRow.session_id)}
+              onClick={() => void copySessionLink(session.session_id)}
             >
               Copy Session Link
             </button>
           )}
-          <button className="secondary-button" onClick={goToDashboard}>
-            Back To Dashboard
-          </button>
+          <Link to="/">
+            <button className="secondary-button">Back To Dashboard</button>
+          </Link>
         </div>
       </section>
     </main>

@@ -83,7 +83,6 @@
 
 .playerAvatar {
   width: 40px;
-  height: 40px;
 }
 
 .inlineActions {
@@ -103,9 +102,8 @@
   bottom: 0;
   left: 50%;
   opacity: 0.15;
-  width: 100vw;
+  width: max(100vw, 100vh);
   z-index: -1;
-  margin-bottom: -1.5rem;
   transform: translateX(-50%);
 }
 

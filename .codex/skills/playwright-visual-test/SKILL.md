@@ -1,6 +1,6 @@
 ---
 name: playwright-visual-test
-description: Use when visually testing Stratego Pulse Arena in a browser, especially for board rendering, SVG perspective, piece layout, or UI regressions. This skill explains how to run the local preview, use the deterministic `?debugBoard=1` route, inspect it with the Playwright MCP server first, and fall back to local Playwright scripts only when MCP is unavailable.
+description: Use when visually testing Stratego Pulse Arena in a browser, especially for board rendering, SVG perspective, piece layout, or UI regressions. This skill explains how to run the local preview, inspect it with the Playwright MCP server first, and fall back to local Playwright scripts only when MCP is unavailable.
 ---
 
 # Playwright Visual Test
@@ -34,10 +34,10 @@ npm run build
 npm run preview -- --host 127.0.0.1 --port 4173
 ```
 
-4. Use the deterministic debug route for board work:
+4. Use the app for board work:
 
 ```bash
-http://127.0.0.1:4173/?debugBoard=1
+http://127.0.0.1:4173
 ```
 
 This route bypasses Supabase/socket setup and renders a stable board state for inspection.
@@ -49,18 +49,10 @@ Preferred MCP actions:
 - Open the preview URL in the Playwright MCP browser session.
 - Capture screenshots through MCP instead of writing one-off local scripts.
 - Use MCP interactions for click-target validation, hover checks, and responsive viewport passes.
-- Keep the debug route as the default board-rendering target unless the task specifically concerns live Supabase flows.
 
 Adjust viewport and URL if the task is not board-specific. Treat this as fallback infrastructure, not the first choice.
 
 If the Playwright MCP server fails to create its own working directory, work around it by interacting with the browser manually.
-
-## Suggested verification passes
-
-- Desktop board pass: `?debugBoard=1` at a wide viewport to inspect projection, piece seating, and hit-target alignment.
-- Mobile board pass: the same debug route at a narrow viewport to confirm readability and tap-target accuracy.
-- Interaction pass: select a piece or trigger the changed UI state to confirm visual alignment under interaction.
-- Non-debug flow pass: only when the task involves session or Supabase behavior that cannot be validated through the deterministic debug route.
 
 ## What to inspect
 
@@ -81,4 +73,3 @@ If the Playwright MCP server fails to create its own working directory, work aro
 - `playwright` is installed as a dev dependency.
 - Codex should prefer the Playwright MCP server for future browser inspection work in this repo.
 - The board projection math currently lives in `src/App.tsx`.
-- The deterministic debug state lives in `src/lib/debugBoardState.ts`.

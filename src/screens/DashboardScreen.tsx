@@ -1,77 +1,80 @@
+import { useNavigate } from "react-router-dom";
+
+import { buildGamePath } from "../app/sessionRouting";
 import background from "../assets/battle-bg.webp";
 import { DashboardTopbar } from "../components/dashboard/DashboardTopbar";
-import { OpenSessionsSection } from "../components/dashboard/OpenSessionsSection";
-import { RecentSessionsSection } from "../components/dashboard/RecentSessionsSection";
-import { StoredSessionMembership } from "../lib/localSessionStore";
-import { SessionRow } from "../lib/supabaseGameService";
+import SessionsList from "../components/dashboard/SessionsList";
+import {
+  useArchiveSession,
+  useCreateSession,
+  useMySessions,
+  useOpenSessions,
+} from "../hooks/useGameService";
+import { useCurrentUser } from "../hooks/useProfile";
+import {} from "../lib/playerProfile";
 import styles from "./DashboardScreen.module.css";
 
-type DashboardScreenProps = {
-  avatarUrl: string;
-  openSessions: SessionRow[];
-  playerName: string;
-  roomCode: string;
-  savedSessionRows: Record<string, SessionRow>;
-  trimmedPlayerName: string;
-  visibleSavedSessions: StoredSessionMembership[];
-  createSession: () => Promise<void>;
-  joinSession: () => Promise<void>;
-  onArchiveSavedSession: (membership: StoredSessionMembership) => void;
-  onJoinOpenSession: (sessionId: string) => Promise<void>;
-  onPlayerNameBlur: () => void;
-  onPlayerNameChange: (value: string) => void;
-  onResumeSavedSession: (membership: StoredSessionMembership) => Promise<void>;
-  onRoomCodeChange: (value: string) => void;
-  randomizeAvatar: () => void;
-  randomizeName: () => void;
-};
+export function DashboardScreen() {
+  const { data: currentUser, updateProfile } = useCurrentUser();
+  const { data: mySessions } = useMySessions();
+  const { data: openSessions } = useOpenSessions();
+  const { trigger: createSession } = useCreateSession();
+  const { trigger: archiveSession } = useArchiveSession();
+  const navigate = useNavigate();
 
-export function DashboardScreen({
-  avatarUrl,
-  createSession,
-  joinSession,
-  onArchiveSavedSession,
-  onJoinOpenSession,
-  onPlayerNameBlur,
-  onPlayerNameChange,
-  onResumeSavedSession,
-  onRoomCodeChange,
-  openSessions,
-  playerName,
-  randomizeAvatar,
-  randomizeName,
-  roomCode,
-  savedSessionRows,
-  trimmedPlayerName,
-  visibleSavedSessions,
-}: DashboardScreenProps) {
+  const handleResumeSession = async (sessionId: string) => {
+    sessionId = sessionId.trim().toUpperCase();
+    navigate(buildGamePath(sessionId));
+  };
+
+  const handleCreateSession = async () => {
+    const newSession = await createSession();
+    navigate(buildGamePath(newSession.session_id));
+  };
+
+  const handleArchiveSession = async (sessionId: string) => {
+    await archiveSession({ sessionId });
+  };
+
+  if (!currentUser) {
+    return null;
+  }
+
   return (
     <>
       <DashboardTopbar
-        avatarUrl={avatarUrl}
-        createSession={createSession}
-        joinSession={joinSession}
-        onPlayerNameBlur={onPlayerNameBlur}
-        onPlayerNameChange={onPlayerNameChange}
-        onRoomCodeChange={onRoomCodeChange}
-        playerName={playerName}
-        randomizeAvatar={randomizeAvatar}
-        randomizeName={randomizeName}
-        roomCode={roomCode}
-        trimmedPlayerName={trimmedPlayerName}
+        avatarId={currentUser.avatar_id}
+        createSession={handleCreateSession}
+        onPlayerNameChange={(value) => {
+          void updateProfile({ ...currentUser, player_name: value });
+        }}
+        onPlayerAvatarChange={(value) => {
+          void updateProfile({ ...currentUser, avatar_id: value });
+        }}
+        playerName={currentUser.player_name}
       />
 
       <main className={styles.columns}>
-        <OpenSessionsSection
-          openSessions={openSessions}
-          onJoinOpenSession={onJoinOpenSession}
-        />
-        <RecentSessionsSection
-          onArchiveSavedSession={onArchiveSavedSession}
-          onResumeSavedSession={onResumeSavedSession}
-          savedSessionRows={savedSessionRows}
-          visibleSavedSessions={visibleSavedSessions}
-        />
+        {openSessions?.length ? (
+          <section className={`${styles.panel} card`}>
+            <div className="launcher-header">
+              <h2>Open Sessions</h2>
+            </div>
+            <SessionsList sessions={openSessions} />
+          </section>
+        ) : null}
+        {mySessions?.length ? (
+          <section className={`${styles.panel} card`}>
+            <div className="launcher-header">
+              <h2>Your Recent Games</h2>
+            </div>
+            <SessionsList
+              sessions={mySessions}
+              onResumeSession={handleResumeSession}
+              onArchiveSession={handleArchiveSession}
+            />
+          </section>
+        ) : null}
       </main>
 
       <img
