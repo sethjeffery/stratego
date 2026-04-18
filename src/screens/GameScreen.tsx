@@ -20,6 +20,7 @@ const getPlayerColorClass = (playerId: string, playerOneId: string | null) =>
   playerId === playerOneId ? "player-one" : "player-two";
 
 type GameScreenProps = {
+  archived: boolean;
   canMarkReady: boolean;
   debugBoardEnabled: boolean;
   disabled: boolean;
@@ -38,10 +39,12 @@ type GameScreenProps = {
   onCellClick: (target: Position) => Promise<void>;
   onFinish: () => Promise<void>;
   onPlayAgain: () => Promise<void>;
+  onSurrender: () => Promise<void>;
   sendChatMessage: (message: string) => Promise<void>;
 };
 
 export function GameScreen({
+  archived,
   canMarkReady,
   debugBoardEnabled,
   disabled,
@@ -52,6 +55,7 @@ export function GameScreen({
   onCellClick,
   onFinish,
   onPlayAgain,
+  onSurrender,
   pendingBoardAction = null,
   selectablePieceKeys,
   selected,
@@ -60,6 +64,8 @@ export function GameScreen({
 }: GameScreenProps) {
   const [chatDraft, setChatDraft] = useState("");
   const [completionActionPending, setCompletionActionPending] = useState(false);
+  const [surrenderConfirmVisible, setSurrenderConfirmVisible] = useState(false);
+  const [surrenderActionPending, setSurrenderActionPending] = useState(false);
   const chatInputRef = useRef<HTMLInputElement | null>(null);
   const chatStackRef = useRef<HTMLDivElement | null>(null);
   const otherPlayerName =
@@ -92,7 +98,9 @@ export function GameScreen({
             : null,
         ].filter(Boolean)
       : [];
-  const mainStatus = state.winnerId
+  const mainStatus = archived
+    ? "This game is archived"
+    : state.winnerId
     ? `${state.players.find((player) => player.id === state.winnerId)?.name ?? "Commander"} wins`
     : state.phase === "setup"
       ? canMarkReady
@@ -103,10 +111,12 @@ export function GameScreen({
         : `Waiting on ${otherPlayerName}...`;
   const playerOneId = state.players[0]?.id ?? null;
   const visibleChatMessages = useMemo(() => state.chatMessages, [state]);
-  const canSendChat = Boolean(myId);
+  const canSendChat = Boolean(myId) && !archived && !state.winnerId;
   const winner = state.players.find((player) => player.id === state.winnerId) ?? null;
   const completionVisible = state.phase === "finished" && Boolean(winner);
   const isClosed = state.phase === "closed";
+  const surrenderedPlayer =
+    state.players.find((player) => player.id === state.surrenderedById) ?? null;
 
   const completionStats = useMemo(() => {
     const battleMessages = state.chatMessages.filter(
@@ -168,6 +178,16 @@ export function GameScreen({
     const seconds = totalSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
+
+  const completionTitle =
+    state.completionReason === "surrender" && surrenderedPlayer
+      ? `${surrenderedPlayer.name} surrendered`
+      : `${winner?.name ?? "Commander"} wins!`;
+
+  const completionDescription =
+    state.completionReason === "surrender"
+      ? `${surrenderedPlayer?.name ?? "A player"} surrendered.`
+      : "Flag secured. Match complete.";
 
   useEffect(() => {
     setChatDraft("");
@@ -325,8 +345,36 @@ export function GameScreen({
           <div className={`game-status-lozenge ${isMyTurn ? "is-active" : ""}`}>
             {mainStatus}
           </div>
-          <span className="toolbar-spacer" aria-hidden="true" />
+          <div className="toolbar-actions">
+            <button
+              className="icon-button surrender-button"
+              onClick={() => setSurrenderConfirmVisible(true)}
+              aria-label="Surrender"
+              title="Surrender"
+              disabled={archived || state.phase === "finished" || state.phase === "closed"}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M7 4v16M7 5c5.5-2.3 8.4 1.8 12 0v9c-3.6 1.8-6.5-2.3-12 0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {archived && (
+          <section className="archived-banner card">
+            <p>This game is archived and disabled on this device.</p>
+            <button className="secondary-button" onClick={leaveCurrentSession}>
+              Return to lobby
+            </button>
+          </section>
+        )}
 
         <section className="board">
           <ProjectedBoard
@@ -480,7 +528,8 @@ export function GameScreen({
               color={winner.id === playerOneId ? "red" : "blue"}
               className="completion-avatar"
             />
-            <h2 id="completion-modal-title">{winner.name} wins!</h2>
+            <h2 id="completion-modal-title">{completionTitle}</h2>
+            <p>{completionDescription}</p>
             <div className="completion-stats">
               <p>
                 <strong>Match Time:</strong> {formatDuration(completionStats.matchTimeMs)}
@@ -529,6 +578,37 @@ export function GameScreen({
                 disabled={completionActionPending || isClosed}
               >
                 Finish
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {surrenderConfirmVisible && (
+        <div className="completion-modal-backdrop" role="presentation">
+          <section className="completion-modal" role="dialog" aria-modal="true">
+            <h2>Surrender match?</h2>
+            <p>This ends the game immediately for both players.</p>
+            <div className="completion-actions">
+              <button
+                className="secondary-button"
+                onClick={() => setSurrenderConfirmVisible(false)}
+                disabled={surrenderActionPending}
+              >
+                Cancel
+              </button>
+              <button
+                className="primary-cta"
+                onClick={() => {
+                  if (surrenderActionPending) return;
+                  setSurrenderActionPending(true);
+                  void onSurrender()
+                    .then(() => setSurrenderConfirmVisible(false))
+                    .finally(() => setSurrenderActionPending(false));
+                }}
+                disabled={surrenderActionPending}
+              >
+                Surrender
               </button>
             </div>
           </section>

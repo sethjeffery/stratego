@@ -32,13 +32,6 @@ body {
   margin-bottom: 1rem;
 }
 
-.hero-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.9fr);
-  gap: 1rem;
-  align-items: start;
-}
-
 .hero-copy {
   padding: 0.5rem 0;
 }
@@ -78,8 +71,45 @@ header h1 {
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
 }
 
-.lobby-stack {
+.lobby-topbar {
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.identity-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.identity-copy {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.identity-name-input {
+  font-size: clamp(1.35rem, 2.4vw, 2rem);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.lobby-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.host-topbar-cta {
+  min-width: 8rem;
+}
+
+.lobby-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -277,6 +307,11 @@ input {
   align-items: center;
 }
 
+.lobby-empty-state {
+  margin: 0;
+  color: #b8ae92;
+}
+
 .session-access {
   display: grid;
   place-items: start center;
@@ -447,9 +482,11 @@ input {
   gap: 1rem;
 }
 
-.toolbar-spacer {
-  width: 2.75rem;
-  height: 2.75rem;
+.toolbar-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
 }
 
 .icon-button {
@@ -471,6 +508,22 @@ input {
 
 .exit-button {
   justify-self: start;
+}
+
+.surrender-button:disabled {
+  opacity: 0.45;
+}
+
+.archived-banner {
+  padding: 0.8rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.archived-banner p {
+  margin: 0;
 }
 
 .game-status-lozenge {
@@ -810,6 +863,11 @@ input {
   font-size: clamp(2rem, 8vw, 2.75rem);
   color: #f8df9c;
   text-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+}
+
+.completion-modal > p {
+  margin: -0.45rem 0 1rem;
+  color: #e9dbc0;
 }
 
 .completion-stats {
@@ -1467,7 +1525,7 @@ input {
 }
 
 @media (max-width: 900px) {
-  .hero-grid,
+  .lobby-columns,
   .arena-layout {
     grid-template-columns: 1fr;
   }
@@ -1486,11 +1544,7 @@ input {
   }
 
   .arena-toolbar {
-    grid-template-columns: auto 1fr;
-  }
-
-  .toolbar-spacer {
-    display: none;
+    grid-template-columns: auto 1fr auto;
   }
 
   .game-status-lozenge {
@@ -1523,6 +1577,13 @@ input {
   .profile-card-body,
   .launcher-row,
   .join-control {
+    grid-template-columns: 1fr;
+  }
+
+  .lobby-topbar,
+  .lobby-topbar-actions,
+  .identity-hero {
+    display: grid;
     grid-template-columns: 1fr;
   }
 

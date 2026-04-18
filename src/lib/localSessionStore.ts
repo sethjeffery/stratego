@@ -14,6 +14,7 @@ export type StoredSessionMembership = {
   avatarId: string;
   role: "initiator" | "challenger";
   lastOpenedAt: number;
+  archivedAt?: number | null;
 };
 
 const PROFILE_KEY = "stratego:profile:v1";
@@ -64,6 +65,7 @@ const repairStoredMembership = (
     avatarId: membership.avatarId || DEFAULT_AVATAR_ID,
     role: membership.role,
     lastOpenedAt: membership.lastOpenedAt ?? Date.now(),
+    archivedAt: membership.archivedAt ?? null,
   };
 };
 
@@ -145,6 +147,7 @@ export const upsertStoredSessionMembership = (
     ...membership,
     avatarId: membership.avatarId || DEFAULT_AVATAR_ID,
     lastOpenedAt: membership.lastOpenedAt ?? Date.now(),
+    archivedAt: membership.archivedAt ?? null,
   };
 
   const sessions = listStoredSessions().filter(
@@ -160,4 +163,13 @@ export const touchStoredSessionMembership = (sessionId: string) => {
   const membership = getStoredSessionMembership(sessionId);
   if (!membership) return;
   upsertStoredSessionMembership({ ...membership, lastOpenedAt: Date.now() });
+};
+
+export const archiveStoredSessionMembership = (sessionId: string) => {
+  const membership = getStoredSessionMembership(sessionId);
+  if (!membership) return;
+  upsertStoredSessionMembership({
+    ...membership,
+    archivedAt: Date.now(),
+  });
 };

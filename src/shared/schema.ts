@@ -91,6 +91,8 @@ export type GameChatMessage = {
 export type GameState = {
   roomCode: string;
   phase: "setup" | "battle" | "finished" | "closed";
+  completionReason?: "flag_capture" | "surrender";
+  surrenderedById?: string | null;
   setupReadyPlayerIds: string[];
   turnPlayerId: string | null;
   winnerId: string | null;
@@ -130,6 +132,12 @@ export const normalizeGameState = (
   return {
     ...state,
     phase: normalizedPhase,
+    completionReason:
+      (state as GameState & { completionReason?: "flag_capture" | "surrender" })
+        .completionReason ?? "flag_capture",
+    surrenderedById:
+      (state as GameState & { surrenderedById?: string | null }).surrenderedById ??
+      null,
     startedAt: (state as GameState & { startedAt?: string | null }).startedAt ?? null,
     finishedAt: (state as GameState & { finishedAt?: string | null }).finishedAt ?? null,
     chatMessages: getChatMessages(state),
