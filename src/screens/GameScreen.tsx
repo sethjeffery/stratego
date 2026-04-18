@@ -36,6 +36,8 @@ type GameScreenProps = {
   state: GameState;
   leaveCurrentSession: () => void;
   onCellClick: (target: Position) => Promise<void>;
+  onFinish: () => Promise<void>;
+  onPlayAgain: () => Promise<void>;
   sendChatMessage: (message: string) => Promise<void>;
 };
 
@@ -48,6 +50,8 @@ export function GameScreen({
   markReady,
   myId,
   onCellClick,
+  onFinish,
+  onPlayAgain,
   pendingBoardAction = null,
   selectablePieceKeys,
   selected,
@@ -55,6 +59,7 @@ export function GameScreen({
   state,
 }: GameScreenProps) {
   const [chatDraft, setChatDraft] = useState("");
+  const [completionActionPending, setCompletionActionPending] = useState(false);
   const chatInputRef = useRef<HTMLInputElement | null>(null);
   const chatStackRef = useRef<HTMLDivElement | null>(null);
   const otherPlayerName =
@@ -99,6 +104,70 @@ export function GameScreen({
   const playerOneId = state.players[0]?.id ?? null;
   const visibleChatMessages = useMemo(() => state.chatMessages, [state]);
   const canSendChat = Boolean(myId);
+  const winner = state.players.find((player) => player.id === state.winnerId) ?? null;
+  const completionVisible = state.phase === "finished" && Boolean(winner);
+  const isClosed = state.phase === "closed";
+
+  const completionStats = useMemo(() => {
+    const battleMessages = state.chatMessages.filter(
+      (message) => message.type === "battle" && message.battle,
+    );
+
+    const killsByPiece = new Map<
+      string,
+      { pieceId: string; ownerId: string; kills: number; value: number; score: number }
+    >();
+
+    battleMessages.forEach((message) => {
+      const battle = message.battle!;
+      if (battle.winner === "both") return;
+
+      const killerPieceId =
+        battle.winner === "attacker" ? battle.attackerPieceId : battle.defenderPieceId;
+      const killerOwnerId =
+        battle.winner === "attacker" ? battle.attackerOwnerId : battle.defenderOwnerId;
+      const defeatedPieceId =
+        battle.winner === "attacker" ? battle.defenderPieceId : battle.attackerPieceId;
+      const killer = pieceById.get(killerPieceId);
+      const defeated = pieceById.get(defeatedPieceId);
+      if (!killer || !defeated || killer.rank <= 0) return;
+
+      const key = `${killerOwnerId}::${killerPieceId}`;
+      const current = killsByPiece.get(key) ?? {
+        pieceId: killerPieceId,
+        ownerId: killerOwnerId,
+        kills: 0,
+        value: 0,
+        score: 0,
+      };
+      current.kills += 1;
+      current.value += defeated.rank;
+      current.score = current.value / killer.rank;
+      killsByPiece.set(key, current);
+    });
+
+    const mvp =
+      [...killsByPiece.values()].sort((a, b) => b.score - a.score || b.value - a.value)[0] ??
+      null;
+    const startTime = state.startedAt ? new Date(state.startedAt) : null;
+    const endTime = state.finishedAt ? new Date(state.finishedAt) : null;
+    const matchTimeMs =
+      startTime && endTime ? Math.max(0, endTime.getTime() - startTime.getTime()) : null;
+
+    return {
+      mvp,
+      battleCount: battleMessages.length,
+      matchTimeMs,
+    };
+  }, [state.chatMessages, state.finishedAt, state.startedAt]);
+
+  const formatDuration = (durationMs: number | null) => {
+    if (durationMs === null) return "Unknown";
+    const totalSeconds = Math.floor(durationMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
 
   useEffect(() => {
     setChatDraft("");
@@ -395,6 +464,76 @@ export function GameScreen({
           </form>
         </section>
       </aside>
+
+      {completionVisible && winner && (
+        <div className="completion-modal-backdrop" role="presentation">
+          <section
+            className="completion-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="completion-modal-title"
+          >
+            <Avatar
+              avatarUrl={resolveAvatarUrl(winner.avatarId)}
+              alt={winner.name}
+              title={winner.name}
+              color={winner.id === playerOneId ? "red" : "blue"}
+              className="completion-avatar"
+            />
+            <h2 id="completion-modal-title">{winner.name} wins!</h2>
+            <div className="completion-stats">
+              <p>
+                <strong>Match Time:</strong> {formatDuration(completionStats.matchTimeMs)}
+              </p>
+              <p>
+                <strong>Battles:</strong> {completionStats.battleCount}
+              </p>
+              <p className="completion-mvp">
+                <strong>Most Valuable Piece:</strong>
+                {completionStats.mvp ? (
+                  <>
+                    {renderBattlePieceBadge(
+                      completionStats.mvp.pieceId,
+                      completionStats.mvp.ownerId,
+                    )}
+                    <span>
+                      {pieceById.get(completionStats.mvp.pieceId)?.label ?? "Unknown unit"} ·{" "}
+                      {completionStats.mvp.kills} kills
+                    </span>
+                  </>
+                ) : (
+                  <span>No qualifying kills</span>
+                )}
+              </p>
+            </div>
+
+            <div className="completion-actions">
+              <button
+                className="primary-cta"
+                onClick={() => {
+                  if (completionActionPending) return;
+                  setCompletionActionPending(true);
+                  void onPlayAgain().finally(() => setCompletionActionPending(false));
+                }}
+                disabled={completionActionPending || isClosed}
+              >
+                Play Again
+              </button>
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  if (completionActionPending) return;
+                  setCompletionActionPending(true);
+                  void onFinish().finally(() => setCompletionActionPending(false));
+                }}
+                disabled={completionActionPending || isClosed}
+              >
+                Finish
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

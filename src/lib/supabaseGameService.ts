@@ -9,6 +9,7 @@ import {
 import {
   applyMoveToState,
   applySetupSwapToState,
+  createRematchState,
   createSessionGame,
   markPlayerSetupReady,
 } from './engine';
@@ -297,6 +298,46 @@ export const markSetupReady = async (sessionId: string, playerId: string) => {
   const row = await updateSessionState(sessionId, (currentRow) => {
     if (!currentRow.state) return { error: 'Waiting for challenger to join.' };
     return markPlayerSetupReady(currentRow.state, playerId);
+  });
+
+  return row.state!;
+};
+
+export const resetFinishedGame = async (sessionId: string, playerId: string) => {
+  const row = await updateSessionState(sessionId, (currentRow) => {
+    if (!currentRow.state) return { error: 'Waiting for challenger to join.' };
+    if (!currentRow.state.players.some((player) => player.id === playerId)) {
+      return { error: 'Unknown player.' };
+    }
+    if (currentRow.state.phase !== 'finished') {
+      return { error: 'Game is not in completion phase.' };
+    }
+
+    return {
+      nextState: createRematchState(currentRow.state, gameRules, gamePieces),
+    };
+  });
+
+  return row.state!;
+};
+
+export const closeFinishedGame = async (sessionId: string, playerId: string) => {
+  const row = await updateSessionState(sessionId, (currentRow) => {
+    if (!currentRow.state) return { error: 'Waiting for challenger to join.' };
+    if (!currentRow.state.players.some((player) => player.id === playerId)) {
+      return { error: 'Unknown player.' };
+    }
+    if (currentRow.state.phase !== 'finished') {
+      return { error: 'Game is not in completion phase.' };
+    }
+
+    return {
+      nextState: {
+        ...currentRow.state,
+        phase: 'closed',
+        turnPlayerId: null,
+      },
+    };
   });
 
   return row.state!;

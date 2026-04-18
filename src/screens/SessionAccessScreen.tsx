@@ -65,13 +65,18 @@ export function SessionAccessScreen({
 
   const hasOpenSlot = !sessionRow.challenger_id;
   const isFull = Boolean(sessionRow.challenger_id);
+  const isClosed = sessionRow.state?.phase === "closed";
 
   let eyebrow = "Session Access";
   let title = `Session ${sessionRow.session_id}`;
   let description =
     "This session is available from a link, but your device does not control a seat in it.";
 
-  if (isMember && hasOpenSlot && isHost) {
+  if (isClosed) {
+    eyebrow = "Match Closed";
+    title = `Session ${sessionRow.session_id}`;
+    description = "This match has been finished and permanently closed by a player.";
+  } else if (isMember && hasOpenSlot && isHost) {
     eyebrow = "Waiting For Opponent";
     description = `You are hosting this session as ${sessionRow.initiator_name}. Share the link and wait for a challenger to join.`;
   } else if (!isMember && hasOpenSlot) {
@@ -98,7 +103,7 @@ export function SessionAccessScreen({
 
         <div className="session-meta">
           <span className={`status-pill ${hasOpenSlot ? "is-open" : "is-full"}`}>
-            {hasOpenSlot ? "Open Seat" : "Two Players Joined"}
+            {isClosed ? "Closed" : hasOpenSlot ? "Open Seat" : "Two Players Joined"}
           </span>
           <small>Updated {formatUpdatedAt(sessionRow.updated_at)}</small>
         </div>
@@ -145,12 +150,12 @@ export function SessionAccessScreen({
         </div>
 
         <div className="session-status-actions">
-          {hasOpenSlot && !isMember && (
+          {hasOpenSlot && !isMember && !isClosed && (
             <button className="primary-cta" onClick={() => void joinSession()}>
               Join Session
             </button>
           )}
-          {isMember && hasOpenSlot && (
+          {isMember && hasOpenSlot && !isClosed && (
             <button
               className="secondary-button"
               onClick={() => void copySessionLink(sessionRow.session_id)}
