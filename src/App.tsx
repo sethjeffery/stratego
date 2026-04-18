@@ -15,6 +15,7 @@ import { createDebugBoardState } from "./lib/debugBoardState";
 import {
   applyMoveToState,
   applySetupSwapToState,
+  createRematchState,
   getLegalMovesForUnit,
   getSetupSwapTargets,
   markPlayerSetupReady,
@@ -41,12 +42,14 @@ import {
 import {
   applyMove as applySupabaseMove,
   applySetupSwap as applySupabaseSetupSwap,
+  closeFinishedGame as closeSupabaseFinishedGame,
   createInitiatedSession,
   getSession,
   isSupabaseMode,
   joinAsChallenger,
   listSessions,
   markSetupReady as markSupabaseSetupReady,
+  resetFinishedGame as resetSupabaseFinishedGame,
   sendChatMessage as sendSupabaseChatMessage,
   SessionRow,
   subscribeToSession,
@@ -575,7 +578,7 @@ export function App() {
 
   const visibleSavedSessions = savedMemberships.filter((membership) => {
     const row = savedSessionRows[membership.sessionId];
-    return !row?.state?.winnerId;
+    return row?.state?.phase !== "closed";
   });
 
   const createSession = async () => {
@@ -819,6 +822,48 @@ export function App() {
     }
   };
 
+  const playAgain = async () => {
+    if (!state || !myId || state.phase !== "finished") return;
+
+    if (debugBoardEnabled) {
+      setState(createRematchState(state, gameRules, gamePieces));
+      setSelected(null);
+      setError("Debug board preview mode.");
+      return;
+    }
+
+    try {
+      await resetSupabaseFinishedGame(state.roomCode, myId);
+      setSelected(null);
+      setError(null);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const finishGame = async () => {
+    if (!state || !myId || state.phase !== "finished") return;
+
+    if (debugBoardEnabled) {
+      setState({
+        ...state,
+        phase: "closed",
+        turnPlayerId: null,
+      });
+      setSelected(null);
+      setError("Debug board preview mode.");
+      return;
+    }
+
+    try {
+      await closeSupabaseFinishedGame(state.roomCode, myId);
+      setSelected(null);
+      setError(null);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   const sendChatMessage = async (message: string) => {
     const trimmedMessage = message.trim();
     if (!trimmedMessage || !state || !myId) return;
@@ -912,7 +957,8 @@ export function App() {
     Boolean(routeSessionId) &&
     Boolean(routeMembership) &&
     roomCode === routeSessionId &&
-    Boolean(state);
+    Boolean(state) &&
+    state?.phase !== "closed";
   const isGameLayout =
     showLiveGame ||
     (debugBoardEnabled && location.pathname === GAME_ROUTE && Boolean(state));
@@ -983,6 +1029,8 @@ export function App() {
                   state={state}
                   leaveCurrentSession={leaveCurrentSession}
                   onCellClick={onCellClick}
+                  onFinish={finishGame}
+                  onPlayAgain={playAgain}
                   sendChatMessage={sendChatMessage}
                 />
               ) : (
@@ -1027,6 +1075,8 @@ export function App() {
                 state={state!}
                 leaveCurrentSession={leaveCurrentSession}
                 onCellClick={onCellClick}
+                onFinish={finishGame}
+                onPlayAgain={playAgain}
                 sendChatMessage={sendChatMessage}
               />
             ) : (

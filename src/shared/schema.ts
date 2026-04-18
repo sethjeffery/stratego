@@ -90,10 +90,12 @@ export type GameChatMessage = {
 
 export type GameState = {
   roomCode: string;
-  phase: "setup" | "battle" | "finished";
+  phase: "setup" | "battle" | "finished" | "closed";
   setupReadyPlayerIds: string[];
   turnPlayerId: string | null;
   winnerId: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
   players: PlayerState[];
   units: Unit[];
   moveCount: number;
@@ -119,8 +121,17 @@ export const normalizeGameState = (
 ): GameState | null => {
   if (!state) return null;
 
+  const phase = (state as GameState & { phase?: string }).phase;
+  const normalizedPhase =
+    phase === "setup" || phase === "battle" || phase === "finished" || phase === "closed"
+      ? phase
+      : "setup";
+
   return {
     ...state,
+    phase: normalizedPhase,
+    startedAt: (state as GameState & { startedAt?: string | null }).startedAt ?? null,
+    finishedAt: (state as GameState & { finishedAt?: string | null }).finishedAt ?? null,
     chatMessages: getChatMessages(state),
   };
 };

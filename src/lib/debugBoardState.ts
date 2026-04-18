@@ -63,6 +63,8 @@ export const createDebugBoardState = (rules: RulesConfig, pieces: PieceDefinitio
       setupReadyPlayerIds: players.map((player) => player.id),
       turnPlayerId: DEBUG_PLAYER_NEAR_ID,
       winnerId: null,
+      startedAt: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
+      finishedAt: null,
       players,
       units: [...farUnits, ...nearUnits],
       moveCount: 12,

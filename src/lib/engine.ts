@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import { appendChatMessage, GameState, PieceDefinition, PlayerState, Position, RulesConfig, Unit } from '../shared/schema';
-import { PlayerProfile } from './playerProfile';
+import { DEFAULT_AVATAR_ID, PlayerProfile } from './playerProfile';
 
 const buildPieceMap = (pieces: PieceDefinition[]) => new Map(pieces.map((piece) => [piece.id, piece]));
 
@@ -179,6 +179,8 @@ export const createSessionGame = (
       setupReadyPlayerIds: [],
       turnPlayerId: null,
       winnerId: null,
+      startedAt: null,
+      finishedAt: null,
       players,
       units: [...createLineup(players[0].id, false, rules, pieces), ...createLineup(players[1].id, true, rules, pieces)],
       moveCount: 0,
@@ -288,6 +290,8 @@ export const markPlayerSetupReady = (
       setupReadyPlayerIds: nextReady,
       phase: everyoneReady ? 'battle' : 'setup',
       turnPlayerId: everyoneReady ? state.players[Math.floor(Math.random() * state.players.length)]?.id ?? null : null,
+      startedAt: everyoneReady ? new Date().toISOString() : state.startedAt,
+      finishedAt: everyoneReady ? null : state.finishedAt,
     },
   };
 };
@@ -376,9 +380,41 @@ export const applyMoveToState = (
 
   const nextPlayer = nextState.players.find((p) => p.id !== playerId);
   nextState.turnPlayerId = nextState.winnerId ? null : nextPlayer?.id ?? null;
-  if (nextState.winnerId) nextState.phase = 'finished';
+  if (nextState.winnerId) {
+    nextState.phase = 'finished';
+    nextState.finishedAt = new Date().toISOString();
+  }
 
   return { nextState };
+};
+
+export const createRematchState = (
+  state: GameState,
+  rules: RulesConfig,
+  pieces: PieceDefinition[],
+): GameState => {
+  if (state.players.length < 2) {
+    throw new Error('Cannot reset without both players.');
+  }
+
+  const next = createSessionGame(
+    {
+      playerName: state.players[0].name,
+      avatarId: state.players[0].avatarId ?? DEFAULT_AVATAR_ID,
+    },
+    {
+      playerName: state.players[1].name,
+      avatarId: state.players[1].avatarId ?? DEFAULT_AVATAR_ID,
+    },
+    rules,
+    pieces,
+    {
+      initiatorId: state.players[0].id,
+      challengerId: state.players[1].id,
+    },
+  ).state;
+  next.roomCode = state.roomCode;
+  return next;
 };
 
 export const getLegalMovesForUnit = (
