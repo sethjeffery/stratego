@@ -176,6 +176,8 @@ export const createSessionGame = (
     state: {
       roomCode: '',
       phase: 'setup',
+      completionReason: 'flag_capture',
+      surrenderedById: null,
       setupReadyPlayerIds: [],
       turnPlayerId: null,
       winnerId: null,
@@ -316,6 +318,8 @@ export const applyMoveToState = (
   const nextState: GameState = {
     ...state,
     phase: state.phase,
+    completionReason: state.completionReason ?? 'flag_capture',
+    surrenderedById: state.surrenderedById ?? null,
     setupReadyPlayerIds: [...state.setupReadyPlayerIds],
     units: state.units.map((u) => ({ ...u, revealedTo: [...u.revealedTo] })),
     players: state.players.map((p) => ({ ...p })),
@@ -382,6 +386,8 @@ export const applyMoveToState = (
   nextState.turnPlayerId = nextState.winnerId ? null : nextPlayer?.id ?? null;
   if (nextState.winnerId) {
     nextState.phase = 'finished';
+    nextState.completionReason = 'flag_capture';
+    nextState.surrenderedById = null;
     nextState.finishedAt = new Date().toISOString();
   }
 

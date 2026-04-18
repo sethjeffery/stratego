@@ -343,6 +343,33 @@ export const closeFinishedGame = async (sessionId: string, playerId: string) => 
   return row.state!;
 };
 
+export const surrenderGame = async (sessionId: string, playerId: string) => {
+  const row = await updateSessionState(sessionId, (currentRow) => {
+    if (!currentRow.state) return { error: 'Waiting for challenger to join.' };
+    if (!currentRow.state.players.some((player) => player.id === playerId)) {
+      return { error: 'Unknown player.' };
+    }
+    if (currentRow.state.phase === 'finished' || currentRow.state.phase === 'closed') {
+      return { error: 'Game is already over.' };
+    }
+
+    const winner = currentRow.state.players.find((player) => player.id !== playerId);
+    return {
+      nextState: {
+        ...currentRow.state,
+        phase: 'finished',
+        turnPlayerId: null,
+        winnerId: winner?.id ?? null,
+        completionReason: 'surrender',
+        surrenderedById: playerId,
+        finishedAt: new Date().toISOString(),
+      },
+    };
+  });
+
+  return row.state!;
+};
+
 export const sendChatMessage = async (
   sessionId: string,
   playerId: string,

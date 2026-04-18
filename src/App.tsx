@@ -22,6 +22,7 @@ import {
 } from "./lib/engine";
 import { gamePieces, gameRules } from "./lib/gameConfig";
 import {
+  archiveStoredSessionMembership,
   getOrCreateStoredProfile,
   getStoredSessionMembership,
   listStoredSessions,
@@ -47,11 +48,13 @@ import {
   getSession,
   isSupabaseMode,
   joinAsChallenger,
+  listOpenSessions,
   listSessions,
   markSetupReady as markSupabaseSetupReady,
   resetFinishedGame as resetSupabaseFinishedGame,
   sendChatMessage as sendSupabaseChatMessage,
   SessionRow,
+  surrenderGame as surrenderSupabaseGame,
   subscribeToSession,
   updateSessionPlayerProfile,
 } from "./lib/supabaseGameService";
@@ -126,6 +129,7 @@ export function App() {
   const [savedSessionRows, setSavedSessionRows] = useState<
     Record<string, SessionRow>
   >({});
+  const [openSessionRows, setOpenSessionRows] = useState<SessionRow[]>([]);
   const [routeSessionRow, setRouteSessionRow] = useState<SessionRow | null>(null);
   const [routeSessionLoading, setRouteSessionLoading] = useState(false);
   const [routeSessionMissing, setRouteSessionMissing] = useState(false);
@@ -136,10 +140,6 @@ export function App() {
   const debugBoardEnabled = useMemo(
     () => isDebugBoardEnabled(location.search),
     [location.search],
-  );
-  const demoState = useMemo(
-    () => createDebugBoardState(gameRules, gamePieces).state,
-    [],
   );
   const committedOptimisticStateKey = useRef<string | null>(null);
   const lastSyncedProfileKey = useRef<string | null>(null);
@@ -160,11 +160,13 @@ export function App() {
         : null,
     [routeSessionId, savedMemberships],
   );
+  const isCurrentSessionArchived = Boolean(routeMembership?.archivedAt);
 
   const isSetupPhase = Boolean(state && state.phase === "setup");
   const disabled =
     !state ||
     !myId ||
+    isCurrentSessionArchived ||
     Boolean(pendingBoardAction) ||
     (isSetupPhase
       ? state.setupReadyPlayerIds.includes(myId)
@@ -292,18 +294,25 @@ export function App() {
     const memberships = listStoredSessions();
     setSavedMemberships(memberships);
 
-    if (!isSupabaseMode || debugBoardEnabled || memberships.length === 0) {
+    if (!isSupabaseMode || debugBoardEnabled) {
       setSavedSessionRows({});
+      setOpenSessionRows([]);
       return;
     }
 
     try {
-      const rows = await listSessions([
-        ...new Set(memberships.map((membership) => membership.sessionId)),
+      const [rows, openRows] = await Promise.all([
+        memberships.length > 0
+          ? listSessions([
+              ...new Set(memberships.map((membership) => membership.sessionId)),
+            ])
+          : Promise.resolve([] as SessionRow[]),
+        listOpenSessions(5),
       ]);
       setSavedSessionRows(
         Object.fromEntries(rows.map((row) => [row.session_id, row])),
       );
+      setOpenSessionRows(openRows);
     } catch (err) {
       setError((err as Error).message);
     }
@@ -348,6 +357,15 @@ export function App() {
     setRouteSessionLoading(false);
     setError(null);
     navigate({ pathname: DASHBOARD_ROUTE, search: "" });
+  };
+
+  const archiveSavedSession = (membership: StoredSessionMembership) => {
+    archiveStoredSessionMembership(membership.sessionId);
+    const nextMemberships = listStoredSessions();
+    setSavedMemberships(nextMemberships);
+    if (routeSessionId === membership.sessionId) {
+      leaveCurrentSession();
+    }
   };
 
   const copySessionLink = async (sessionId: string) => {
@@ -576,10 +594,9 @@ export function App() {
     setSavedMemberships(listStoredSessions());
   }, [debugBoardEnabled, myId, roomCode, state?.moveCount]);
 
-  const visibleSavedSessions = savedMemberships.filter((membership) => {
-    const row = savedSessionRows[membership.sessionId];
-    return row?.state?.phase !== "closed";
-  });
+  const visibleSavedSessions = savedMemberships.filter(
+    (membership) => !membership.archivedAt,
+  );
 
   const createSession = async () => {
     if (!isSupabaseMode) {
@@ -620,7 +637,7 @@ export function App() {
     }
   };
 
-  const joinSession = async () => {
+  const joinSession = async (sessionIdOverride?: string) => {
     if (!isSupabaseMode) {
       setError("Supabase client env vars are missing.");
       return;
@@ -631,7 +648,9 @@ export function App() {
       return;
     }
 
-    const targetSessionId = normalizeSessionId(routeSessionId || roomCode);
+    const targetSessionId = normalizeSessionId(
+      sessionIdOverride || routeSessionId || roomCode,
+    );
     if (!targetSessionId) {
       setError("Enter a session code first.");
       return;
@@ -667,6 +686,12 @@ export function App() {
     } catch (err) {
       setError((err as Error).message);
     }
+  };
+
+  const joinOpenSession = async (sessionId: string) => {
+    setRoomCode(sessionId);
+    navigateToSession(sessionId);
+    await joinSession(sessionId);
   };
 
   const onCellClick = async (target: Position) => {
@@ -864,6 +889,36 @@ export function App() {
     }
   };
 
+  const surrenderGame = async () => {
+    if (!state || !myId || pendingBoardAction) return;
+    if (state.phase === "finished" || state.phase === "closed") return;
+
+    if (debugBoardEnabled) {
+      const winner = state.players.find((player) => player.id !== myId);
+      setState({
+        ...state,
+        phase: "finished",
+        turnPlayerId: null,
+        winnerId: winner?.id ?? null,
+        completionReason: "surrender",
+        surrenderedById: myId,
+        finishedAt: new Date().toISOString(),
+      });
+      setSelected(null);
+      setError("Debug board preview mode.");
+      return;
+    }
+
+    try {
+      await surrenderSupabaseGame(state.roomCode, myId);
+      setSelected(null);
+      setError(null);
+      await refreshSavedSessions();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   const sendChatMessage = async (message: string) => {
     const trimmedMessage = message.trim();
     if (!trimmedMessage || !state || !myId) return;
@@ -930,21 +985,6 @@ export function App() {
     }
   };
 
-  const loadExisting = async () => {
-    if (!isSupabaseMode) {
-      setError("Supabase client env vars are missing.");
-      return;
-    }
-
-    const targetSessionId = normalizeSessionId(roomCode);
-    if (!targetSessionId) {
-      setError("Enter a session code first.");
-      return;
-    }
-
-    navigateToSession(targetSessionId);
-  };
-
   const randomizeAvatar = () => {
     setAvatarId((current) => pickRandomAvatarId(current));
   };
@@ -980,18 +1020,16 @@ export function App() {
             ) : (
               <DashboardScreen
                 avatarUrl={profileAvatarUrl}
-                debugBoardEnabled={debugBoardEnabled}
-                demoState={demoState}
+                openSessions={openSessionRows}
                 playerName={playerName}
                 roomCode={roomCode}
                 savedSessionRows={savedSessionRows}
                 trimmedPlayerName={trimmedPlayerName}
                 visibleSavedSessions={visibleSavedSessions}
-                buildSessionUrl={buildSessionUrl}
-                copySessionLink={copySessionLink}
                 createSession={createSession}
                 joinSession={joinSession}
-                loadExisting={loadExisting}
+                onArchiveSavedSession={archiveSavedSession}
+                onJoinOpenSession={joinOpenSession}
                 onPlayerNameBlur={() =>
                   setPlayerName(
                     (current) => current.trim() || DEFAULT_PLAYER_NAME,
@@ -1031,6 +1069,8 @@ export function App() {
                   onCellClick={onCellClick}
                   onFinish={finishGame}
                   onPlayAgain={playAgain}
+                  onSurrender={surrenderGame}
+                  archived={isCurrentSessionArchived}
                   sendChatMessage={sendChatMessage}
                 />
               ) : (
@@ -1077,6 +1117,8 @@ export function App() {
                 onCellClick={onCellClick}
                 onFinish={finishGame}
                 onPlayAgain={playAgain}
+                onSurrender={surrenderGame}
+                archived={isCurrentSessionArchived}
                 sendChatMessage={sendChatMessage}
               />
             ) : (
