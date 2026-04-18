@@ -1,0 +1,21 @@
+.appShell {
+  min-height: 100vh;
+  padding: var(--space-4);
+  position: relative;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.gameMode {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.error {
+  margin: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  color: var(--color-danger-text);
+  border-color: var(--color-danger-border);
+}

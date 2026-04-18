@@ -59,43 +59,15 @@ import {
   updateSessionPlayerProfile,
 } from "./lib/supabaseGameService";
 import { appendChatMessage, GameState, Position } from "./shared/schema";
-
-const DEFAULT_PLAYER_NAME = "Commander Nova";
-const SESSION_QUERY_PARAM = "session";
-const DEBUG_BOARD_PARAM = "debugBoard";
-const DASHBOARD_ROUTE = "/";
-const GAME_ROUTE = "/game";
-
-const normalizeSessionId = (sessionId: string) => sessionId.trim().toUpperCase();
-
-const getSessionIdFromSearch = (search: string) => {
-  const value = new URLSearchParams(search).get(SESSION_QUERY_PARAM);
-  return value ? normalizeSessionId(value) : "";
-};
-
-const buildSearchWithoutLegacySession = (search: string) => {
-  const nextParams = new URLSearchParams(search);
-  nextParams.delete(SESSION_QUERY_PARAM);
-  return nextParams.toString() ? `?${nextParams.toString()}` : "";
-};
-
-const isDebugBoardEnabled = (search: string) => {
-  const value = new URLSearchParams(search).get(DEBUG_BOARD_PARAM);
-  return value === "1" || value === "true";
-};
-
-type PendingBoardAction = {
-  optimisticStateKey: string;
-  previousSelection: Position;
-  previousState: GameState;
-};
-
-const serializeGameState = (state: GameState) => JSON.stringify(state);
-const serializeBoardActionState = (state: GameState) =>
-  serializeGameState({
-    ...state,
-    chatMessages: [],
-  });
+import { DASHBOARD_ROUTE, DEFAULT_PLAYER_NAME, GAME_ROUTE } from "./app/constants";
+import {
+  buildGamePath,
+  buildSearchWithoutLegacySession,
+  getSessionIdFromSearch,
+  isDebugBoardEnabled,
+  normalizeSessionId,
+} from "./app/sessionRouting";
+import { PendingBoardAction, serializeBoardActionState } from "./types/ui";
 
 export function App() {
   const location = useLocation();
@@ -115,20 +87,18 @@ export function App() {
     [],
   );
   const [playerName, setPlayerName] = useState(DEFAULT_PLAYER_NAME);
-  const [avatarId, setAvatarId] = useState(
-    avatarCatalog[0]?.id ?? DEFAULT_AVATAR_ID,
-  );
+  const [avatarId, setAvatarId] = useState(avatarCatalog[0]?.id ?? DEFAULT_AVATAR_ID);
   const [roomCode, setRoomCode] = useState("");
   const [myId, setMyId] = useState<string | null>(null);
   const [state, setState] = useState<GameState | null>(null);
   const [selected, setSelected] = useState<Position | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [savedMemberships, setSavedMemberships] = useState<
-    StoredSessionMembership[]
-  >([]);
-  const [savedSessionRows, setSavedSessionRows] = useState<
-    Record<string, SessionRow>
-  >({});
+  const [savedMemberships, setSavedMemberships] = useState<StoredSessionMembership[]>(
+    [],
+  );
+  const [savedSessionRows, setSavedSessionRows] = useState<Record<string, SessionRow>>(
+    {},
+  );
   const [openSessionRows, setOpenSessionRows] = useState<SessionRow[]>([]);
   const [routeSessionRow, setRouteSessionRow] = useState<SessionRow | null>(null);
   const [routeSessionLoading, setRouteSessionLoading] = useState(false);
@@ -154,9 +124,9 @@ export function App() {
   const routeMembership = useMemo(
     () =>
       routeSessionId
-        ? savedMemberships.find(
+        ? (savedMemberships.find(
             (membership) => membership.sessionId === routeSessionId,
-          ) ?? null
+          ) ?? null)
         : null,
     [routeSessionId, savedMemberships],
   );
@@ -214,9 +184,6 @@ export function App() {
 
     return new Set(keys);
   }, [disabled, myId, state]);
-
-  const buildGamePath = (sessionId: string) =>
-    `/game/${normalizeSessionId(sessionId)}`;
 
   const navigateToSession = (sessionId: string, replace = false) => {
     navigate(
@@ -309,9 +276,7 @@ export function App() {
           : Promise.resolve([] as SessionRow[]),
         listOpenSessions(5),
       ]);
-      setSavedSessionRows(
-        Object.fromEntries(rows.map((row) => [row.session_id, row])),
-      );
+      setSavedSessionRows(Object.fromEntries(rows.map((row) => [row.session_id, row])));
       setOpenSessionRows(openRows);
     } catch (err) {
       setError((err as Error).message);
@@ -336,9 +301,7 @@ export function App() {
       setSavedMemberships(listStoredSessions());
       await refreshSavedSessions();
       setError(
-        session.state
-          ? null
-          : "Session restored. Waiting for challenger to join.",
+        session.state ? null : "Session restored. Waiting for challenger to join.",
       );
     } catch (err) {
       setError((err as Error).message);
@@ -425,9 +388,7 @@ export function App() {
 
         const successfulRows = updates
           .filter(
-            (
-              result,
-            ): result is PromiseFulfilledResult<SessionRow> =>
+            (result): result is PromiseFulfilledResult<SessionRow> =>
               result.status === "fulfilled",
           )
           .map((result) => result.value);
@@ -435,9 +396,7 @@ export function App() {
         if (successfulRows.length > 0) {
           setSavedSessionRows((current) => ({
             ...current,
-            ...Object.fromEntries(
-              successfulRows.map((row) => [row.session_id, row]),
-            ),
+            ...Object.fromEntries(successfulRows.map((row) => [row.session_id, row])),
           }));
           setRouteSessionRow((current) => {
             if (!current) return current;
@@ -449,8 +408,7 @@ export function App() {
         }
 
         const failures = updates.filter(
-          (result): result is PromiseRejectedResult =>
-            result.status === "rejected",
+          (result): result is PromiseRejectedResult => result.status === "rejected",
         );
         if (failures.length > 0) {
           setError(failures[0].reason?.message ?? "Could not sync profile.");
@@ -565,7 +523,8 @@ export function App() {
       if (
         pendingBoardAction &&
         nextRow.state &&
-        serializeBoardActionState(nextRow.state) === pendingBoardAction.optimisticStateKey
+        serializeBoardActionState(nextRow.state) ===
+          pendingBoardAction.optimisticStateKey
       ) {
         committedOptimisticStateKey.current = pendingBoardAction.optimisticStateKey;
         setPendingBoardAction(null);
@@ -1031,9 +990,7 @@ export function App() {
                 onArchiveSavedSession={archiveSavedSession}
                 onJoinOpenSession={joinOpenSession}
                 onPlayerNameBlur={() =>
-                  setPlayerName(
-                    (current) => current.trim() || DEFAULT_PLAYER_NAME,
-                  )
+                  setPlayerName((current) => current.trim() || DEFAULT_PLAYER_NAME)
                 }
                 onPlayerNameChange={setPlayerName}
                 onResumeSavedSession={resumeSavedSession}

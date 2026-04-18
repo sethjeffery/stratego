@@ -1,5 +1,7 @@
+import clsx from "clsx";
 import { resolveAvatarUrl } from "../lib/playerProfile";
 import { SessionRow } from "../lib/supabaseGameService";
+import styles from "./SessionAccessScreen.module.css";
 
 type SessionAccessScreenProps = {
   isLoading: boolean;
@@ -33,8 +35,8 @@ export function SessionAccessScreen({
 }: SessionAccessScreenProps) {
   if (isLoading) {
     return (
-      <main className="session-access">
-        <section className="session-status-card card">
+      <main className={styles.sessionAccess}>
+        <section className={clsx("card", styles.statusCard)}>
           <p className="eyebrow">Loading Session</p>
           <h1>Resolving {sessionId}</h1>
           <p>Checking the latest session status and your device membership.</p>
@@ -45,15 +47,15 @@ export function SessionAccessScreen({
 
   if (isMissing || !sessionRow) {
     return (
-      <main className="session-access">
-        <section className="session-status-card card">
+      <main className={styles.sessionAccess}>
+        <section className={clsx("card", styles.statusCard)}>
           <p className="eyebrow">Session Unavailable</p>
           <h1>{sessionId}</h1>
           <p>
-            This session could not be found. It may have expired, or the link
-            may be incorrect.
+            This session could not be found. It may have expired, or the link may be
+            incorrect.
           </p>
-          <div className="session-status-actions">
+          <div className={styles.statusActions}>
             <button className="secondary-button" onClick={goToDashboard}>
               Back To Dashboard
             </button>
@@ -95,21 +97,21 @@ export function SessionAccessScreen({
   }
 
   return (
-    <main className="session-access">
-      <section className="session-status-card card">
+    <main className={styles.sessionAccess}>
+      <section className={clsx("card", styles.statusCard)}>
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
         <p>{description}</p>
 
-        <div className="session-meta">
+        <div className={styles.meta}>
           <span className={`status-pill ${hasOpenSlot ? "is-open" : "is-full"}`}>
             {isClosed ? "Closed" : hasOpenSlot ? "Open Seat" : "Two Players Joined"}
           </span>
           <small>Updated {formatUpdatedAt(sessionRow.updated_at)}</small>
         </div>
 
-        <div className="session-player-list">
-          <article className="session-player-row">
+        <div className={styles.playerList}>
+          <article className={styles.playerRow}>
             <img
               className="player-avatar"
               src={resolveAvatarUrl(sessionRow.initiator_avatar ?? undefined)}
@@ -122,7 +124,7 @@ export function SessionAccessScreen({
           </article>
 
           {sessionRow.challenger_name ? (
-            <article className="session-player-row">
+            <article className={styles.playerRow}>
               <img
                 className="player-avatar"
                 src={resolveAvatarUrl(sessionRow.challenger_avatar ?? undefined)}
@@ -134,8 +136,8 @@ export function SessionAccessScreen({
               </div>
             </article>
           ) : (
-            <article className="session-player-row is-empty">
-              <div className="empty-avatar">?</div>
+            <article className={clsx(styles.playerRow, styles.playerRowEmpty)}>
+              <div className={styles.emptyAvatar}>?</div>
               <div>
                 <strong>Open Challenger Seat</strong>
                 <p>Waiting for a second player</p>
@@ -144,12 +146,12 @@ export function SessionAccessScreen({
           )}
         </div>
 
-        <div className="session-link-block">
+        <div className={styles.linkBlock}>
           <small>Share link</small>
           <code>{buildSessionUrl(sessionRow.session_id)}</code>
         </div>
 
-        <div className="session-status-actions">
+        <div className={styles.statusActions}>
           {hasOpenSlot && !isMember && !isClosed && (
             <button className="primary-cta" onClick={() => void joinSession()}>
               Join Session

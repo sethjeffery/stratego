@@ -70,6 +70,21 @@ When adjusting the board renderer, visually inspect it in a browser rather than 
 4. Preserve data-driven configuration instead of hardcoding piece or ruleset logic into UI code.
 5. Do not expose Supabase secret/service keys to client code.
 
+## Code Organization & Quality Standards
+
+- Keep boundaries explicit:
+  - `src/screens/*` orchestrates user flows and routing-level decisions.
+  - `src/components/*` owns reusable UI primitives and visuals.
+  - `src/lib/*` owns gameplay/service logic and external adapters.
+  - `src/app/*` owns app-wide constants and routing helpers.
+  - `src/types/*` owns shared UI-only TypeScript types/helpers.
+- Prefer CSS Modules per component/screen for new or touched UI.
+- Keep global styles limited to design tokens, resets, and shared primitives (`card`, button variants, etc.).
+- Reuse existing utilities (`clsx`, data-driven configs) before adding new dependencies.
+- Maintain lint/format hygiene before handoff:
+  - `npm run lint`
+  - `npm run format` (or `npm run format:write` to fix)
+
 ## Useful Local Commands
 
 ```bash

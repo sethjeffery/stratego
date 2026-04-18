@@ -1,0 +1,58 @@
+.sessionAccess {
+  display: grid;
+  place-items: center;
+  padding: var(--space-6) var(--space-4);
+}
+
+.statusCard {
+  width: min(720px, 100%);
+  padding: var(--space-5);
+  display: grid;
+  gap: var(--space-4);
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.playerList {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.playerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.playerRowEmpty {
+  opacity: 0.75;
+}
+
+.emptyAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-round);
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--color-border-muted);
+}
+
+.linkBlock {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.statusActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

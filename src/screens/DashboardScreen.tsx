@@ -1,9 +1,10 @@
-import { DEFAULT_AVATAR_ID, resolveAvatarUrl } from "../lib/playerProfile";
-import { StoredSessionMembership } from "../lib/localSessionStore";
-import { SessionRow } from "../lib/supabaseGameService";
-import { PlayerState } from "../shared/schema";
 import Avatar from "../components/Avatar";
 import background from "../assets/battle-bg.webp";
+import { StoredSessionMembership } from "../lib/localSessionStore";
+import { DEFAULT_AVATAR_ID, resolveAvatarUrl } from "../lib/playerProfile";
+import { SessionRow } from "../lib/supabaseGameService";
+import { PlayerState } from "../shared/schema";
+import styles from "./DashboardScreen.module.css";
 
 const formatSessionTimestamp = (timestamp?: string | number) => {
   if (!timestamp) return "Unknown activity";
@@ -114,19 +115,19 @@ export function DashboardScreen({
 
   return (
     <>
-      <header className="lobby-topbar card">
-        <div className="identity-hero">
+      <header className={`${styles.topbar} card`}>
+        <div className={styles.identityHero}>
           <Avatar
-            className="avatar-button"
+            className={styles.avatarButton}
             onClick={randomizeAvatar}
             avatarUrl={avatarUrl}
             alt={trimmedPlayerName}
             title="Randomize avatar"
           />
-          <div className="identity-copy">
+          <div className={styles.identityCopy}>
             <p className="eyebrow">Commander profile</p>
             <input
-              className="identity-name-input"
+              className={styles.nameInput}
               value={playerName}
               onBlur={onPlayerNameBlur}
               onChange={(event) => onPlayerNameChange(event.target.value)}
@@ -138,8 +139,8 @@ export function DashboardScreen({
             </button>
           </div>
         </div>
-        <div className="lobby-topbar-actions">
-          <div className="join-control">
+        <div className={styles.topbarActions}>
+          <div className={styles.joinControl}>
             <input
               placeholder="Session code"
               maxLength={8}
@@ -152,32 +153,35 @@ export function DashboardScreen({
               Join
             </button>
           </div>
-          <button className="primary-cta host-topbar-cta" onClick={() => void createSession()}>
+          <button
+            className={`primary-cta ${styles.hostButton}`}
+            onClick={() => void createSession()}
+          >
             Host
           </button>
         </div>
       </header>
 
-      <main className="lobby-columns">
-        <section className="session-dashboard card">
+      <main className={styles.columns}>
+        <section className={`${styles.panel} card`}>
           <div className="launcher-header">
             <h2>Looking For Opponent</h2>
           </div>
-          <div className="saved-session-list">
+          <div className={styles.list}>
             {latestOpenSessions.length === 0 ? (
-              <p className="lobby-empty-state">No open games right now.</p>
+              <p className={styles.emptyState}>No open games right now.</p>
             ) : (
               latestOpenSessions.map((row) => {
                 const players = getSessionPlayers(row);
 
                 return (
-                  <article key={row.session_id} className="saved-session-card">
-                    <div className="saved-session-summary">
-                      <div className="player-strip">
+                  <article key={row.session_id} className={styles.sessionCard}>
+                    <div className={styles.sessionSummary}>
+                      <div className={styles.playerStrip}>
                         {players.map((player, index) => (
                           <Avatar
                             key={`${row.session_id}-${player.id}`}
-                            className="player-avatar"
+                            className={styles.playerAvatar}
                             avatarUrl={resolveAvatarUrl(player.avatarId)}
                             alt={player.name}
                             title={player.name}
@@ -207,31 +211,32 @@ export function DashboardScreen({
           </div>
         </section>
 
-        <section className="session-dashboard card">
+        <section className={`${styles.panel} card`}>
           <div className="launcher-header">
             <h2>Your Recent Games</h2>
           </div>
-          <div className="saved-session-list">
+          <div className={styles.list}>
             {latestSavedSessions.length === 0 ? (
-              <p className="lobby-empty-state">No recent games yet.</p>
+              <p className={styles.emptyState}>No recent games yet.</p>
             ) : (
               latestSavedSessions.map((membership) => {
                 const row = savedSessionRows[membership.sessionId];
                 const players = getSessionPlayers(row, membership);
-                const isFinished = row?.state?.phase === "finished" || row?.state?.phase === "closed";
+                const isFinished =
+                  row?.state?.phase === "finished" || row?.state?.phase === "closed";
                 const isWaitingForChallenger = row && !row.state;
                 const completionLabel = row
                   ? getCompletionLabel(row, membership, players)
                   : "Saved locally";
 
                 return (
-                  <article key={membership.sessionId} className="saved-session-card">
-                    <div className="saved-session-summary">
-                      <div className="player-strip">
+                  <article key={membership.sessionId} className={styles.sessionCard}>
+                    <div className={styles.sessionSummary}>
+                      <div className={styles.playerStrip}>
                         {players.map((player, index) => (
                           <Avatar
                             key={`${membership.sessionId}-${player.id}`}
-                            className="player-avatar"
+                            className={styles.playerAvatar}
                             avatarUrl={resolveAvatarUrl(player.avatarId)}
                             alt={player.name}
                             title={player.name}
@@ -250,11 +255,13 @@ export function DashboardScreen({
                         </p>
                         <small>
                           Updated{" "}
-                          {formatSessionTimestamp(row?.updated_at ?? membership.lastOpenedAt)}
+                          {formatSessionTimestamp(
+                            row?.updated_at ?? membership.lastOpenedAt,
+                          )}
                         </small>
                       </div>
                     </div>
-                    <div className="inline-actions">
+                    <div className={styles.inlineActions}>
                       {isFinished ? (
                         <span className="status-pill">{completionLabel}</span>
                       ) : (
@@ -283,7 +290,7 @@ export function DashboardScreen({
       <img
         src={background}
         alt="Battle background"
-        className="background-image"
+        className={styles.backgroundImage}
       />
     </>
   );
