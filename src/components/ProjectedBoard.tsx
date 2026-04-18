@@ -1,13 +1,8 @@
-import {
-  CSSProperties,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { CSSProperties, useLayoutEffect, useMemo, useRef, useState } from "react";
 import boardMapUrl from "../assets/map.png";
 import bluePieceUrl from "../assets/pieces/blue-piece.svg";
 import redPieceUrl from "../assets/pieces/red-piece.svg";
+import { pieceIconById } from "./board/pieceIcons";
 import {
   GameState,
   PieceDefinition,
@@ -39,17 +34,6 @@ const impactParticles = [
   { angle: 126, distance: 48, delay: 188, size: 5 },
   { angle: 164, distance: 40, delay: 212, size: 4 },
 ] as const;
-
-const pieceIconModules = import.meta.glob("../assets/pieces/*.svg", {
-  eager: true,
-  import: "default",
-}) as Record<string, string>;
-const pieceIconById = Object.fromEntries(
-  Object.entries(pieceIconModules).flatMap(([path, url]) => {
-    const match = path.match(/stratego-([a-z]+)\.svg$/);
-    return match ? [[match[1], url]] : [];
-  }),
-) as Record<string, string>;
 
 const colorForOwner = (ownerId: string, playerOneId: string | null) =>
   ownerId === playerOneId ? "player-one" : "player-two";
@@ -118,8 +102,7 @@ export function ProjectedBoard({
   const boardRows = rules.board.height;
   const playerOneId = state.players[0]?.id ?? null;
   const isPerspectiveFlipped = myId !== null && state.players[1]?.id === myId;
-  const shouldShowRank = (pieceId: string) =>
-    pieceId !== "flag" && pieceId !== "bomb";
+  const shouldShowRank = (pieceId: string) => pieceId !== "flag" && pieceId !== "bomb";
   const legalTargetKeys = useMemo(
     () => new Set(legalTargets.map((target) => `${target.x}-${target.y}`)),
     [legalTargets],
@@ -145,9 +128,7 @@ export function ProjectedBoard({
 
   useLayoutEffect(() => {
     if (!pendingBoardAction || !state.lastBattle) return;
-    if (
-      animatedActionKeyRef.current === pendingBoardAction.optimisticStateKey
-    ) {
+    if (animatedActionKeyRef.current === pendingBoardAction.optimisticStateKey) {
       return;
     }
 
@@ -156,8 +137,7 @@ export function ProjectedBoard({
         unit.x === pendingBoardAction.previousSelection.x &&
         unit.y === pendingBoardAction.previousSelection.y,
     );
-    if (!attacker || state.units.some((unit) => unit.id === attacker.id))
-      return;
+    if (!attacker || state.units.some((unit) => unit.id === attacker.id)) return;
 
     animatedActionKeyRef.current = pendingBoardAction.optimisticStateKey;
     setGhostResolving(false);
@@ -204,9 +184,7 @@ export function ProjectedBoard({
       if (!previousUnit) return false;
       if (previousUnit.x === unit.x && previousUnit.y === unit.y) return false;
 
-      return (
-        !isUnitVisibleToViewer(previousUnit) && !isUnitVisibleToViewer(unit)
-      );
+      return !isUnitVisibleToViewer(previousUnit) && !isUnitVisibleToViewer(unit);
     });
 
     if (!movedHiddenUnit) return;
@@ -229,9 +207,7 @@ export function ProjectedBoard({
       setGhostResolving(true);
     });
     const timeoutId = window.setTimeout(() => {
-      setGhostUnit((current) =>
-        current?.key === animationKey ? null : current,
-      );
+      setGhostUnit((current) => (current?.key === animationKey ? null : current));
       setGhostResolving(false);
     }, 320);
 
@@ -267,9 +243,7 @@ export function ProjectedBoard({
                 key={cell.key}
                 className={`board-cell-hit ${isLegalTarget ? "is-target" : ""} ${isSelected ? "is-selected" : ""}`}
                 style={buttonStyle}
-                onClick={() =>
-                  interactive && onCellClick?.({ x: cell.x, y: cell.y })
-                }
+                onClick={() => interactive && onCellClick?.({ x: cell.x, y: cell.y })}
                 disabled={!interactive}
                 data-x={cell.x}
                 data-y={cell.y}
@@ -288,8 +262,7 @@ export function ProjectedBoard({
             })
             .sort((left, right) => left.display.y - right.display.y)
             .map(({ unit, display }) => {
-              const isSelected =
-                selected?.x === unit.x && selected?.y === unit.y;
+              const isSelected = selected?.x === unit.x && selected?.y === unit.y;
               const isPicked =
                 isSelected &&
                 !disabled &&
@@ -330,8 +303,7 @@ export function ProjectedBoard({
                   className={`piece-hit ${interactive ? "can-hover" : ""} ${isPieceActionable ? "is-interactive" : ""} ${isSelectable ? "is-selectable" : ""} ${isSelected ? "is-selected" : ""} ${isPicked ? "is-picked" : ""}`}
                   style={buttonStyle}
                   onClick={() =>
-                    isPieceInteractive &&
-                    onCellClick?.({ x: unit.x, y: unit.y })
+                    isPieceInteractive && onCellClick?.({ x: unit.x, y: unit.y })
                   }
                   onMouseEnter={() => onPieceHover?.({ x: unit.x, y: unit.y })}
                   onMouseLeave={() => onPieceHover?.(null)}
@@ -402,10 +374,7 @@ export function ProjectedBoard({
             (() => {
               const piece = pieceById.get(ghostUnit.unit.pieceId);
               const pieceIcon = pieceIconById[ghostUnit.unit.pieceId];
-              const pieceColor = colorForOwner(
-                ghostUnit.unit.ownerId,
-                playerOneId,
-              );
+              const pieceColor = colorForOwner(ghostUnit.unit.ownerId, playerOneId);
               const pieceShellUrl =
                 pieceColor === "player-one" ? redPieceUrl : bluePieceUrl;
               const visible = isUnitVisibleToViewer(ghostUnit.unit);
