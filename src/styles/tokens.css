@@ -1,0 +1,25 @@
+:root {
+  --font-sans: "Rajdhani", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "PT Serif", "Times New Roman", serif;
+
+  --color-bg-top: #2b3124;
+  --color-bg-mid: #1c2017;
+  --color-bg-bottom: #12150f;
+  --color-text: #e6dfc9;
+  --color-text-muted: #b8ae92;
+  --color-surface: rgba(31, 36, 26, 0.86);
+  --color-surface-2: rgba(46, 52, 37, 0.32);
+  --color-border: rgba(197, 177, 127, 0.34);
+  --color-border-muted: rgba(209, 191, 145, 0.26);
+  --color-danger-text: #ffc9c9;
+  --color-danger-border: rgba(220, 75, 75, 0.42);
+
+  --radius-md: 10px;
+  --radius-round: 999px;
+
+  --space-2: 0.45rem;
+  --space-3: 0.7rem;
+  --space-4: 1rem;
+  --space-5: 1.1rem;
+  --space-6: 1.5rem;
+}

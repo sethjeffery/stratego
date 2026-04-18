@@ -4,17 +4,8 @@ import { gamePieces, gameRules } from "../lib/gameConfig";
 import { resolveAvatarUrl } from "../lib/playerProfile";
 import { GameChatMessage, GameState, Position } from "../shared/schema";
 import Avatar from "../components/Avatar";
+import { pieceIconById } from "../components/board/pieceIcons";
 
-const pieceIconModules = import.meta.glob("../assets/pieces/*.svg", {
-  eager: true,
-  import: "default",
-}) as Record<string, string>;
-const pieceIconById = Object.fromEntries(
-  Object.entries(pieceIconModules).flatMap(([path, url]) => {
-    const match = path.match(/stratego-([a-z]+)\.svg$/);
-    return match ? [[match[1], url]] : [];
-  }),
-) as Record<string, string>;
 const pieceById = new Map(gamePieces.map((piece) => [piece.id, piece]));
 const getPlayerColorClass = (playerId: string, playerOneId: string | null) =>
   playerId === playerOneId ? "player-one" : "player-two";
@@ -72,9 +63,8 @@ export function GameScreen({
     state.players.find((player) => player.id !== myId)?.name ?? "the opponent";
   const isMyTurn = Boolean(myId && state.turnPlayerId === myId);
   const selectedUnit = selected
-    ? (state.units.find(
-        (unit) => unit.x === selected.x && unit.y === selected.y,
-      ) ?? null)
+    ? (state.units.find((unit) => unit.x === selected.x && unit.y === selected.y) ??
+      null)
     : null;
   const inspectedUnit = selectedUnit;
   const inspectedPiece = inspectedUnit
@@ -88,27 +78,23 @@ export function GameScreen({
   const inspectedPieceTraits =
     inspectedVisible && inspectedPiece
       ? [
-          inspectedPiece.canTraverseMany
-            ? "Moves multiple spaces in a line."
-            : null,
+          inspectedPiece.canTraverseMany ? "Moves multiple spaces in a line." : null,
           inspectedPiece.canDefuseBomb ? "Defuses bombs when attacking." : null,
           inspectedPiece.immovable ? "Cannot move once deployed." : null,
-          inspectedPiece.canKillMarshal
-            ? "Kills the Marshal if attacking."
-            : null,
+          inspectedPiece.canKillMarshal ? "Kills the Marshal if attacking." : null,
         ].filter(Boolean)
       : [];
   const mainStatus = archived
     ? "This game is archived"
     : state.winnerId
-    ? `${state.players.find((player) => player.id === state.winnerId)?.name ?? "Commander"} wins`
-    : state.phase === "setup"
-      ? canMarkReady
-        ? "Organize your army"
-        : `Waiting on ${otherPlayerName}...`
-      : isMyTurn
-        ? "Your turn..."
-        : `Waiting on ${otherPlayerName}...`;
+      ? `${state.players.find((player) => player.id === state.winnerId)?.name ?? "Commander"} wins`
+      : state.phase === "setup"
+        ? canMarkReady
+          ? "Organize your army"
+          : `Waiting on ${otherPlayerName}...`
+        : isMyTurn
+          ? "Your turn..."
+          : `Waiting on ${otherPlayerName}...`;
   const playerOneId = state.players[0]?.id ?? null;
   const visibleChatMessages = useMemo(() => state.chatMessages, [state]);
   const canSendChat = Boolean(myId) && !archived && !state.winnerId;
@@ -157,12 +143,15 @@ export function GameScreen({
     });
 
     const mvp =
-      [...killsByPiece.values()].sort((a, b) => b.score - a.score || b.value - a.value)[0] ??
-      null;
+      [...killsByPiece.values()].sort(
+        (a, b) => b.score - a.score || b.value - a.value,
+      )[0] ?? null;
     const startTime = state.startedAt ? new Date(state.startedAt) : null;
     const endTime = state.finishedAt ? new Date(state.finishedAt) : null;
     const matchTimeMs =
-      startTime && endTime ? Math.max(0, endTime.getTime() - startTime.getTime()) : null;
+      startTime && endTime
+        ? Math.max(0, endTime.getTime() - startTime.getTime())
+        : null;
 
     return {
       mvp,
@@ -228,10 +217,7 @@ export function GameScreen({
     const colorClass = getPlayerColorClass(ownerId, playerOneId);
 
     return (
-      <span
-        className={`game-chat-piece-badge ${colorClass}`}
-        aria-hidden="true"
-      >
+      <span className={`game-chat-piece-badge ${colorClass}`} aria-hidden="true">
         {pieceIcon ? (
           <img src={pieceIcon} alt="" />
         ) : (
@@ -298,15 +284,9 @@ export function GameScreen({
         <p className="game-chat-battle">
           {battle.winner === "both" ? (
             <>
-              {renderBattlePieceBadge(
-                battle.attackerPieceId,
-                battle.attackerOwnerId,
-              )}
+              {renderBattlePieceBadge(battle.attackerPieceId, battle.attackerOwnerId)}
               <span>and</span>
-              {renderBattlePieceBadge(
-                battle.defenderPieceId,
-                battle.defenderOwnerId,
-              )}
+              {renderBattlePieceBadge(battle.defenderPieceId, battle.defenderOwnerId)}
               <span>died</span>
             </>
           ) : (
@@ -351,7 +331,9 @@ export function GameScreen({
               onClick={() => setSurrenderConfirmVisible(true)}
               aria-label="Surrender"
               title="Surrender"
-              disabled={archived || state.phase === "finished" || state.phase === "closed"}
+              disabled={
+                archived || state.phase === "finished" || state.phase === "closed"
+              }
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path
@@ -453,21 +435,14 @@ export function GameScreen({
           </section>
 
           {canMarkReady && !debugBoardEnabled && (
-            <button
-              className="game-ready-button"
-              onClick={() => void markReady()}
-            >
+            <button className="game-ready-button" onClick={() => void markReady()}>
               Ready
             </button>
           )}
         </div>
 
         <section className="game-chat-dock" aria-label="Match chat">
-          <div
-            ref={chatStackRef}
-            className="game-chat-stack"
-            aria-live="polite"
-          >
+          <div ref={chatStackRef} className="game-chat-stack" aria-live="polite">
             {visibleChatMessages.length === 0 ? (
               <p className="game-chat-placeholder">
                 Open channel. Keep it brief and tactical.
@@ -502,9 +477,7 @@ export function GameScreen({
               type="text"
               value={chatDraft}
               onChange={(event) => setChatDraft(event.target.value)}
-              placeholder={
-                canSendChat ? "Send a message…" : "Join a seat to chat"
-              }
+              placeholder={canSendChat ? "Send a message…" : "Join a seat to chat"}
               autoComplete="off"
               maxLength={180}
               disabled={!myId}
@@ -532,7 +505,8 @@ export function GameScreen({
             <p>{completionDescription}</p>
             <div className="completion-stats">
               <p>
-                <strong>Match Time:</strong> {formatDuration(completionStats.matchTimeMs)}
+                <strong>Match Time:</strong>{" "}
+                {formatDuration(completionStats.matchTimeMs)}
               </p>
               <p>
                 <strong>Battles:</strong> {completionStats.battleCount}
@@ -546,8 +520,9 @@ export function GameScreen({
                       completionStats.mvp.ownerId,
                     )}
                     <span>
-                      {pieceById.get(completionStats.mvp.pieceId)?.label ?? "Unknown unit"} ·{" "}
-                      {completionStats.mvp.kills} kills
+                      {pieceById.get(completionStats.mvp.pieceId)?.label ??
+                        "Unknown unit"}{" "}
+                      · {completionStats.mvp.kills} kills
                     </span>
                   </>
                 ) : (
