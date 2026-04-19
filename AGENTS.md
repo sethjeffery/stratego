@@ -93,6 +93,25 @@ npm run build
 npm run preview -- --host 127.0.0.1 --port 4173
 ```
 
+For local development, Supabase is expected to run locally.
+If you are not already running it, start it with:
+
+```bash
+npx supabase start
+```
+
+To inspect the generated runtime variables, use:
+
+```bash
+npx supabase status
+```
+
+This command will show the values you need for:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SECRET_KEY`
+
 Then open:
 
 ```bash

@@ -12,7 +12,8 @@
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "lint:strict": "eslint . --max-warnings 0",
-    "generate:types": "npx supabase gen types typescript --project-id kyqvcsazlgotzeobvpov --schema public > src/types/database.types.ts"
+    "generate:types": "supabase gen types typescript --project-id kyqvcsazlgotzeobvpov --schema public > src/types/database.types.ts",
+    "db:dump": "supabase db dump -f supabase/schema.sql"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.3",

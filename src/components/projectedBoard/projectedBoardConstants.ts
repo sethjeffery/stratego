@@ -1,0 +1,16 @@
+export const impactParticles = [
+  { angle: -78, distance: 46, delay: 0, size: 7 },
+  { angle: -42, distance: 38, delay: 28, size: 6 },
+  { angle: -14, distance: 34, delay: 12, size: 5 },
+  { angle: 18, distance: 40, delay: 24, size: 7 },
+  { angle: 52, distance: 48, delay: 8, size: 6 },
+  { angle: 96, distance: 36, delay: 18, size: 5 },
+  { angle: 138, distance: 42, delay: 4, size: 6 },
+  { angle: 174, distance: 32, delay: 16, size: 5 },
+  { angle: -58, distance: 52, delay: 96, size: 5 },
+  { angle: -8, distance: 44, delay: 118, size: 4 },
+  { angle: 34, distance: 50, delay: 142, size: 5 },
+  { angle: 82, distance: 42, delay: 164, size: 4 },
+  { angle: 126, distance: 48, delay: 188, size: 5 },
+  { angle: 164, distance: 40, delay: 212, size: 4 },
+] as const;

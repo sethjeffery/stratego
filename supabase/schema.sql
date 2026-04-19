@@ -52,6 +52,15 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE TYPE "public"."session_role" AS ENUM (
+    'initiator',
+    'challenger'
+);
+
+
+ALTER TYPE "public"."session_role" OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."rls_auto_enable"() RETURNS "event_trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'pg_catalog'
@@ -103,15 +112,9 @@ SET default_table_access_method = "heap";
 
 CREATE TABLE IF NOT EXISTS "public"."game_sessions" (
     "session_id" "text" NOT NULL,
-    "initiator_name" "text" NOT NULL,
-    "initiator_id" "text" NOT NULL,
-    "challenger_name" "text",
-    "challenger_id" "text",
     "state" "jsonb",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "initiator_avatar" "text" DEFAULT 'char01'::"text" NOT NULL,
-    "challenger_avatar" "text"
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
 
@@ -133,12 +136,11 @@ ALTER TABLE "public"."player_profiles" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."session_memberships" (
     "session_id" "text" NOT NULL,
     "device_id" "text" NOT NULL,
-    "role" "text" NOT NULL,
-    "player_id" "text" NOT NULL,
     "archived_at" timestamp with time zone,
     "last_opened_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "role" "public"."session_role" NOT NULL
 );
 
 
@@ -149,42 +151,36 @@ ALTER TABLE ONLY "public"."game_sessions"
     ADD CONSTRAINT "game_sessions_pkey" PRIMARY KEY ("session_id");
 
 
+
 ALTER TABLE ONLY "public"."player_profiles"
     ADD CONSTRAINT "player_profiles_pkey" PRIMARY KEY ("device_id");
 
 
-ALTER TABLE ONLY "public"."session_memberships"
-    ADD CONSTRAINT "session_memberships_pkey" PRIMARY KEY ("session_id", "device_id");
-
 
 ALTER TABLE ONLY "public"."session_memberships"
-    ADD CONSTRAINT "session_memberships_player_id_key" UNIQUE ("session_id", "player_id");
-
-
-ALTER TABLE ONLY "public"."session_memberships"
-    ADD CONSTRAINT "session_memberships_role_key" UNIQUE ("session_id", "role");
-
-
-ALTER TABLE ONLY "public"."session_memberships"
-    ADD CONSTRAINT "session_memberships_role_check" CHECK (("role" = ANY (ARRAY['initiator'::"text", 'challenger'::"text"])));
-
-
-ALTER TABLE ONLY "public"."session_memberships"
-    ADD CONSTRAINT "session_memberships_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "public"."player_profiles"("device_id") ON DELETE CASCADE;
-
-
-ALTER TABLE ONLY "public"."session_memberships"
-    ADD CONSTRAINT "session_memberships_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "public"."game_sessions"("session_id") ON DELETE CASCADE;
+    ADD CONSTRAINT "session_memberships_pkey" PRIMARY KEY ("session_id", "role");
 
 
 
 CREATE OR REPLACE TRIGGER "trg_touch_game_sessions" BEFORE UPDATE ON "public"."game_sessions" FOR EACH ROW EXECUTE FUNCTION "public"."touch_updated_at"();
 
 
+
 CREATE OR REPLACE TRIGGER "trg_touch_player_profiles" BEFORE UPDATE ON "public"."player_profiles" FOR EACH ROW EXECUTE FUNCTION "public"."touch_updated_at"();
 
 
+
 CREATE OR REPLACE TRIGGER "trg_touch_session_memberships" BEFORE UPDATE ON "public"."session_memberships" FOR EACH ROW EXECUTE FUNCTION "public"."touch_updated_at"();
+
+
+
+ALTER TABLE ONLY "public"."session_memberships"
+    ADD CONSTRAINT "session_memberships_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "public"."player_profiles"("device_id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."session_memberships"
+    ADD CONSTRAINT "session_memberships_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "public"."game_sessions"("session_id") ON DELETE CASCADE;
 
 
 
@@ -194,30 +190,7 @@ ALTER TABLE "public"."game_sessions" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."player_profiles" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."session_memberships" ENABLE ROW LEVEL SECURITY;
-
-
-CREATE POLICY "public insert sessions" ON "public"."game_sessions" FOR INSERT WITH CHECK (true);
-
-
-
-CREATE POLICY "public read sessions" ON "public"."game_sessions" FOR SELECT USING (true);
-
-
-
-CREATE POLICY "public update sessions" ON "public"."game_sessions" FOR UPDATE USING (true) WITH CHECK (true);
-
-
-
 CREATE POLICY "public insert player profiles" ON "public"."player_profiles" FOR INSERT WITH CHECK (true);
-
-
-
-CREATE POLICY "public read player profiles" ON "public"."player_profiles" FOR SELECT USING (true);
-
-
-
-CREATE POLICY "public update player profiles" ON "public"."player_profiles" FOR UPDATE USING (true) WITH CHECK (true);
 
 
 
@@ -225,12 +198,35 @@ CREATE POLICY "public insert session memberships" ON "public"."session_membershi
 
 
 
+CREATE POLICY "public insert sessions" ON "public"."game_sessions" FOR INSERT WITH CHECK (true);
+
+
+
+CREATE POLICY "public read player profiles" ON "public"."player_profiles" FOR SELECT USING (true);
+
+
+
 CREATE POLICY "public read session memberships" ON "public"."session_memberships" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "public read sessions" ON "public"."game_sessions" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "public update player profiles" ON "public"."player_profiles" FOR UPDATE USING (true) WITH CHECK (true);
 
 
 
 CREATE POLICY "public update session memberships" ON "public"."session_memberships" FOR UPDATE USING (true) WITH CHECK (true);
 
+
+
+CREATE POLICY "public update sessions" ON "public"."game_sessions" FOR UPDATE USING (true) WITH CHECK (true);
+
+
+
+ALTER TABLE "public"."session_memberships" ENABLE ROW LEVEL SECURITY;
 
 
 
@@ -444,6 +440,18 @@ GRANT ALL ON TABLE "public"."game_sessions" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."player_profiles" TO "anon";
+GRANT ALL ON TABLE "public"."player_profiles" TO "authenticated";
+GRANT ALL ON TABLE "public"."player_profiles" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."session_memberships" TO "anon";
+GRANT ALL ON TABLE "public"."session_memberships" TO "authenticated";
+GRANT ALL ON TABLE "public"."session_memberships" TO "service_role";
+
+
+
 
 
 
@@ -474,6 +482,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+
 
 
 

@@ -24,49 +24,8 @@ export function SessionAccessScreen() {
     await joinSession({ sessionId });
   };
 
-  // const [error, setError] = useState<string | null>(null);
-
-  // const {
-  //   data: routeAccess,
-  //   error: routeAccessError,
-  //   isLoading,
-  // } = useSessionAccess(sessionId);
-
-  // const {
-  //   disabled,
-  //   finishGame,
-  //   isCurrentSessionArchived: isArchived,
-  //   legalTargets,
-  //   markReady,
-  //   myId,
-  //   onCellClick,
-  //   pendingBoardAction,
-  //   playAgain,
-  //   reset,
-  //   selectablePieceKeys,
-  //   selected,
-  //   sendChatMessage,
-  //   state,
-  //   surrenderGame,
-  // } = useSessionGameState({
-  //   debugBoardEnabled: isDebugBoardEnabled(location.search),
-  //   routeSessionId: sessionId,
-  //   sessionAccess: routeAccess,
-  //   setError,
-  // });
-
   const copySessionLink = async (sessionId: string) => {
-    // if (typeof navigator === "undefined" || !navigator.clipboard) {
-    // setUiError(`Share this link: ${buildSessionUrl(sessionId)}`);
-    // return;
-    // }
-
-    // try {
     await navigator.clipboard.writeText(buildSessionUrl(sessionId));
-    // setUiError("Session link copied.");
-    // } catch {
-    // setUiError(`Share this link: ${buildSessionUrl(sessionId)}`);
-    // }
   };
 
   const isLoading = isLoadingSession || isLoadingUser;
@@ -213,7 +172,7 @@ export function SessionAccessScreen() {
 
         <div className={styles.statusActions}>
           {((hasOpenSlot && !isMember) || isArchived) && !isClosed && (
-            <button className="primary-cta" onClick={() => handleJoinSession}>
+            <button className="primary-cta" onClick={() => void handleJoinSession()}>
               {isArchived ? "Reopen Session" : "Join Session"}
             </button>
           )}

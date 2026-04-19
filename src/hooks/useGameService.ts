@@ -11,7 +11,6 @@ import {
   listOpenSessions,
   type SessionAccess,
   type SessionSummary,
-  touchSessionMembership,
 } from "../lib/supabaseGameService";
 import { useCurrentUser } from "./useProfile";
 
@@ -23,6 +22,7 @@ const mySessionsKey = (deviceId: string) => [MY_SESSIONS_KEY, deviceId] as const
 const openSessionsKey = (limit: number) => [OPEN_SESSIONS_KEY, limit] as const;
 const sessionAccessKey = (sessionId: string, deviceId: string) =>
   [SESSION_ACCESS_KEY, sessionId, deviceId] as const;
+export const getSessionCacheKey = (sessionId: string) => `/api/session/${sessionId}`;
 
 const revalidateSessionCaches = async (
   mutate: ReturnType<typeof useSWRConfig>["mutate"],
@@ -59,7 +59,7 @@ export function useOpenSessions(limit = 5) {
 }
 
 export function useSession(sessionId: string | null) {
-  return useSWR(sessionId && `/api/session/${sessionId}`, () =>
+  return useSWR(sessionId && getSessionCacheKey(sessionId), () =>
     getSession(sessionId ?? ""),
   );
 }
@@ -140,22 +140,7 @@ export function useJoinSession() {
     `/api/session`,
     async (_url, { arg: { sessionId } }: { arg: { sessionId: string } }) => {
       const sessionRow = await joinSessionAsCurrentUser(sessionId);
-      await mutate(`/api/session/${sessionId}`, sessionRow);
-    },
-  );
-}
-
-export function useTouchSessionMembership() {
-  const { mutate } = useSWRConfig();
-
-  return useSWRMutation(
-    "/api/touch-session-membership",
-    async (_url, { arg: sessionId }: { arg: string }) => {
-      const currentUser = await getCurrentUser();
-      if (!currentUser) return;
-
-      await touchSessionMembership(sessionId, currentUser.device_id);
-      await mutate(mySessionsKey(currentUser.device_id));
+      await mutate(getSessionCacheKey(sessionId), sessionRow);
     },
   );
 }

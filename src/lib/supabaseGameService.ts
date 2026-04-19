@@ -8,6 +8,7 @@ import {
   applyMoveToState,
   applySetupSwapToState,
   createRematchState,
+  createSessionGame,
   markPlayerSetupReady,
 } from "./engine";
 import { gamePieces, gameRules } from "./gameConfig";
@@ -95,6 +96,23 @@ const normalizeSessionRow = (row: SessionRow): SessionRow => ({
 const getCurrentDeviceId = () => getOrCreateStoredDeviceIdentity().deviceId;
 
 const getNowIsoString = () => new Date().toISOString();
+
+const buildInitialSessionState = (session: SessionRow) => {
+  if (!session.initiator || !session.challenger) return null;
+
+  const initialized = createSessionGame(
+    session.initiator,
+    session.challenger,
+    gameRules,
+    gamePieces,
+    {
+      initiatorId: session.initiator.device_id,
+      challengerId: session.challenger.device_id,
+    },
+  );
+  initialized.state.roomCode = session.session_id;
+  return initialized.state;
+};
 
 const upsertMembership = async (membership: {
   session_id: string;
@@ -302,23 +320,6 @@ export const archiveSession = async (
     .is("archived_at", null);
 };
 
-export const touchSessionMembership = async (
-  sessionId: string,
-  deviceId = getCurrentDeviceId(),
-) => {
-  if (!client) throw new Error("Supabase is not configured.");
-
-  const { error } = await client
-    .from(MEMBERSHIP_TABLE)
-    .update({
-      last_opened_at: getNowIsoString(),
-    })
-    .eq("session_id", sessionId)
-    .eq("device_id", deviceId);
-
-  if (error) throw error;
-};
-
 export const getSession = async (sessionId: string): Promise<SessionRow> => {
   if (!client) throw new Error("Supabase is not configured.");
   const { data } = await client
@@ -328,7 +329,26 @@ export const getSession = async (sessionId: string): Promise<SessionRow> => {
     .single()
     .throwOnError();
 
-  return hydrateSessionData(data);
+  const hydrated = hydrateSessionData(data);
+  if (hydrated.state || !hydrated.initiator || !hydrated.challenger) {
+    return hydrated;
+  }
+
+  const initialState = buildInitialSessionState(hydrated);
+  if (!initialState) return hydrated;
+
+  await client
+    .from(TABLE)
+    .update({
+      state: initialState,
+    })
+    .eq("session_id", sessionId)
+    .throwOnError();
+
+  return {
+    ...hydrated,
+    state: initialState,
+  };
 };
 
 export const hydrateSessionData = (
