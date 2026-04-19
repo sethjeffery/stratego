@@ -42,6 +42,20 @@ http://127.0.0.1:4173/?debugBoard=1
 
 This route bypasses Supabase/socket setup and renders a stable board state for inspection.
 
+For session-flow testing without Supabase, run preview with memory mode:
+
+```bash
+VITE_GAME_SERVICE_MODE=memory VITE_SESSION_STORAGE_MODE=memory npm run preview -- --host 127.0.0.1 --port 4173
+```
+
+Then open a fixture-backed session:
+
+```bash
+http://127.0.0.1:4173/game?fixture=battle_preview&as=initiator
+```
+
+Fixture definitions live in `src/fixtures/sessionRows.ts`.
+
 5. Use the Playwright MCP server as the default browser driver.
 
 Preferred MCP actions:
@@ -61,6 +75,7 @@ If the Playwright MCP server fails to create its own working directory, work aro
 - Mobile board pass: the same debug route at a narrow viewport to confirm readability and tap-target accuracy.
 - Interaction pass: select a piece or trigger the changed UI state to confirm visual alignment under interaction.
 - Non-debug flow pass: only when the task involves session or Supabase behavior that cannot be validated through the deterministic debug route.
+- Fixture impersonation pass: validate both `as=initiator` and `as=challenger` on the same fixture to verify hidden-information perspective changes.
 
 ## What to inspect
 

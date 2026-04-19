@@ -48,9 +48,10 @@ If a visual change makes ownership, selection, or board geometry harder to read,
 
 ### Session persistence
 
-- Device-local session memberships are stored in `localStorage`.
+- Device-local session memberships default to `localStorage`, but can be switched via `VITE_SESSION_STORAGE_MODE` to `sessionStorage` or in-memory storage.
 - The dashboard of resumable sessions is local to the current device, not account-wide.
 - Loading a session by code or URL without a saved local membership should not silently assign control.
+- Fixture debug flows can intentionally impersonate a seat using URL params (`fixture` + `as`) for deterministic testing.
 
 Avoid reintroducing any flow where knowing a session code alone grants player identity.
 
@@ -67,8 +68,9 @@ When adjusting the board renderer, visually inspect it in a browser rather than 
 1. Prefer small, testable changes over broad rewrites.
 2. When touching the board renderer, use the local debug route and capture screenshots through the Playwright MCP server when available.
 3. When changing session logic, test refresh/resume behavior and local player identity.
-4. Preserve data-driven configuration instead of hardcoding piece or ruleset logic into UI code.
-5. Do not expose Supabase secret/service keys to client code.
+4. Prefer in-memory game service + fixtures when validating session UX locally (`VITE_GAME_SERVICE_MODE=memory` and `src/fixtures/sessionRows.ts`).
+5. Preserve data-driven configuration instead of hardcoding piece or ruleset logic into UI code.
+6. Do not expose Supabase secret/service keys to client code.
 
 ## Code Organization & Quality Standards
 
@@ -97,6 +99,13 @@ Then open:
 
 ```bash
 http://127.0.0.1:4173/?debugBoard=1
+```
+
+For deterministic session-state testing without Supabase:
+
+```bash
+VITE_GAME_SERVICE_MODE=memory VITE_SESSION_STORAGE_MODE=memory npm run preview -- --host 127.0.0.1 --port 4173
+http://127.0.0.1:4173/game?fixture=battle_preview&as=initiator
 ```
 
 For browser-based visual inspection, use Playwright against the local preview server. Prefer the Playwright MCP server for navigation, interaction, and screenshots; keep direct `playwright` scripts as fallback only.

@@ -3,12 +3,14 @@
 A real-time multiplayer Stratego-inspired web game with animated battles, configurable rulesets, and room-based hosting/joining across devices.
 
 ## Stack
+
 - TypeScript
 - React + Vite
 - Supabase Realtime + Postgres
 - Zod schema validation for rule/piece config files
 
 ## Run
+
 ```bash
 npm install
 npm run dev
@@ -17,6 +19,7 @@ npm run dev
 Open `http://localhost:5173`, host on one device, and join using room code from another device on the same network (pointing both to the same server).
 
 ## Board debug preview
+
 For local renderer tuning, open the app with `?debugBoard=1`:
 
 ```bash
@@ -24,10 +27,36 @@ http://localhost:5173/?debugBoard=1
 ```
 
 This bypasses live session setup and renders a deterministic local board state so you can inspect board geometry, piece scaling, and SVG surface changes in the browser.
-This bypasses live session setup and renders a deterministic local board state so you can inspect board geometry, piece scaling, and SVG surface changes in the browser.
+
+## Runtime debug + storage switches
+
+You can switch persistence/session behavior at runtime with client env vars:
+
+- `VITE_SESSION_STORAGE_MODE=local|session|memory`
+  - `local` (default): uses `localStorage`.
+  - `session`: uses `sessionStorage`.
+  - `memory`: in-tab memory only (great for disposable test runs).
+- `VITE_GAME_SERVICE_MODE=supabase|memory`
+  - `supabase` uses Postgres + realtime (when configured).
+  - `memory` keeps sessions in-memory in the browser runtime.
+
+### Fixture-driven debug sessions
+
+For deterministic session testing (without Supabase), use:
+
+```bash
+http://localhost:5173/game?fixture=battle_preview&as=initiator
+```
+
+Available fixture IDs are defined in `src/fixtures/sessionRows.ts`.
+
+- `fixture=<id>` loads a static `SessionRow` fixture into memory service.
+- `as=initiator|challenger` impersonates the selected seat on this device.
 
 ## Architecture options
+
 ### Supabase direct mode
+
 - No custom Node server required for gameplay.
 - Session storage is persistent in Postgres.
 - Realtime updates come from Supabase Realtime.
@@ -36,10 +65,12 @@ This bypasses live session setup and renders a deterministic local board state s
 - This device stores its player identity and active session memberships in local storage so refresh/reopen can resume the same side of the game.
 
 Set either of these client env pairs:
+
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
 Or, if you are using the Vercel Supabase integration:
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
@@ -48,6 +79,7 @@ Or, if you are using the Vercel Supabase integration:
 Then run the SQL in `supabase/schema.sql` in your Supabase project.
 
 ### Supabase setup checklist (required)
+
 If you are asking “is there anything I need to do?” — **yes, these steps are required once per project**:
 
 1. **Create a Supabase project** in your preferred region.
@@ -62,27 +94,34 @@ If you are asking “is there anything I need to do?” — **yes, these steps a
 6. Redeploy frontend.
 
 ### Local `.env` example for Supabase mode
+
 ```bash
 VITE_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
 VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
 ```
 
 ### Vercel env vars for Supabase mode
+
 Any one of these client-safe configurations works:
+
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
 Or Vercel Supabase integration defaults:
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 Optional fallback:
+
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
 You also do **not** need to expose `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_SECRET_KEY`, or `SUPABASE_JWT_SECRET` to the browser.
 
 ### Quick validation steps
+
 After deployment:
+
 1. Open app on device A and click **Create Session**.
 2. Copy the session link or session code.
 3. Open app on device B and **Join as Challenger** with same code.
@@ -91,14 +130,16 @@ After deployment:
 6. Click **Leave Session**, then resume it from the **Your Active Sessions** dashboard.
 
 If this fails:
+
 - Check browser console for missing env vars.
 - Check Supabase table `public.game_sessions` contains rows.
 - Check realtime replication includes `game_sessions`.
 - Confirm your app URL is using the same Supabase project whose keys you configured.
 
 ## Configuration
+
 - Piece definitions: `config/pieces/classic.json`
 - Rules/board setup: `config/rules/default.json`
 - Schemas: `src/shared/schema.ts`
- 
+
 You can add alternate config files and wire selection into the session flow later if needed.

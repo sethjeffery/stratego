@@ -24,6 +24,7 @@ import {
   getOrCreateStoredProfile,
   getStoredSessionMembership,
   listStoredSessions,
+  sessionStorageMode,
   setStoredProfile,
   StoredSessionMembership,
   touchStoredSessionMembership,
@@ -43,8 +44,9 @@ import {
   applySetupSwap as applySupabaseSetupSwap,
   closeFinishedGame as closeSupabaseFinishedGame,
   createInitiatedSession,
+  gameServiceMode,
   getSession,
-  isSupabaseMode,
+  isMemoryGameServiceMode,
   joinAsChallenger,
   listOpenSessions,
   listSessions,
@@ -55,6 +57,7 @@ import {
   surrenderGame as surrenderSupabaseGame,
   subscribeToSession,
   updateSessionPlayerProfile,
+  seedMemorySessions,
 } from "./lib/supabaseGameService";
 import { appendChatMessage, GameState, Position } from "./shared/schema";
 import { DASHBOARD_ROUTE, DEFAULT_PLAYER_NAME, GAME_ROUTE } from "./app/constants";
@@ -62,11 +65,14 @@ import {
   buildGamePath,
   buildSearchWithoutLegacySession,
   getSessionIdFromSearch,
+  getSessionFixtureIdFromSearch,
+  getSessionFixtureRoleFromSearch,
   isDebugBoardEnabled,
   normalizeSessionId,
 } from "./app/sessionRouting";
 import { useBoardInteractionState } from "./hooks/useBoardInteractionState";
 import { PendingBoardAction, serializeBoardActionState } from "./types/ui";
+import { getSessionFixture } from "./fixtures/sessionRows";
 
 export function App() {
   const location = useLocation();
@@ -79,6 +85,14 @@ export function App() {
   );
   const legacySessionId = useMemo(
     () => getSessionIdFromSearch(location.search),
+    [location.search],
+  );
+  const fixtureSessionId = useMemo(
+    () => getSessionFixtureIdFromSearch(location.search),
+    [location.search],
+  );
+  const fixtureRole = useMemo(
+    () => getSessionFixtureRoleFromSearch(location.search),
     [location.search],
   );
   const defaultProfile = useMemo(
@@ -216,7 +230,7 @@ export function App() {
     const memberships = listStoredSessions();
     setSavedMemberships(memberships);
 
-    if (!isSupabaseMode || debugBoardEnabled) {
+    if (debugBoardEnabled) {
       setSavedSessionRows({});
       setOpenSessionRows([]);
       return;
@@ -239,8 +253,6 @@ export function App() {
   };
 
   const resumeSavedSession = async (membership: StoredSessionMembership) => {
-    if (!isSupabaseMode) return;
-
     try {
       const session = await getSession(membership.sessionId);
       committedOptimisticStateKey.current = null;
@@ -317,11 +329,7 @@ export function App() {
     const nextMemberships = updateStoredSessionMembershipProfile(nextProfile);
     setSavedMemberships(nextMemberships);
 
-    if (
-      !isSupabaseMode ||
-      nextMemberships.length === 0 ||
-      lastSyncedProfileKey.current === profileKey
-    ) {
+    if (nextMemberships.length === 0 || lastSyncedProfileKey.current === profileKey) {
       return;
     }
 
@@ -397,20 +405,68 @@ export function App() {
       return;
     }
 
-    if (!isSupabaseMode) {
+    if (fixtureSessionId) {
+      const fixture = getSessionFixture(fixtureSessionId);
+      if (!fixture) {
+        setError(
+          `Fixture '${fixtureSessionId}' not found. Check src/fixtures/sessionRows.ts.`,
+        );
+        return;
+      }
+
+      seedMemorySessions([fixture.session]);
+      const row = fixture.session;
+      const playerId =
+        fixtureRole === "challenger"
+          ? (row.challenger_id ?? row.initiator_id)
+          : row.initiator_id;
+      const playerName =
+        fixtureRole === "challenger"
+          ? (row.challenger_name ?? row.initiator_name)
+          : row.initiator_name;
+      const playerAvatar =
+        fixtureRole === "challenger"
+          ? (row.challenger_avatar ?? row.initiator_avatar ?? DEFAULT_AVATAR_ID)
+          : (row.initiator_avatar ?? DEFAULT_AVATAR_ID);
+
+      upsertStoredSessionMembership({
+        sessionId: row.session_id,
+        playerId,
+        playerName,
+        avatarId: playerAvatar,
+        role: fixtureRole,
+      });
+
+      committedOptimisticStateKey.current = null;
+      setMyId(playerId);
+      setRoomCode(row.session_id);
+      setState(row.state);
+      setPendingBoardAction(null);
+      setRouteSessionRow(row);
       setRouteSessionLoading(false);
       setRouteSessionMissing(false);
+      setSavedMemberships(listStoredSessions());
       setError(
-        "Supabase client env vars are missing. Configure Supabase or open ?debugBoard=1 for local board inspection.",
+        `Fixture '${fixture.label}' loaded as ${fixtureRole} using ${gameServiceMode} game service + ${sessionStorageMode} session storage.`,
       );
+
+      if (routeSessionId !== row.session_id) {
+        navigateToSession(row.session_id, true);
+      }
       return;
     }
 
+    if (isMemoryGameServiceMode) {
+      setRouteSessionLoading(false);
+      setRouteSessionMissing(false);
+      setError(null);
+    }
+
     void refreshSavedSessions();
-  }, [debugBoardEnabled, profileReady]);
+  }, [debugBoardEnabled, fixtureRole, fixtureSessionId, profileReady, routeSessionId]);
 
   useEffect(() => {
-    if (!profileReady || debugBoardEnabled || !isSupabaseMode) return;
+    if (!profileReady || debugBoardEnabled || fixtureSessionId) return;
 
     if (!routeSessionId) {
       setRouteSessionRow(null);
@@ -463,10 +519,10 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [debugBoardEnabled, profileReady, routeSessionId]);
+  }, [debugBoardEnabled, fixtureSessionId, profileReady, routeSessionId]);
 
   useEffect(() => {
-    if (debugBoardEnabled || !isSupabaseMode || !routeSessionId) return;
+    if (debugBoardEnabled || !routeSessionId) return;
 
     const unsubscribe = subscribeToSession(routeSessionId, (nextRow) => {
       setRouteSessionRow(nextRow);
@@ -499,7 +555,7 @@ export function App() {
   }, [debugBoardEnabled, pendingBoardAction, routeSessionId]);
 
   useEffect(() => {
-    if (debugBoardEnabled || !isSupabaseMode || !roomCode || !myId) return;
+    if (debugBoardEnabled || !roomCode || !myId) return;
 
     const membership = getStoredSessionMembership(roomCode);
     if (!membership || membership.playerId !== myId) return;
@@ -513,11 +569,6 @@ export function App() {
   );
 
   const createSession = async () => {
-    if (!isSupabaseMode) {
-      setError("Supabase client env vars are missing.");
-      return;
-    }
-
     if (!currentProfile) {
       setError("Enter a callsign before hosting a session.");
       return;
@@ -552,11 +603,6 @@ export function App() {
   };
 
   const joinSession = async (sessionIdOverride?: string) => {
-    if (!isSupabaseMode) {
-      setError("Supabase client env vars are missing.");
-      return;
-    }
-
     if (!currentProfile) {
       setError("Enter a callsign before joining a session.");
       return;
@@ -998,6 +1044,13 @@ export function App() {
                 <section className="session-status-card card">
                   <p className="eyebrow">Redirecting</p>
                   <h1>Opening session {legacySessionId}</h1>
+                </section>
+              </main>
+            ) : fixtureSessionId ? (
+              <main className="session-access">
+                <section className="session-status-card card">
+                  <p className="eyebrow">Fixture Mode</p>
+                  <h1>Loading fixture {fixtureSessionId}</h1>
                 </section>
               </main>
             ) : (

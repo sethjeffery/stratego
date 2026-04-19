@@ -20,10 +20,39 @@ export type StoredSessionMembership = {
 const PROFILE_KEY = "stratego:profile:v1";
 const SESSIONS_KEY = "stratego:sessions:v1";
 
-const canUseStorage = () =>
-  typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+export type SessionStorageMode = "local" | "session" | "memory";
 
-const parseJson = <T,>(raw: string | null, fallback: T): T => {
+const storageModeFromEnv = (
+  import.meta.env.VITE_SESSION_STORAGE_MODE as string | undefined
+)?.toLowerCase();
+export const sessionStorageMode: SessionStorageMode =
+  storageModeFromEnv === "session"
+    ? "session"
+    : storageModeFromEnv === "memory"
+      ? "memory"
+      : "local";
+
+type StorageLike = Pick<Storage, "getItem" | "setItem">;
+
+const inMemoryStorage = new Map<string, string>();
+
+const memoryStorage: StorageLike = {
+  getItem: (key: string) => inMemoryStorage.get(key) ?? null,
+  setItem: (key: string, value: string) => {
+    inMemoryStorage.set(key, value);
+  },
+};
+
+const getStorage = (): StorageLike => {
+  if (typeof window === "undefined") return memoryStorage;
+  if (sessionStorageMode === "memory") return memoryStorage;
+  if (sessionStorageMode === "session" && window.sessionStorage) {
+    return window.sessionStorage;
+  }
+  return window.localStorage ?? memoryStorage;
+};
+
+const parseJson = <T>(raw: string | null, fallback: T): T => {
   if (!raw) return fallback;
 
   try {
@@ -70,55 +99,47 @@ const repairStoredMembership = (
 };
 
 export const getOrCreateStoredProfile = (defaults: PlayerProfile): StoredProfile => {
-  if (!canUseStorage()) {
-    return { deviceId: nanoid(), ...defaults };
-  }
+  const storage = getStorage();
 
-  const existing = parseJson<StoredProfile | null>(
-    window.localStorage.getItem(PROFILE_KEY),
-    null,
-  );
+  const existing = parseJson<StoredProfile | null>(storage.getItem(PROFILE_KEY), null);
   const repaired = repairStoredProfile(existing, defaults);
   if (repaired) {
     if (
       repaired.playerName !== existing?.playerName ||
       repaired.avatarId !== existing?.avatarId
     ) {
-      window.localStorage.setItem(PROFILE_KEY, JSON.stringify(repaired));
+      storage.setItem(PROFILE_KEY, JSON.stringify(repaired));
     }
     return repaired;
   }
 
   const profile = { deviceId: nanoid(), ...defaults };
-  window.localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  storage.setItem(PROFILE_KEY, JSON.stringify(profile));
   return profile;
 };
 
 export const setStoredProfile = (profile: PlayerProfile) => {
-  if (!canUseStorage()) return;
+  const storage = getStorage();
   const existing = getOrCreateStoredProfile(profile);
-  window.localStorage.setItem(
-    PROFILE_KEY,
-    JSON.stringify({ ...existing, ...profile }),
-  );
+  storage.setItem(PROFILE_KEY, JSON.stringify({ ...existing, ...profile }));
 };
 
 export const listStoredSessions = (): StoredSessionMembership[] => {
-  if (!canUseStorage()) return [];
+  const storage = getStorage();
 
   const sessions = parseJson<Partial<StoredSessionMembership>[]>(
-    window.localStorage.getItem(SESSIONS_KEY),
+    storage.getItem(SESSIONS_KEY),
     [],
   )
     .map((session) => repairStoredMembership(session))
     .filter((session): session is StoredSessionMembership => Boolean(session));
 
-  window.localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+  storage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
   return sessions.sort((a, b) => b.lastOpenedAt - a.lastOpenedAt);
 };
 
 export const updateStoredSessionMembershipProfile = (profile: PlayerProfile) => {
-  if (!canUseStorage()) return [] as StoredSessionMembership[];
+  const storage = getStorage();
 
   const nextSessions = listStoredSessions().map((session) => ({
     ...session,
@@ -126,22 +147,21 @@ export const updateStoredSessionMembershipProfile = (profile: PlayerProfile) => 
     avatarId: profile.avatarId,
   }));
 
-  window.localStorage.setItem(SESSIONS_KEY, JSON.stringify(nextSessions));
+  storage.setItem(SESSIONS_KEY, JSON.stringify(nextSessions));
   return nextSessions;
 };
 
 export const getStoredSessionMembership = (
   sessionId: string,
 ): StoredSessionMembership | null =>
-  listStoredSessions().find((session) => session.sessionId === sessionId) ??
-  null;
+  listStoredSessions().find((session) => session.sessionId === sessionId) ?? null;
 
 export const upsertStoredSessionMembership = (
   membership: Omit<StoredSessionMembership, "lastOpenedAt"> & {
     lastOpenedAt?: number;
   },
 ) => {
-  if (!canUseStorage()) return;
+  const storage = getStorage();
 
   const nextMembership: StoredSessionMembership = {
     ...membership,
@@ -153,7 +173,7 @@ export const upsertStoredSessionMembership = (
   const sessions = listStoredSessions().filter(
     (session) => session.sessionId !== membership.sessionId,
   );
-  window.localStorage.setItem(
+  storage.setItem(
     SESSIONS_KEY,
     JSON.stringify([nextMembership, ...sessions].slice(0, 20)),
   );
