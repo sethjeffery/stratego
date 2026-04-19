@@ -725,3 +725,49 @@ export const subscribeToSession = (
     client.removeChannel(channel);
   };
 };
+
+export const subscribeToSessionDetails = (
+  sessionId: string,
+  onSession: (next: SessionRow) => void,
+) => {
+  if (shouldUseMemoryGameService()) {
+    return memorySubscribeToSession(sessionId, onSession);
+  }
+  if (!client) return () => undefined;
+
+  const publishLatestSession = () => {
+    void getSession(sessionId).then(onSession).catch(() => undefined);
+  };
+
+  const membershipChannel = client
+    .channel(`session-memberships:${sessionId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: MEMBERSHIP_TABLE,
+        filter: `session_id=eq.${sessionId}`,
+      },
+      publishLatestSession,
+    )
+    .subscribe();
+
+  const profileChannel = client
+    .channel(`session-profiles:${sessionId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: PROFILE_TABLE,
+      },
+      publishLatestSession,
+    )
+    .subscribe();
+
+  return () => {
+    client.removeChannel(membershipChannel);
+    client.removeChannel(profileChannel);
+  };
+};
