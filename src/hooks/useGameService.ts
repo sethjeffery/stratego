@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import useSWR, { mutate, useSWRConfig } from "swr";
 import useSWRMutation from "swr/mutation";
 
@@ -12,6 +13,7 @@ import {
   listOpenSessions,
   type SessionAccess,
   type SessionSummary,
+  subscribeToSessionDetails,
 } from "../lib/supabaseGameService";
 import { useCurrentUser } from "./useProfile";
 
@@ -20,6 +22,10 @@ const OPEN_SESSIONS_KEY = "/api/open-sessions";
 const SESSION_ACCESS_KEY = "/api/session-access";
 
 const SESSION_KEY = "/api/session";
+const sessionDetailSubscriptions = new Map<
+  string,
+  { references: number; unsubscribe: () => void }
+>();
 
 const mySessionsKey = (cacheScope: string, deviceId: string) =>
   [MY_SESSIONS_KEY, cacheScope, deviceId] as const;
@@ -32,6 +38,41 @@ const sessionAccessKey = (
 ) => [SESSION_ACCESS_KEY, cacheScope, sessionId, deviceId] as const;
 export const getSessionCacheKey = (sessionId: string, cacheScope?: string) =>
   [SESSION_KEY, cacheScope ?? getGameServiceCacheScope(), sessionId] as const;
+
+const retainSessionDetailsSubscription = (sessionId: string, cacheScope: string) => {
+  const subscriptionKey = `${cacheScope}:${sessionId}`;
+  const existingSubscription = sessionDetailSubscriptions.get(subscriptionKey);
+
+  if (existingSubscription) {
+    existingSubscription.references += 1;
+    return () => {
+      existingSubscription.references -= 1;
+      if (existingSubscription.references > 0) return;
+
+      existingSubscription.unsubscribe();
+      sessionDetailSubscriptions.delete(subscriptionKey);
+    };
+  }
+
+  const unsubscribe = subscribeToSessionDetails(sessionId, (nextSession) => {
+    void mutate(getSessionCacheKey(sessionId, cacheScope), nextSession, false);
+  });
+  sessionDetailSubscriptions.set(subscriptionKey, {
+    references: 1,
+    unsubscribe,
+  });
+
+  return () => {
+    const activeSubscription = sessionDetailSubscriptions.get(subscriptionKey);
+    if (!activeSubscription) return;
+
+    activeSubscription.references -= 1;
+    if (activeSubscription.references > 0) return;
+
+    activeSubscription.unsubscribe();
+    sessionDetailSubscriptions.delete(subscriptionKey);
+  };
+};
 
 const revalidateSessionCaches = async (
   mutate: ReturnType<typeof useSWRConfig>["mutate"],
@@ -83,9 +124,18 @@ export function useOpenSessions(limit = 5) {
 
 export function useSession(sessionId: string | null) {
   const cacheScope = getGameServiceCacheScope();
-  return useSWR(sessionId && getSessionCacheKey(sessionId, cacheScope), () =>
+  const key = sessionId && getSessionCacheKey(sessionId, cacheScope);
+  const swr = useSWR(key, () =>
     getSession(sessionId ?? ""),
   );
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    return retainSessionDetailsSubscription(sessionId, cacheScope);
+  }, [cacheScope, sessionId]);
+
+  return swr;
 }
 
 export function useCreateSession() {
