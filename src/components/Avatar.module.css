@@ -21,15 +21,33 @@
   z-index: 0;
 }
 
+.avatarWrapper.shadow::after {
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.15),
+    0 10px 28px rgba(0, 0, 0, 0.3);
+}
+
+.avatarWrapper.empty::after {
+  border-style: dashed;
+  background-color: rgba(202, 206, 184, 0.5);
+}
+
 .avatar {
+  aspect-ratio: 23 / 30;
   border-bottom-left-radius: 1000px;
   border-bottom-right-radius: 1000px;
   margin: 0.125rem;
-  display: block;
-  width: calc(100% - 0.25rem);
+  display: flex;
   position: relative;
   z-index: 1;
-  position: relative;
+  justify-content: center;
+  align-items: center;
+  color: rgb(47, 55, 48);
+  text-shadow: none;
+}
+
+span.avatar {
+  padding-top: 30%;
 }
 
 .clickable {

@@ -7,7 +7,7 @@
   --color-bg-bottom: #12150f;
   --color-text: #e6dfc9;
   --color-text-muted: #b8ae92;
-  --color-surface: rgba(31, 36, 26, 0.86);
+  --color-surface: rgba(26, 34, 18, 0.5);
   --color-surface-2: rgba(46, 52, 37, 0.32);
   --color-border: rgba(197, 177, 127, 0.34);
   --color-border-muted: rgba(209, 191, 145, 0.26);
@@ -15,6 +15,7 @@
   --color-danger-border: rgba(220, 75, 75, 0.42);
 
   --radius-md: 10px;
+  --radius-lg: 24px;
   --radius-round: 999px;
 
   --space-2: 0.45rem;

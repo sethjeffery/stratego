@@ -1,3 +1,6 @@
+import { Button } from "../../components/Button";
+import styles from "./GameSurface.module.css";
+
 type GameSetupActionsProps = {
   canMarkReady: boolean;
   onMarkReady: () => void | Promise<void>;
@@ -10,8 +13,8 @@ export function GameSetupActions({
   if (!canMarkReady) return null;
 
   return (
-    <button className="game-ready-button" onClick={() => void onMarkReady()}>
+    <Button className={styles.gameReadyButton} onClick={() => void onMarkReady()}>
       Ready
-    </button>
+    </Button>
   );
 }

@@ -1,4 +1,5 @@
 import { ProjectedBoard } from "../../components/ProjectedBoard";
+import boardStyles from "../../components/projectedBoard/ProjectedBoard.module.css";
 import { gamePieces, gameRules } from "../../lib/gameConfig";
 import type { GameState, Position } from "../../shared/schema";
 import type { PendingBoardAction } from "../../types/ui";
@@ -25,7 +26,7 @@ export function GameBoardSection({
   state,
 }: GameBoardSectionProps) {
   return (
-    <section className="board">
+    <section className={boardStyles.boardSection}>
       <ProjectedBoard
         state={state}
         rules={gameRules}

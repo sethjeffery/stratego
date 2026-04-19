@@ -1,4 +1,7 @@
+import clsx from "clsx";
+
 import type { GameState, PieceDefinition, Position, Unit } from "../../shared/schema";
+import styles from "./ProjectedBoard.module.css";
 import { ProjectedBoardBattleBurst } from "./ProjectedBoardBattleBurst";
 import { colorForOwner, getPieceStyle } from "./projectedBoardHelpers";
 import { ProjectedBoardPieceVisual } from "./ProjectedBoardPieceVisual";
@@ -81,7 +84,14 @@ export function ProjectedBoardPieces({
         return (
           <button
             key={unit.id}
-            className={`piece-hit ${interactive ? "can-hover" : ""} ${isPieceActionable ? "is-interactive" : ""} ${isSelectable ? "is-selectable" : ""} ${isSelected ? "is-selected" : ""} ${isPicked ? "is-picked" : ""}`}
+            className={clsx(
+              styles.pieceHit,
+              interactive && styles.canHover,
+              isPieceActionable && styles.interactive,
+              isSelectable && styles.selectable,
+              isSelected && styles.selectedPiece,
+              isPicked && styles.picked,
+            )}
             style={getPieceStyle(
               display.x,
               display.y,
@@ -112,7 +122,11 @@ export function ProjectedBoardPieces({
       {ghostUnit && (
         <span
           key={ghostUnit.key}
-          className={`piece-hit is-ghost ${ghostResolving ? "is-resolving" : ""}`}
+          className={clsx(
+            styles.pieceHit,
+            styles.ghost,
+            ghostResolving && styles.resolving,
+          )}
           style={getPieceStyle(
             (ghostResolving ? ghostUnit.endDisplay : ghostUnit.startDisplay).x,
             (ghostResolving ? ghostUnit.endDisplay : ghostUnit.startDisplay).y,

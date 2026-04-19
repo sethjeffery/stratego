@@ -1,9 +1,11 @@
+import clsx from "clsx";
 import type { CSSProperties } from "react";
 
 import bluePieceUrl from "../../assets/pieces/blue-piece.svg";
 import redPieceUrl from "../../assets/pieces/red-piece.svg";
 import type { PieceDefinition } from "../../shared/schema";
 import { pieceIconById } from "../board/pieceIcons";
+import styles from "./ProjectedBoard.module.css";
 import { impactParticles } from "./projectedBoardConstants";
 import { shouldShowRank } from "./projectedBoardHelpers";
 import type { PieceColor } from "./types";
@@ -30,28 +32,30 @@ export function ProjectedBoardPieceVisual({
   const pieceIcon = pieceIconById[pieceId];
   const pieceShellUrl =
     pieceColor === "player-one" ? redPieceUrl : bluePieceUrl;
+  const pieceImpactColorClass =
+    pieceColor === "player-one" ? styles.impactPlayerOne : styles.impactPlayerTwo;
 
   return (
     <span
-      className={`piece ${pieceColor} ${isWinningBattlePiece ? "impact" : ""}`}
+      className={clsx(styles.piece, isWinningBattlePiece && styles.impact)}
     >
       <img
-        className="piece-shell"
+        className={styles.pieceShell}
         src={pieceShellUrl}
         alt=""
         aria-hidden="true"
       />
-      <span className="piece-face">
+      <span className={styles.pieceFace}>
         {visible ? (
           <>
             {piece?.rank !== undefined && shouldShowRank(pieceId) && (
-              <span className="piece-rank" aria-hidden="true">
+              <span className={styles.pieceRank} aria-hidden="true">
                 {piece.rank}
               </span>
             )}
             {pieceIcon ? (
               <img
-                className="piece-icon"
+                className={styles.pieceIcon}
                 src={pieceIcon}
                 alt={decorative ? "" : piece?.label ?? pieceId}
                 aria-hidden={decorative}
@@ -61,16 +65,19 @@ export function ProjectedBoardPieceVisual({
             )}
           </>
         ) : (
-          <span className="piece-mask">?</span>
+          <span className={styles.pieceMask}>?</span>
         )}
       </span>
       {isWinningBattlePiece && (
-        <span className={`piece-impact-burst ${pieceColor}`} aria-hidden="true">
-          <span className="piece-impact-flash" />
+        <span
+          className={clsx(styles.pieceImpactBurst, pieceImpactColorClass)}
+          aria-hidden="true"
+        >
+          <span className={styles.pieceImpactFlash} />
           {impactParticles.map((particle, index) => (
             <span
               key={`${pieceKey}-impact-${index}`}
-              className="piece-impact-particle"
+              className={styles.pieceImpactParticle}
               style={
                 {
                   "--impact-angle": `${particle.angle}deg`,

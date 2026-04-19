@@ -22,10 +22,10 @@ Use this skill when the task requires seeing the app instead of inferring visual
 npm install
 ```
 
-2. Build the app:
+2. Build the app in memory-session mode for deterministic fixture testing:
 
 ```bash
-npm run build
+VITE_GAME_SERVICE_MODE=memory VITE_PLAYER_SESSION_STORAGE=memory npm run build
 ```
 
 3. Start a local preview server:
@@ -34,13 +34,13 @@ npm run build
 npm run preview -- --host 127.0.0.1 --port 4173
 ```
 
-4. Use the app for board work:
+4. Use the app for board and session-state work:
 
 ```bash
-http://127.0.0.1:4173
+http://127.0.0.1:4173/?fixture=opening-skirmish&as=initiator
 ```
 
-This route bypasses Supabase/socket setup and renders a stable board state for inspection.
+This route bypasses Supabase, seeds an in-memory fixture session, and impersonates the requested player role for inspection.
 
 5. Use the Playwright MCP server as the default browser driver.
 
@@ -49,6 +49,9 @@ Preferred MCP actions:
 - Open the preview URL in the Playwright MCP browser session.
 - Capture screenshots through MCP instead of writing one-off local scripts.
 - Use MCP interactions for click-target validation, hover checks, and responsive viewport passes.
+- When a test needs the opposite fog-of-war perspective, switch only the `as=` param and keep the same fixture id.
+- Do not use local `node` Playwright scripts when the MCP server is available.
+- If the MCP browser reports that its shared Chrome profile is already in use, clear the stale MCP Chrome process and retry MCP before considering any non-MCP fallback.
 
 Adjust viewport and URL if the task is not board-specific. Treat this as fallback infrastructure, not the first choice.
 
@@ -61,6 +64,7 @@ If the Playwright MCP server fails to create its own working directory, work aro
 - Hit-target alignment: piece positions should match visible cells
 - Bevel/base shape: lower edge should read as a physical board edge
 - Hidden-information behavior: masked enemy pieces should still render correctly
+- Fixture behavior: the selected `fixture=` and `as=` params should produce the expected board and player perspective
 
 ## Cleanup
 
@@ -72,4 +76,5 @@ If the Playwright MCP server fails to create its own working directory, work aro
 
 - `playwright` is installed as a dev dependency.
 - Codex should prefer the Playwright MCP server for future browser inspection work in this repo.
-- The board projection math currently lives in `src/App.tsx`.
+- The preferred fixture-backed debug entrypoint is `/?fixture=<id>&as=initiator|challenger`.
+- `?debugBoard=1` remains accepted as a legacy alias, but it is no longer required.

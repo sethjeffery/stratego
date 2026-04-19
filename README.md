@@ -20,14 +20,26 @@ Open `http://localhost:5173`, host on one device, and join using room code from 
 
 ## Board debug preview
 
-For local renderer tuning, open the app with `?debugBoard=1`:
+For local renderer tuning and fixture-driven session testing, run the app in memory mode:
 
 ```bash
-http://localhost:5173/?debugBoard=1
+VITE_GAME_SERVICE_MODE=memory VITE_PLAYER_SESSION_STORAGE=memory npm run dev
 ```
 
-This bypasses live session setup and renders a deterministic local board state so you can inspect board geometry, piece scaling, and SVG surface changes in the browser.
-This bypasses live session setup and renders a deterministic local board state so you can inspect board geometry, piece scaling, and SVG surface changes in the browser.
+Then open the app with a fixture route:
+
+```bash
+http://localhost:5173/?fixture=opening-skirmish&as=initiator
+```
+
+This bypasses Supabase, seeds an in-memory `SessionRow` fixture, and impersonates the selected player role so you can inspect board geometry, hidden information, and interaction state in the browser.
+
+Available fixture ids currently include:
+
+- `waiting-for-challenger`
+- `setup-duel`
+- `opening-skirmish`
+- `finished-flag`
 
 ## Architecture options
 
@@ -38,7 +50,15 @@ This bypasses live session setup and renders a deterministic local board state s
 - Realtime updates come from Supabase Realtime.
 - Flow is **initiator + challenger** (tokenized session id), not host/client.
 - The current session is mirrored into the URL as `?session=CODE`.
-- This device stores its player identity and active session memberships in local storage so refresh/reopen can resume the same side of the game.
+- This device stores its player identity in a configurable browser-backed store so refresh/reopen can resume the same side of the game.
+
+### In-memory debug mode
+
+- Set `VITE_GAME_SERVICE_MODE=memory` to keep sessions and player profiles in local memory.
+- Set `VITE_PLAYER_SESSION_STORAGE=memory` or `sessionStorage` if you want identity persistence to be non-persistent or tab-scoped while testing.
+- Use `?fixture=...&as=initiator|challenger` to seed a named fixture and impersonate a player without Supabase.
+- `?debugBoard=1` is still accepted as a legacy alias, but it is no longer required for fixture routes.
+- The in-memory backend is intended for local testing and Playwright flows; it resets on full page reload.
 
 Set either of these client env pairs:
 

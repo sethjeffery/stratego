@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
 
+import background from "../assets/battle-bg.webp";
 import styles from "./AppLayout.module.css";
 
 type AppLayoutProps = {
@@ -9,5 +10,14 @@ type AppLayoutProps = {
 };
 
 export function AppLayout({ children }: AppLayoutProps) {
-  return <div className={clsx(styles.appShell)}>{children}</div>;
+  return (
+    <div className={clsx(styles.appShell)}>
+      {children}
+      <img
+        src={background}
+        alt="Battle background"
+        className={styles.backgroundImage}
+      />
+    </div>
+  );
 }

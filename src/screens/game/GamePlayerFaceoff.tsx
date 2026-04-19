@@ -1,6 +1,7 @@
 import Avatar from "../../components/Avatar";
 import { resolveAvatarUrl } from "../../lib/playerProfile";
 import type { GameState } from "../../shared/schema";
+import styles from "./GameSurface.module.css";
 
 type GamePlayerFaceoffProps = {
   players: GameState["players"];
@@ -12,20 +13,20 @@ export function GamePlayerFaceoff({
   turnPlayerId,
 }: GamePlayerFaceoffProps) {
   return (
-    <div className="game-faceoff">
+    <div className={styles.gameFaceoff}>
       {players.slice(0, 2).map((player, index) => (
-        <div key={player.id} className="game-faceoff-slot">
-          {index === 1 && <div className="game-versus">vs</div>}
-          <div className="game-player">
+        <div key={player.id} className={styles.gameFaceoffSlot}>
+          {index === 1 && <div className={styles.gameVersus}>vs</div>}
+          <div className={styles.gamePlayer}>
             <Avatar
               avatarUrl={resolveAvatarUrl(player.avatarId)}
               alt={player.name}
               title={player.name}
               pulsing={player.id === turnPlayerId}
               color={index === 0 ? "red" : "blue"}
-              className="game-player-avatar"
+              className={styles.gamePlayerAvatar}
             />
-            <div className="game-player-name">{player.name}</div>
+            <div className={styles.gamePlayerName}>{player.name}</div>
           </div>
         </div>
       ))}

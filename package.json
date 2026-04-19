@@ -16,6 +16,7 @@
     "db:dump": "supabase db dump -f supabase/schema.sql"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.103.3",
     "clsx": "^2.1.1",
     "nanoid": "^5.1.9",

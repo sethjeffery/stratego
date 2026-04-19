@@ -1,0 +1,47 @@
+.statusLozenge {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.85rem;
+  padding: 0.55rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(211, 205, 189, 0.5);
+  background: rgba(31, 36, 26, 0.5);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.18),
+    inset 0 2px 2px rgba(0, 0, 0, 0.2);
+  color: #f5eed8;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+  gap: 0.25rem;
+}
+
+.statusLozenge svg {
+  margin-top: -1px;
+}
+
+.active {
+  border-color: rgba(5, 137, 3, 0.779);
+  background-color: rgba(39, 87, 34, 0.9);
+  animation: zoom-swing 1.5s infinite;
+}
+
+@media (max-width: 900px) {
+  .statusLozenge {
+    justify-self: stretch;
+  }
+}
+
+@keyframes zoom-swing {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

@@ -29,7 +29,7 @@ Vercel deployments should work without a custom game backend.
 - Client-side Supabase envs are supported.
 - Session identity is persisted locally per device.
 - The active session is mirrored into the URL as `?session=CODE`.
-- `?debugBoard=1` is a local visual-debug route and must not depend on Supabase.
+- Fixture-backed local debug routes must not depend on Supabase.
 
 When changing session flow, treat Supabase direct mode as the primary production path.
 
@@ -48,7 +48,8 @@ If a visual change makes ownership, selection, or board geometry harder to read,
 
 ### Session persistence
 
-- Device-local session memberships are stored in `localStorage`.
+- Device-local player identity storage is configurable with
+  `VITE_PLAYER_SESSION_STORAGE=localStorage|sessionStorage|memory`.
 - The dashboard of resumable sessions is local to the current device, not account-wide.
 - Loading a session by code or URL without a saved local membership should not silently assign control.
 
@@ -58,7 +59,8 @@ Avoid reintroducing any flow where knowing a session code alone grants player id
 
 - The main board is rendered with an SVG surface plus absolutely positioned interactive hit targets.
 - Piece depth/perspective is driven by projection math in `src/App.tsx`.
-- `?debugBoard=1` provides a deterministic local board state for visual tuning.
+- `?fixture=...&as=initiator|challenger` boots an in-memory debug session for deterministic fixture-based testing.
+- `?debugBoard=1` is still accepted as a legacy alias for the same debug path.
 
 When adjusting the board renderer, visually inspect it in a browser rather than relying on code alone.
 
@@ -66,7 +68,7 @@ When adjusting the board renderer, visually inspect it in a browser rather than 
 
 1. Prefer small, testable changes over broad rewrites.
 2. When touching the board renderer, use the local debug route and capture screenshots through the Playwright MCP server when available.
-3. When changing session logic, test refresh/resume behavior and local player identity.
+3. When changing session logic, test refresh/resume behavior, local player identity, and the in-memory fixture flow.
 4. Preserve data-driven configuration instead of hardcoding piece or ruleset logic into UI code.
 5. Do not expose Supabase secret/service keys to client code.
 
@@ -93,6 +95,18 @@ npm run build
 npm run preview -- --host 127.0.0.1 --port 4173
 ```
 
+For local fixture-driven testing without Supabase, prefer:
+
+```bash
+VITE_GAME_SERVICE_MODE=memory VITE_PLAYER_SESSION_STORAGE=memory npm run dev
+```
+
+Then open a deterministic fixture route such as:
+
+```bash
+http://127.0.0.1:5173/?fixture=opening-skirmish&as=challenger
+```
+
 For local development, Supabase is expected to run locally.
 If you are not already running it, start it with:
 
@@ -115,7 +129,7 @@ This command will show the values you need for:
 Then open:
 
 ```bash
-http://127.0.0.1:4173/?debugBoard=1
+http://127.0.0.1:4173/?fixture=opening-skirmish&as=initiator
 ```
 
 For browser-based visual inspection, use Playwright against the local preview server. Prefer the Playwright MCP server for navigation, interaction, and screenshots; keep direct `playwright` scripts as fallback only.

@@ -1,4 +1,7 @@
+import clsx from "clsx";
+
 import boardMapUrl from "../assets/map.png";
+import styles from "./projectedBoard/ProjectedBoard.module.css";
 import { ProjectedBoardCells } from "./projectedBoard/ProjectedBoardCells";
 import { ProjectedBoardPieces } from "./projectedBoard/ProjectedBoardPieces";
 import type { ProjectedBoardProps } from "./projectedBoard/types";
@@ -46,14 +49,17 @@ export function ProjectedBoard({
   });
 
   return (
-    <div className="board-stage">
-      <div className="board-plane">
+    <div className={styles.boardStage}>
+      <div className={styles.boardPlane}>
         <img
           src={boardMapUrl}
-          className={`board-map ${isPerspectiveFlipped ? "board-map-rotated" : ""}`}
+          className={clsx(
+            styles.boardMap,
+            isPerspectiveFlipped && styles.boardMapRotated,
+          )}
           alt=""
         />
-        <div className="board-overlay">
+        <div className={styles.boardOverlay}>
           <ProjectedBoardCells
             boardColumns={boardColumns}
             boardRows={boardRows}

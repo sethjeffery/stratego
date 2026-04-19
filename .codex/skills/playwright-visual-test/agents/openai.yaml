@@ -1,4 +1,4 @@
 version: 1
 display_name: Playwright Visual Test
 short_description: Run local browser-based visual checks for Stratego Pulse Arena, especially the SVG board and perspective renderer.
-default_prompt: Visually inspect Stratego Pulse Arena with the Playwright MCP server using the local preview server and the ?debugBoard=1 route when board rendering is involved. Fall back to local Playwright scripts only if MCP is unavailable.
+default_prompt: Visually inspect Stratego Pulse Arena with the Playwright MCP server using the local preview server and the fixture-backed ?fixture=opening-skirmish&as=initiator route when board rendering is involved. Do not use local node Playwright when MCP is available; only fall back if MCP is unavailable.

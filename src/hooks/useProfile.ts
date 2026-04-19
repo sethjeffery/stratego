@@ -3,14 +3,19 @@ import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 
 import type { UserProfile } from "../lib/supabaseGameService";
-import { getCurrentUser, updateCurrentUserProfile } from "../lib/supabaseGameService";
+import {
+  getCurrentUser,
+  getGameServiceCacheScope,
+  updateCurrentUserProfile,
+} from "../lib/supabaseGameService";
 
 const CURRENT_USER_KEY = "/api/current-user";
 
 export function useCurrentUser() {
-  const currentUser = useSWR(CURRENT_USER_KEY, getCurrentUser);
+  const cacheScope = getGameServiceCacheScope();
+  const currentUser = useSWR([CURRENT_USER_KEY, cacheScope] as const, getCurrentUser);
   const { trigger } = useSWRMutation(
-    CURRENT_USER_KEY,
+    [CURRENT_USER_KEY, cacheScope] as const,
     async (_key, { arg }: { arg: UserProfile }) => updateCurrentUserProfile(arg),
   );
 

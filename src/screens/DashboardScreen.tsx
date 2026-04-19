@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 
 import { buildGamePath } from "../app/sessionRouting";
-import background from "../assets/battle-bg.webp";
 import { DashboardTopbar } from "../components/dashboard/DashboardTopbar";
 import SessionsList from "../components/dashboard/SessionsList";
 import {
@@ -41,47 +40,44 @@ export function DashboardScreen() {
   }
 
   return (
-    <>
-      <DashboardTopbar
-        avatarId={currentUser.avatar_id}
-        createSession={handleCreateSession}
-        onPlayerNameChange={(value) => {
-          void updateProfile({ ...currentUser, player_name: value });
-        }}
-        onPlayerAvatarChange={(value) => {
-          void updateProfile({ ...currentUser, avatar_id: value });
-        }}
-        playerName={currentUser.player_name}
-      />
+    <div className={styles.container}>
+      <div className={styles.dashboardCard}>
+        <h1 className={styles.title}>Stratego</h1>
+        <DashboardTopbar
+          avatarId={currentUser.avatar_id}
+          createSession={handleCreateSession}
+          onPlayerNameChange={(value) => {
+            void updateProfile({ ...currentUser, player_name: value });
+          }}
+          onPlayerAvatarChange={(value) => {
+            void updateProfile({ ...currentUser, avatar_id: value });
+          }}
+          playerName={currentUser.player_name}
+        />
 
-      <main className={styles.columns}>
-        {openSessions?.length ? (
-          <section className={`${styles.panel} card`}>
-            <div className="launcher-header">
-              <h2>Open Sessions</h2>
-            </div>
-            <SessionsList sessions={openSessions} />
-          </section>
-        ) : null}
-        {mySessions?.length ? (
-          <section className={`${styles.panel} card`}>
-            <div className="launcher-header">
-              <h2>Your Recent Games</h2>
-            </div>
-            <SessionsList
-              sessions={mySessions}
-              onResumeSession={handleResumeSession}
-              onArchiveSession={handleArchiveSession}
-            />
-          </section>
-        ) : null}
-      </main>
-
-      <img
-        src={background}
-        alt="Battle background"
-        className={styles.backgroundImage}
-      />
-    </>
+        <main className={styles.columns}>
+          {openSessions?.length ? (
+            <section className={`${styles.panel} card`}>
+              <div className={styles.sectionHeader}>
+                <h2>Open Sessions</h2>
+              </div>
+              <SessionsList sessions={openSessions} />
+            </section>
+          ) : null}
+          {mySessions?.length ? (
+            <section className={`${styles.panel} card`}>
+              <div className={styles.sectionHeader}>
+                <h2>Your Recent Games</h2>
+              </div>
+              <SessionsList
+                sessions={mySessions}
+                onResumeSession={handleResumeSession}
+                onArchiveSession={handleArchiveSession}
+              />
+            </section>
+          ) : null}
+        </main>
+      </div>
+    </div>
   );
 }

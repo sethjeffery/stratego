@@ -47,6 +47,13 @@ export const getInspectedPieceState = (
   };
 };
 
+export type MainStatus =
+  | "archived"
+  | "winner"
+  | "loser"
+  | "setup"
+  | "waiting"
+  | "active";
 export const getMainStatus = ({
   archived,
   canMarkReady,
@@ -59,19 +66,18 @@ export const getMainStatus = ({
   isMyTurn: boolean;
   myId: string | null;
   state: GameState;
-}) => {
-  if (archived) return "This game is archived";
+}): MainStatus => {
+  if (archived) return "archived";
 
   if (state.winnerId) {
-    return `${state.players.find((player) => player.id === state.winnerId)?.name ?? "Commander"} wins`;
+    return state.winnerId === myId ? "winner" : "loser";
   }
 
-  const otherPlayerName = getOtherPlayerName(state, myId);
   if (state.phase === "setup") {
-    return canMarkReady ? "Organize your army" : `Waiting on ${otherPlayerName}...`;
+    return canMarkReady ? "setup" : "waiting";
   }
 
-  return isMyTurn ? "Your turn..." : `Waiting on ${otherPlayerName}...`;
+  return isMyTurn ? "active" : "waiting";
 };
 
 export const getCompletionStats = (state: GameState) => {

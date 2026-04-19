@@ -2,6 +2,7 @@ import { useCurrentUser } from "../../hooks/useProfile";
 import { resolveAvatarUrl } from "../../lib/playerProfile";
 import type { SessionRow } from "../../lib/supabaseGameService";
 import Avatar from "../Avatar";
+import { Button } from "../Button";
 import { getCompletionLabel } from "./sessionHelpers";
 import styles from "./SessionsList.module.css";
 
@@ -34,6 +35,10 @@ export default function SessionsList({
         const completionLabel = getCompletionLabel(session, currentUser);
         const isCurrentHost = session.initiator?.device_id === currentUser.device_id;
 
+        if (isArchived) {
+          return null;
+        }
+
         return (
           <article key={session.session_id} className={styles.sessionCard}>
             <div className={styles.sessionSummary}>
@@ -52,40 +57,38 @@ export default function SessionsList({
               <div>
                 <strong>{session.session_id}</strong>
                 <p>
-                  {isArchived
-                    ? "Archived"
-                    : isFinished
-                      ? completionLabel
-                      : isWaitingForChallenger
-                        ? "Waiting for challenger"
-                        : "In progress"}
+                  {isFinished
+                    ? completionLabel
+                    : isWaitingForChallenger
+                      ? "Waiting for challenger"
+                      : "In progress"}
                 </p>
               </div>
             </div>
             <div className={styles.inlineActions}>
-              {!isArchived && onResumeSession && (
-                <button
-                  className="secondary-button"
+              {onResumeSession && (
+                <Button
+                  variant="secondary"
                   onClick={() => void onResumeSession(session.session_id)}
                 >
                   Continue
-                </button>
+                </Button>
               )}
               {hasOpenSeat && !isCurrentHost && onJoinSession && (
-                <button
-                  className="secondary-button"
+                <Button
+                  variant="secondary"
                   onClick={() => void onJoinSession(session.session_id)}
                 >
                   Join
-                </button>
+                </Button>
               )}
-              {onArchiveSession && !isArchived && (
-                <button
-                  className="secondary-button"
+              {onArchiveSession && (
+                <Button
+                  variant="secondary"
                   onClick={() => void onArchiveSession(session.session_id)}
                 >
                   Archive
-                </button>
+                </Button>
               )}
             </div>
           </article>

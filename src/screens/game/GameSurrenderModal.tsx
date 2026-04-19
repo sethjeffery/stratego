@@ -1,31 +1,27 @@
 import { useState } from "react";
 
+import { Button } from "../../components/Button";
+import styles from "./GameSurface.module.css";
+
 type GameSurrenderModalProps = {
   onCancel: () => void;
   onConfirm: () => Promise<void>;
 };
 
-export function GameSurrenderModal({
-  onCancel,
-  onConfirm,
-}: GameSurrenderModalProps) {
+export function GameSurrenderModal({ onCancel, onConfirm }: GameSurrenderModalProps) {
   const [actionPending, setActionPending] = useState(false);
 
   return (
-    <div className="completion-modal-backdrop" role="presentation">
-      <section className="completion-modal" role="dialog" aria-modal="true">
+    <div className={styles.completionModalBackdrop} role="presentation">
+      <section className={styles.completionModal} role="dialog" aria-modal="true">
         <h2>Surrender match?</h2>
         <p>This ends the game immediately for both players.</p>
-        <div className="completion-actions">
-          <button
-            className="secondary-button"
-            onClick={onCancel}
-            disabled={actionPending}
-          >
+        <div className={styles.completionActions}>
+          <Button variant="secondary" onClick={onCancel} disabled={actionPending}>
             Cancel
-          </button>
-          <button
-            className="primary-cta"
+          </Button>
+          <Button
+            variant="primary"
             onClick={() => {
               if (actionPending) return;
               setActionPending(true);
@@ -34,7 +30,7 @@ export function GameSurrenderModal({
             disabled={actionPending}
           >
             Surrender
-          </button>
+          </Button>
         </div>
       </section>
     </div>

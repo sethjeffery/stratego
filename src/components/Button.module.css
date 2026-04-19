@@ -1,0 +1,31 @@
+.button {
+  padding: 0.75rem;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+}
+
+.button:not(:disabled) {
+  cursor: pointer;
+}
+
+.button:not(:disabled):hover {
+  filter: brightness(1.1);
+}
+
+.primary {
+  color: white;
+  background: linear-gradient(180deg, #7c5901, #553b01);
+  border-color: rgba(245, 227, 173, 0.38);
+}
+
+.secondary {
+  color: white;
+  background: rgba(46, 52, 37, 0.7);
+  border-color: rgba(209, 191, 145, 0.22);
+}
+
+.button svg {
+  vertical-align: top;
+}

@@ -1,6 +1,9 @@
+import clsx from "clsx";
+
 import type { GameChatMessage } from "../../shared/schema";
 import { GameBattlePieceBadge } from "./GameBattlePieceBadge";
 import { getBattleMessageDisplay } from "./gameScreenSelectors";
+import styles from "./GameSurface.module.css";
 
 type GameBattleMessageProps = {
   message: GameChatMessage;
@@ -19,10 +22,10 @@ export function GameBattleMessage({
   return (
     <article
       key={message.id}
-      className="game-chat-message is-battle"
+      className={clsx(styles.gameChatMessage, styles.gameChatMessageBattle)}
       aria-label={display.articleLabel}
     >
-      <p className="game-chat-battle">
+      <p className={styles.gameChatBattle}>
         {display.battle.winner === "both" ? (
           <>
             <GameBattlePieceBadge

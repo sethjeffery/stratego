@@ -1,3 +1,4 @@
+import { ArrowClockwiseIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import Avatar from "../../components/Avatar";
@@ -7,6 +8,7 @@ import {
   resolveAvatarUrl,
 } from "../../lib/playerProfile";
 import styles from "../../screens/DashboardScreen.module.css";
+import { Button } from "../Button";
 
 type DashboardTopbarProps = {
   avatarId: string;
@@ -46,7 +48,7 @@ export function DashboardTopbar({
           title="Randomize avatar"
         />
         <div className={styles.identityCopy}>
-          <p className="eyebrow">Commander profile</p>
+          <div className={styles.intro}>What do they call you?</div>
           <input
             className={styles.nameInput}
             value={name}
@@ -55,18 +57,15 @@ export function DashboardTopbar({
             placeholder="Commander Name"
             aria-label="Player name"
           />
-          <button className="secondary-button" onClick={randomizeName}>
-            New Codename
-          </button>
+          <Button variant="secondary" onClick={randomizeName}>
+            <ArrowClockwiseIcon size={32} weight="bold" />
+          </Button>
         </div>
       </div>
       <div className={styles.topbarActions}>
-        <button
-          className={`primary-cta ${styles.hostButton}`}
-          onClick={() => void createSession()}
-        >
-          Host
-        </button>
+        <Button variant="primary" onClick={() => void createSession()}>
+          Host new game
+        </Button>
       </div>
     </header>
   );

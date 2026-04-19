@@ -1,5 +1,6 @@
 import { pieceIconById } from "../../components/board/pieceIcons";
 import type { PieceDefinition, Unit } from "../../shared/schema";
+import styles from "./GameSurface.module.css";
 
 type GamePiecePanelProps = {
   inspectedPiece: PieceDefinition | null;
@@ -15,10 +16,10 @@ export function GamePiecePanel({
   inspectedVisible,
 }: GamePiecePanelProps) {
   return (
-    <section className="game-piece-panel">
+    <section className={styles.gamePiecePanel}>
       {inspectedUnit ? (
-        <div className="game-piece-hero">
-          <div className="game-piece-icon" aria-hidden="true">
+        <div className={styles.gamePieceHero}>
+          <div className={styles.gamePieceIcon} aria-hidden="true">
             {inspectedVisible && inspectedPiece ? (
               pieceIconById[inspectedPiece.id] ? (
                 <img src={pieceIconById[inspectedPiece.id]} alt="" />
@@ -29,7 +30,7 @@ export function GamePiecePanel({
               "?"
             )}
           </div>
-          <div className="game-piece-copy">
+          <div className={styles.gamePieceCopy}>
             <strong>
               {inspectedVisible && inspectedPiece ? inspectedPiece.label : "Unknown unit"}
             </strong>
@@ -37,7 +38,7 @@ export function GamePiecePanel({
               <>
                 <p>Rank {inspectedPiece.rank}</p>
                 {inspectedPieceTraits.map((trait) => (
-                  <div className="game-piece-trait" key={trait}>
+                  <div className={styles.gamePieceTrait} key={trait}>
                     {trait}
                   </div>
                 ))}

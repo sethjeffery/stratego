@@ -1,9 +1,66 @@
+.container {
+  padding: var(--space-4);
+  margin: 0 auto;
+  max-width: 1180px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.intro {
+  font-size: 1.5rem;
+  grid-column: 1 / -1;
+}
+
+.title {
+  text-align: center;
+  color: rgba(248, 248, 242);
+  font-size: clamp(5rem, 7vw, 7rem);
+  font-weight: 400;
+  line-height: 1.1;
+  margin: 0 0 1rem;
+  font-family: "Pirata One", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  text-shadow:
+    2px 0 1px rgb(3, 78, 4),
+    -2px 0 1px rgb(4, 78, 6),
+    0 -2px 1px rgb(4, 78, 6),
+    0 3px 1px rgb(4, 78, 6),
+    0 2px 10px rgb(0 0 0 / 75%);
+  background-clip: text;
+}
+
+@supports (paint-order: stroke fill) {
+  .title {
+    -webkit-text-stroke-color: rgba(28, 84, 29, 0.9);
+    -webkit-text-stroke-width: 10px;
+    paint-order: stroke fill;
+    text-shadow:
+      0 2px 1px rgb(0, 54, 13),
+      0 2px 10px rgb(0 0 0 / 75%);
+  }
+}
+
+.dashboardCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-6);
+  border-radius: var(--radius-lg);
+  border: solid 4px rgb(18 23 11 / 10%);
+  box-shadow:
+    0 2px 0 0 rgba(224, 228, 217, 0.25),
+    inset 0 2px 0 0 rgba(228, 232, 222, 0.25);
+  /* backdrop-filter: blur(4px); */
+  /* background-color: rgba(0, 91, 21, 0.1); */
+}
+
 .topbar {
-  margin-bottom: var(--space-4);
-  padding: var(--space-4) var(--space-5);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-4);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
   align-items: center;
 }
 
@@ -14,12 +71,13 @@
 }
 
 .avatarButton {
-  width: 92px;
+  width: 128px;
 }
 
 .identityCopy {
   display: grid;
   gap: var(--space-2);
+  grid-template-columns: 1fr 64px;
 }
 
 .nameInput {
@@ -52,6 +110,20 @@
 
 .panel {
   padding: var(--space-4) var(--space-5);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.sectionHeader h2 {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .list {
@@ -95,16 +167,6 @@
 .emptyState {
   margin: 0;
   color: var(--color-text-muted);
-}
-
-.backgroundImage {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  opacity: 0.15;
-  width: max(100vw, 100vh);
-  z-index: -1;
-  transform: translateX(-50%);
 }
 
 @media (max-width: 900px) {

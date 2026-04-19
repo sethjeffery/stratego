@@ -3,6 +3,7 @@ import { GameChatDock } from "./GameChatDock";
 import { GamePiecePanel } from "./GamePiecePanel";
 import { GamePlayerFaceoff } from "./GamePlayerFaceoff";
 import { GameSetupActions } from "./GameSetupActions";
+import styles from "./GameSurface.module.css";
 
 type GameSidebarProps = {
   canMarkReady: boolean;
@@ -34,8 +35,8 @@ export function GameSidebar({
   const playerOneId = state.players[0]?.id ?? null;
 
   return (
-    <aside className="game-sidebar">
-      <div className="game-sidebar-main">
+    <aside className={styles.gameSidebar}>
+      <div className={styles.gameSidebarMain}>
         <GamePlayerFaceoff
           players={state.players}
           turnPlayerId={state.turnPlayerId}

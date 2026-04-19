@@ -1,5 +1,8 @@
+import clsx from "clsx";
+
 import { pieceIconById } from "../../components/board/pieceIcons";
 import { getPlayerColorClass, pieceById } from "./gameScreenSelectors";
+import styles from "./GameSurface.module.css";
 
 type GameBattlePieceBadgeProps = {
   ownerId: string;
@@ -17,7 +20,13 @@ export function GameBattlePieceBadge({
   const colorClass = getPlayerColorClass(ownerId, playerOneId);
 
   return (
-    <span className={`game-chat-piece-badge ${colorClass}`} aria-hidden="true">
+    <span
+      className={clsx(
+        styles.gameChatPieceBadge,
+        colorClass === "player-one" ? styles.playerOne : styles.playerTwo,
+      )}
+      aria-hidden="true"
+    >
       {pieceIcon ? <img src={pieceIcon} alt="" /> : <span>{piece?.label.slice(0, 2) ?? "?"}</span>}
     </span>
   );

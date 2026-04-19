@@ -1,0 +1,448 @@
+.arenaShell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--arena-sidebar-width, 320px);
+}
+
+.arenaMain {
+  min-width: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
+  padding: 1rem 1.5rem 2rem;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.toolbarActions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.exitButton {
+  justify-self: start;
+}
+
+.surrenderButton:disabled {
+  opacity: 0.45;
+}
+
+.statusActive {
+  border-color: rgba(115, 243, 210, 0.44);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(115, 243, 210, 0.18);
+}
+
+.archivedBanner {
+  padding: 0.8rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.archivedBanner p {
+  margin: 0;
+}
+
+.gameSidebar {
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+  height: 100vh;
+  border-left: 1px solid rgba(209, 191, 145, 0.18);
+  background: rgba(25, 30, 20, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.gameSidebarMain {
+  position: relative;
+  z-index: 2;
+  padding: 1.4rem 1.25rem 1.25rem;
+  padding-bottom: 12rem;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgb(38, 59, 38) 0%, rgba(38, 59, 38, 0) 100%),
+    linear-gradient(180deg, rgb(38, 59, 38) 0%, rgba(38, 59, 38, 1) 100%);
+  background-position: bottom, top;
+  background-size:
+    100% 12rem,
+    100% calc(100% - 12rem);
+  background-repeat: no-repeat;
+}
+
+.gameFaceoff,
+.gamePiecePanel,
+.gameReadyButton {
+  pointer-events: auto;
+}
+
+.gameFaceoff {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.8rem;
+}
+
+.gameFaceoffSlot {
+  display: contents;
+}
+
+.gamePlayer {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.gamePlayerAvatar {
+  width: 5.6rem;
+}
+
+.gamePlayerName {
+  color: #f2ebd6;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.gameVersus {
+  align-self: center;
+  color: #b9ad8b;
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gamePiecePanel {
+  align-self: start;
+  display: grid;
+  gap: 1rem;
+  margin-top: 3rem;
+  margin-bottom: 2rem;
+}
+
+.gamePieceHero {
+  display: flex;
+  gap: 1rem;
+  margin-left: 0.5rem;
+}
+
+.gamePieceIcon {
+  width: 3rem;
+  height: 4rem;
+  display: flex;
+  justify-content: center;
+  font-size: 2rem;
+  line-height: 0.75;
+}
+
+.gamePieceIcon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.gamePieceCopy p {
+  margin: 0.35rem 0 0;
+  color: #bfb293;
+  font-size: 1rem;
+}
+
+.gamePieceTrait {
+  display: block;
+  color: #bfb293;
+  font-size: 0.875rem;
+  line-height: 1.15;
+  margin-top: 0.125rem;
+}
+
+.gameReadyButton {
+  align-self: end;
+}
+
+.gameChatDock {
+  position: absolute;
+  top: 0.25rem;
+  right: 1.25rem;
+  bottom: 0.25rem;
+  left: 1.25rem;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  overflow: hidden;
+}
+
+.gameChatStack {
+  min-height: 0;
+  display: grid;
+  align-content: end;
+  gap: 0.55rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.gameChatStack::-webkit-scrollbar {
+  display: none;
+}
+
+.gameChatPlaceholder {
+  margin: 0;
+  padding: 0.35rem 0;
+  color: #bdb290;
+}
+
+.gameChatMessage {
+  justify-self: start;
+  max-width: min(100%, 17rem);
+  display: grid;
+  gap: 0.24rem;
+  padding: 0.25rem 0;
+  color: #f3ecd7;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.gameChatMessageOwn {
+  justify-self: end;
+}
+
+.gameChatMessageBattle {
+  justify-self: center;
+  max-width: min(100%, 22rem);
+  text-align: center;
+}
+
+.gameChatAuthor {
+  color: #b9d8c2;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gameChatMessage p {
+  margin: 0;
+  color: #f3ecd7;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.gameChatBattle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  color: #f6efdd;
+  font-weight: 600;
+}
+
+.gameChatPieceBadge {
+  width: 2.25rem;
+  padding: 0.375rem;
+  border-radius: 0.125rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: inline-grid;
+  place-items: center;
+  box-shadow: 0 10px 18px rgba(5, 8, 6, 0.28);
+}
+
+.playerOne {
+  background: rgb(177, 19, 2);
+}
+
+.playerTwo {
+  background: rgb(2, 26, 208);
+}
+
+.gameChatPieceBadge img {
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.gameChatPieceBadge span {
+  color: #fff8ea;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.gameChatForm {
+  display: block;
+}
+
+.gameChatInput {
+  width: 100%;
+  padding: 0.75rem 0;
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid rgba(209, 191, 145, 0.16);
+  background: none;
+  background-color: transparent;
+  box-shadow: none;
+  color: #f7f0dc;
+  font: inherit;
+  line-height: 1.4;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.gameChatInput::placeholder {
+  color: #978c70;
+}
+
+.gameChatInput:focus {
+  border-top-color: rgba(115, 243, 210, 0.42);
+  box-shadow: none;
+  background: none;
+  background-color: transparent;
+}
+
+.gameChatInput:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.completionModalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 5, 8, 0.68);
+  display: grid;
+  place-items: center;
+  z-index: 120;
+  padding: 1.25rem;
+}
+
+.completionModal {
+  width: min(30rem, 100%);
+  border-radius: 1rem;
+  border: 1px solid rgba(220, 196, 147, 0.35);
+  background: linear-gradient(155deg, rgba(33, 39, 29, 0.98), rgba(24, 28, 20, 0.98));
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+  animation: completion-bounce 850ms cubic-bezier(0.18, 0.9, 0.36, 1.2);
+}
+
+.completionAvatar {
+  width: 5rem;
+  height: 5rem;
+  margin: 0 auto 0.75rem;
+}
+
+.completionModal h2 {
+  margin: 0 0 1rem;
+  font-size: clamp(2rem, 8vw, 2.75rem);
+  color: #f8df9c;
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+}
+
+.completionModal > p {
+  margin: -0.45rem 0 1rem;
+  color: #e9dbc0;
+}
+
+.completionStats {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: #e9dbc0;
+  justify-items: center;
+}
+
+.completionStats p {
+  margin: 0;
+}
+
+.completionMvp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.completionActions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: center;
+}
+
+@keyframes completion-bounce {
+  0% {
+    transform: translateY(-22px) scale(0.92);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(8px) scale(1.04);
+    opacity: 1;
+  }
+  78% {
+    transform: translateY(-4px) scale(0.99);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .arenaShell {
+    grid-template-columns: 1fr;
+  }
+
+  .arenaMain {
+    min-height: auto;
+    padding: 1rem;
+  }
+
+  .toolbar {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .gameSidebar {
+    position: static;
+    overflow: visible;
+    height: auto;
+    border-left: none;
+    border-top: 1px solid rgba(209, 191, 145, 0.18);
+    background: none;
+  }
+
+  .gameSidebarMain {
+    min-height: auto;
+    padding-bottom: 0;
+    pointer-events: auto;
+    background: none;
+  }
+
+  .gameChatDock {
+    position: static;
+    right: auto;
+    bottom: auto;
+    left: auto;
+  }
+
+  .gameFaceoff {
+    grid-template-columns: 1fr;
+  }
+}

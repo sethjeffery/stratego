@@ -1,7 +1,9 @@
+import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 
 import type { GameChatMessage } from "../../shared/schema";
 import { GameBattleMessage } from "./GameBattleMessage";
+import styles from "./GameSurface.module.css";
 
 type GameChatDockProps = {
   canSendChat: boolean;
@@ -56,10 +58,10 @@ export function GameChatDock({
   };
 
   return (
-    <section className="game-chat-dock" aria-label="Match chat">
-      <div ref={chatStackRef} className="game-chat-stack" aria-live="polite">
+    <section className={styles.gameChatDock} aria-label="Match chat">
+      <div ref={chatStackRef} className={styles.gameChatStack} aria-live="polite">
         {messages.length === 0 ? (
-          <p className="game-chat-placeholder">
+          <p className={styles.gameChatPlaceholder}>
             Open channel. Keep it brief and tactical.
           </p>
         ) : (
@@ -80,9 +82,12 @@ export function GameChatDock({
             return (
               <article
                 key={message.id}
-                className={`game-chat-message ${isOwnMessage ? "is-own" : ""}`}
+                className={clsx(
+                  styles.gameChatMessage,
+                  isOwnMessage && styles.gameChatMessageOwn,
+                )}
               >
-                <span className="game-chat-author">
+                <span className={styles.gameChatAuthor}>
                   {isOwnMessage ? "You" : message.senderName}
                 </span>
                 <p>{message.text}</p>
@@ -92,10 +97,10 @@ export function GameChatDock({
         )}
       </div>
 
-      <form className="game-chat-form" onSubmit={handleSubmit}>
+      <form className={styles.gameChatForm} onSubmit={handleSubmit}>
         <input
           ref={chatInputRef}
-          className="game-chat-input"
+          className={styles.gameChatInput}
           type="text"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}

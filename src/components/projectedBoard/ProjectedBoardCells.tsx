@@ -1,4 +1,7 @@
+import clsx from "clsx";
+
 import type { Position } from "../../shared/schema";
+import styles from "./ProjectedBoard.module.css";
 import { getCellStyle } from "./projectedBoardHelpers";
 import type { BoardCell } from "./types";
 
@@ -33,15 +36,19 @@ export function ProjectedBoardCells({
         return (
           <button
             key={cell.key}
-            className={`board-cell-hit ${isLegalTarget ? "is-target" : ""} ${isSelected ? "is-selected" : ""}`}
+            className={clsx(
+              styles.boardCellHit,
+              isLegalTarget && styles.target,
+              isSelected && styles.selected,
+            )}
             style={getCellStyle(display.x, display.y, boardColumns, boardRows)}
             onClick={() => interactive && onCellClick?.({ x: cell.x, y: cell.y })}
             disabled={!interactive}
-            data-x={cell.x}
-            data-y={cell.y}
+            data-x={display.x}
+            data-y={display.y}
             aria-label={`Board cell ${cell.x + 1}, ${cell.y + 1}`}
           >
-            <span className="board-cell-highlight" />
+            <span className={styles.boardCellHighlight} />
           </button>
         );
       })}
