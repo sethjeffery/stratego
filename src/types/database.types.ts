@@ -59,6 +59,48 @@ export type Database = {
         }
         Relationships: []
       }
+
+      session_chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          player_id: string
+          sender_name: string
+          sent_at: string
+          session_id: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          player_id: string
+          sender_name: string
+          sent_at?: string
+          session_id: string
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          player_id?: string
+          sender_name?: string
+          sent_at?: string
+          session_id?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "game_sessions"
+            referencedColumns: ["session_id"]
+          },
+        ]
+      }
       session_memberships: {
         Row: {
           archived_at: string | null
