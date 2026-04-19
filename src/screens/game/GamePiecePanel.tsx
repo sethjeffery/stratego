@@ -32,7 +32,9 @@ export function GamePiecePanel({
           </div>
           <div className={styles.gamePieceCopy}>
             <strong>
-              {inspectedVisible && inspectedPiece ? inspectedPiece.label : "Unknown unit"}
+              {inspectedVisible && inspectedPiece
+                ? inspectedPiece.label
+                : "Unknown unit"}
             </strong>
             {inspectedVisible && inspectedPiece && (
               <>

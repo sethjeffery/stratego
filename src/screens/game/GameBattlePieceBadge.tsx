@@ -27,7 +27,11 @@ export function GameBattlePieceBadge({
       )}
       aria-hidden="true"
     >
-      {pieceIcon ? <img src={pieceIcon} alt="" /> : <span>{piece?.label.slice(0, 2) ?? "?"}</span>}
+      {pieceIcon ? (
+        <img src={pieceIcon} alt="" />
+      ) : (
+        <span>{piece?.label.slice(0, 2) ?? "?"}</span>
+      )}
     </span>
   );
 }

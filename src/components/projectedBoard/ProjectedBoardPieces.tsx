@@ -70,8 +70,7 @@ export function ProjectedBoardPieces({
             ? isSelected || legalTargetKeys.has(`${unit.x}-${unit.y}`)
             : selectablePieceKeys.has(`${unit.x}-${unit.y}`));
         const isFriendlyClickable = !disabled && unit.ownerId === myId;
-        const isAttackTarget =
-          !disabled && legalTargetKeys.has(`${unit.x}-${unit.y}`);
+        const isAttackTarget = !disabled && legalTargetKeys.has(`${unit.x}-${unit.y}`);
         const isPieceActionable =
           interactive && (isFriendlyClickable || isAttackTarget);
         const isWinningBattlePiece =

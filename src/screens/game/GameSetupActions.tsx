@@ -6,10 +6,7 @@ type GameSetupActionsProps = {
   onMarkReady: () => void | Promise<void>;
 };
 
-export function GameSetupActions({
-  canMarkReady,
-  onMarkReady,
-}: GameSetupActionsProps) {
+export function GameSetupActions({ canMarkReady, onMarkReady }: GameSetupActionsProps) {
   if (!canMarkReady) return null;
 
   return (

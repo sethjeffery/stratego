@@ -27,7 +27,13 @@ export function ProjectedBoardBattleBurst({
     <span
       key={`battle-burst-${moveCount}`}
       className={clsx(styles.pieceHit, styles.battleBurst)}
-      style={getPieceStyle(display.x, display.y, boardColumns, boardRows, 14 + display.y)}
+      style={getPieceStyle(
+        display.x,
+        display.y,
+        boardColumns,
+        boardRows,
+        14 + display.y,
+      )}
       aria-hidden="true"
     >
       <span className={clsx(styles.pieceImpactBurst, styles.impactBoth)}>

@@ -8,10 +8,7 @@ type GamePlayerFaceoffProps = {
   turnPlayerId: string | null;
 };
 
-export function GamePlayerFaceoff({
-  players,
-  turnPlayerId,
-}: GamePlayerFaceoffProps) {
+export function GamePlayerFaceoff({ players, turnPlayerId }: GamePlayerFaceoffProps) {
   return (
     <div className={styles.gameFaceoff}>
       {players.slice(0, 2).map((player, index) => (

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 
 import type { Position, Unit } from "../../shared/schema";
-import type { BoardCell,ProjectedBoardProps } from "./types";
+import type { BoardCell, ProjectedBoardProps } from "./types";
 
 type UseProjectedBoardViewModelArgs = Pick<
   ProjectedBoardProps,

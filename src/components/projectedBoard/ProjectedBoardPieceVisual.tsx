@@ -30,15 +30,12 @@ export function ProjectedBoardPieceVisual({
   visible,
 }: ProjectedBoardPieceVisualProps) {
   const pieceIcon = pieceIconById[pieceId];
-  const pieceShellUrl =
-    pieceColor === "player-one" ? redPieceUrl : bluePieceUrl;
+  const pieceShellUrl = pieceColor === "player-one" ? redPieceUrl : bluePieceUrl;
   const pieceImpactColorClass =
     pieceColor === "player-one" ? styles.impactPlayerOne : styles.impactPlayerTwo;
 
   return (
-    <span
-      className={clsx(styles.piece, isWinningBattlePiece && styles.impact)}
-    >
+    <span className={clsx(styles.piece, isWinningBattlePiece && styles.impact)}>
       <img
         className={styles.pieceShell}
         src={pieceShellUrl}
@@ -57,7 +54,7 @@ export function ProjectedBoardPieceVisual({
               <img
                 className={styles.pieceIcon}
                 src={pieceIcon}
-                alt={decorative ? "" : piece?.label ?? pieceId}
+                alt={decorative ? "" : (piece?.label ?? pieceId)}
                 aria-hidden={decorative}
               />
             ) : (

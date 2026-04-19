@@ -31,11 +31,8 @@ const mySessionsKey = (cacheScope: string, deviceId: string) =>
   [MY_SESSIONS_KEY, cacheScope, deviceId] as const;
 const openSessionsKey = (cacheScope: string, limit: number) =>
   [OPEN_SESSIONS_KEY, cacheScope, limit] as const;
-const sessionAccessKey = (
-  cacheScope: string,
-  sessionId: string,
-  deviceId: string,
-) => [SESSION_ACCESS_KEY, cacheScope, sessionId, deviceId] as const;
+const sessionAccessKey = (cacheScope: string, sessionId: string, deviceId: string) =>
+  [SESSION_ACCESS_KEY, cacheScope, sessionId, deviceId] as const;
 export const getSessionCacheKey = (sessionId: string, cacheScope?: string) =>
   [SESSION_KEY, cacheScope ?? getGameServiceCacheScope(), sessionId] as const;
 
@@ -83,15 +80,11 @@ const revalidateSessionCaches = async (
   await Promise.all([
     mutate(
       (key) =>
-        Array.isArray(key) &&
-        key[0] === MY_SESSIONS_KEY &&
-        key[1] === cacheScope,
+        Array.isArray(key) && key[0] === MY_SESSIONS_KEY && key[1] === cacheScope,
     ),
     mutate(
       (key) =>
-        Array.isArray(key) &&
-        key[0] === OPEN_SESSIONS_KEY &&
-        key[1] === cacheScope,
+        Array.isArray(key) && key[0] === OPEN_SESSIONS_KEY && key[1] === cacheScope,
     ),
     sessionId
       ? mutate(
@@ -125,9 +118,7 @@ export function useOpenSessions(limit = 5) {
 export function useSession(sessionId: string | null) {
   const cacheScope = getGameServiceCacheScope();
   const key = sessionId && getSessionCacheKey(sessionId, cacheScope);
-  const swr = useSWR(key, () =>
-    getSession(sessionId ?? ""),
-  );
+  const swr = useSWR(key, () => getSession(sessionId ?? ""));
 
   useEffect(() => {
     if (!sessionId) return;
@@ -166,11 +157,7 @@ export function useArchiveSession() {
       if (!currentUser) throw new Error("Current player profile is not ready.");
 
       const myKey = mySessionsKey(cacheScope, currentUser.device_id);
-      const accessKey = sessionAccessKey(
-        cacheScope,
-        sessionId,
-        currentUser.device_id,
-      );
+      const accessKey = sessionAccessKey(cacheScope, sessionId, currentUser.device_id);
       const previousSessions = await mutate(myKey, (sessions?: SessionSummary[]) =>
         sessions?.filter((session) => session.session_id !== sessionId),
       );

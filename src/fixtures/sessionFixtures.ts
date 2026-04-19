@@ -81,11 +81,7 @@ const waitingForChallenger = {
   created_at: DEFAULT_TIMESTAMP,
   initiator: fixtureProfiles.ember,
   memberships: [
-    createMembership(
-      waitingForChallengerSessionId,
-      "initiator",
-      fixtureProfiles.ember,
-    ),
+    createMembership(waitingForChallengerSessionId, "initiator", fixtureProfiles.ember),
   ],
   session_id: waitingForChallengerSessionId,
   state: null,
@@ -200,16 +196,8 @@ const openingSkirmish = {
   created_at: DEFAULT_TIMESTAMP,
   initiator: fixtureProfiles.aurora,
   memberships: [
-    createMembership(
-      openingSkirmishSessionId,
-      "initiator",
-      fixtureProfiles.aurora,
-    ),
-    createMembership(
-      openingSkirmishSessionId,
-      "challenger",
-      fixtureProfiles.grove,
-    ),
+    createMembership(openingSkirmishSessionId, "initiator", fixtureProfiles.aurora),
+    createMembership(openingSkirmishSessionId, "challenger", fixtureProfiles.grove),
   ],
   session_id: openingSkirmishSessionId,
   state: createSessionState(
@@ -414,6 +402,6 @@ export const getFixturePlayerForRole = (
   if (!fixture) return null;
 
   return role === "challenger"
-    ? fixture.challenger ?? null
-    : fixture.initiator ?? null;
+    ? (fixture.challenger ?? null)
+    : (fixture.initiator ?? null);
 };

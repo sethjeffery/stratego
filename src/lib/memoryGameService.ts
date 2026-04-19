@@ -333,9 +333,7 @@ export const memoryJoinSessionAsCurrentUser = async (
 
 export const memoryArchiveSession = async (sessionId: string, deviceId: string) => {
   const session = await memoryGetSession(sessionId);
-  const membership = session.memberships?.find(
-    (entry) => entry.device_id === deviceId,
-  );
+  const membership = session.memberships?.find((entry) => entry.device_id === deviceId);
 
   if (!membership) {
     throw new Error("Session membership not found.");
@@ -457,10 +455,7 @@ export const memoryMarkSetupReady = async (sessionId: string, playerId: string) 
   return row.state!;
 };
 
-export const memoryResetFinishedGame = async (
-  sessionId: string,
-  playerId: string,
-) => {
+export const memoryResetFinishedGame = async (sessionId: string, playerId: string) => {
   const row = await updateSessionState(sessionId, (currentRow) => {
     if (!currentRow.state) return { error: "Waiting for challenger to join." };
     if (!currentRow.state.players.some((player) => player.id === playerId)) {
@@ -478,10 +473,7 @@ export const memoryResetFinishedGame = async (
   return row.state!;
 };
 
-export const memoryCloseFinishedGame = async (
-  sessionId: string,
-  playerId: string,
-) => {
+export const memoryCloseFinishedGame = async (sessionId: string, playerId: string) => {
   const row = await updateSessionState(sessionId, (currentRow) => {
     if (!currentRow.state) return { error: "Waiting for challenger to join." };
     if (!currentRow.state.players.some((player) => player.id === playerId)) {

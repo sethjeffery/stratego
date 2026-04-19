@@ -203,12 +203,7 @@ export function useGameScreenController(session: SessionRow) {
               previousSelection,
               target,
             )
-          : applySessionMove(
-              previousState.roomCode,
-              myId,
-              previousSelection,
-              target,
-            ),
+          : applySessionMove(previousState.roomCode, myId, previousSelection, target),
       );
       setPendingBoardAction(null);
     } catch {

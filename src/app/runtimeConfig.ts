@@ -6,10 +6,7 @@ import {
   DEBUG_SESSION_ROLE_PARAM,
 } from "./constants";
 
-export type PlayerSessionStorageMode =
-  | "localStorage"
-  | "sessionStorage"
-  | "memory";
+export type PlayerSessionStorageMode = "localStorage" | "sessionStorage" | "memory";
 
 export type GameServiceMode = "supabase" | "memory";
 
@@ -40,11 +37,10 @@ export const isDebugBoardEnabled = (search = getWindowSearch()) => {
   return value === "1" || value === "true";
 };
 
-export const getConfiguredPlayerSessionStorageMode =
-  (): PlayerSessionStorageMode => {
-    const rawValue = getNormalizedValue(import.meta.env.VITE_PLAYER_SESSION_STORAGE);
-    return STORAGE_MODE_ALIASES[rawValue] ?? "localStorage";
-  };
+export const getConfiguredPlayerSessionStorageMode = (): PlayerSessionStorageMode => {
+  const rawValue = getNormalizedValue(import.meta.env.VITE_PLAYER_SESSION_STORAGE);
+  return STORAGE_MODE_ALIASES[rawValue] ?? "localStorage";
+};
 
 export const getRequestedGameServiceMode = (): GameServiceMode | null => {
   const rawValue = getNormalizedValue(import.meta.env.VITE_GAME_SERVICE_MODE);

@@ -781,7 +781,9 @@ export const subscribeToSessionDetails = (
   if (!client) return () => undefined;
 
   const publishLatestSession = () => {
-    void getSession(sessionId).then(onSession).catch(() => undefined);
+    void getSession(sessionId)
+      .then(onSession)
+      .catch(() => undefined);
   };
 
   const membershipChannel = client
