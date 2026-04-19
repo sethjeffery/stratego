@@ -74,6 +74,9 @@ type SessionMembershipRow = {
   updated_at: string;
 };
 
+type SessionChatMessageRow =
+  Database["public"]["Tables"]["session_chat_messages"]["Row"];
+
 export type SessionParticipant = SessionMembershipRow & {
   player_name: string;
   avatar_id: string;
@@ -113,6 +116,7 @@ const PROFILE_TABLE = "player_profiles";
 const SESSION_CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const createSessionCode = customAlphabet(SESSION_CODE_ALPHABET, 8);
 const MAX_SESSION_UPDATE_ATTEMPTS = 4;
+const MAX_SESSION_CHAT_MESSAGES = 12;
 
 const normalizeSessionRow = (row: SessionRow): SessionRow => ({
   ...row,
@@ -419,7 +423,9 @@ export const getSession = async (sessionId: string): Promise<SessionRow> => {
   if (!client) throw new Error("Supabase is not configured.");
   const { data } = await client
     .from(TABLE)
-    .select("*, memberships:session_memberships(*, player:player_profiles(*))")
+    .select(
+      "*, memberships:session_memberships(*, player:player_profiles(*)), chat_messages:session_chat_messages(*)",
+    )
     .eq("session_id", sessionId)
     .single()
     .throwOnError();
@@ -451,15 +457,36 @@ export const hydrateSessionData = (
     memberships: (Database["public"]["Tables"]["session_memberships"]["Row"] & {
       player: Database["public"]["Tables"]["player_profiles"]["Row"];
     })[];
+    chat_messages?: SessionChatMessageRow[];
   },
 ) => {
+  const baseState = normalizeGameState(data.state as GameState | null);
+  const battleMessages =
+    baseState?.chatMessages.filter((message) => message.type === "battle") ?? [];
+  const playerMessages = (data.chat_messages ?? []).map((message) => ({
+    id: message.id,
+    type: "player" as const,
+    playerId: message.player_id,
+    senderName: message.sender_name,
+    text: message.text,
+    sentAt: message.sent_at,
+  }));
+  const chatMessages = [...battleMessages, ...playerMessages]
+    .sort((a, b) => a.sentAt.localeCompare(b.sentAt))
+    .slice(-MAX_SESSION_CHAT_MESSAGES);
+
   return {
     ...data,
     initiator: data.memberships.find((membership) => membership.role === "initiator")
       ?.player,
     challenger: data.memberships.find((membership) => membership.role === "challenger")
       ?.player,
-    state: data.state as GameState | null,
+    state: baseState
+      ? {
+          ...baseState,
+          chatMessages,
+        }
+      : null,
   } as SessionRow;
 };
 
@@ -671,28 +698,34 @@ export const sendChatMessage = async (
   if (shouldUseMemoryGameService()) {
     return await memorySendChatMessage(sessionId, playerId, text, options);
   }
+  if (!client) throw new Error("Supabase is not configured.");
   const trimmedText = text.trim();
   if (!trimmedText) throw new Error("Enter a message first.");
+  const session = await getSession(sessionId);
+  if (!session.state) throw new Error("Waiting for challenger to join.");
+  const sender = session.state.players.find((player) => player.id === playerId);
+  if (!sender) throw new Error("Unknown player.");
 
-  const row = await updateSessionState(sessionId, (currentRow) => {
-    if (!currentRow.state) return { error: "Waiting for challenger to join." };
-
-    const sender = currentRow.state.players.find((player) => player.id === playerId);
-    if (!sender) return { error: "Unknown player." };
-
-    return {
-      nextState: appendChatMessage(currentRow.state, {
-        id: options?.messageId ?? nanoid(10),
-        type: "player",
-        playerId,
-        senderName: sender.name,
-        text: trimmedText,
-        sentAt: options?.sentAt ?? getNowIsoString(),
-      }),
-    };
+  const messageId = options?.messageId ?? nanoid(10);
+  const sentAt = options?.sentAt ?? getNowIsoString();
+  const { error } = await client.from("session_chat_messages").insert({
+    id: messageId,
+    session_id: sessionId,
+    player_id: playerId,
+    sender_name: sender.name,
+    text: trimmedText,
+    sent_at: sentAt,
   });
+  if (error) throw error;
 
-  return row.state!;
+  return appendChatMessage(session.state, {
+    id: messageId,
+    type: "player",
+    playerId,
+    senderName: sender.name,
+    text: trimmedText,
+    sentAt,
+  });
 };
 
 export const subscribeToSession = (
@@ -717,6 +750,18 @@ export const subscribeToSession = (
       (payload) => {
         const next = normalizeSessionRow(payload.new as SessionRow);
         onSession(next);
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "session_chat_messages",
+        filter: `session_id=eq.${sessionId}`,
+      },
+      () => {
+        void getSession(sessionId).then(onSession);
       },
     )
     .subscribe();

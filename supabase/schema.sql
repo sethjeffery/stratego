@@ -133,6 +133,21 @@ CREATE TABLE IF NOT EXISTS "public"."player_profiles" (
 ALTER TABLE "public"."player_profiles" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."session_chat_messages" (
+    "id" "text" NOT NULL,
+    "session_id" "text" NOT NULL,
+    "player_id" "text" NOT NULL,
+    "sender_name" "text" NOT NULL,
+    "text" "text" NOT NULL,
+    "sent_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."session_chat_messages" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."session_memberships" (
     "session_id" "text" NOT NULL,
     "device_id" "text" NOT NULL,
@@ -156,6 +171,10 @@ ALTER TABLE ONLY "public"."player_profiles"
     ADD CONSTRAINT "player_profiles_pkey" PRIMARY KEY ("device_id");
 
 
+ALTER TABLE ONLY "public"."session_chat_messages"
+    ADD CONSTRAINT "session_chat_messages_pkey" PRIMARY KEY ("id");
+
+
 
 ALTER TABLE ONLY "public"."session_memberships"
     ADD CONSTRAINT "session_memberships_pkey" PRIMARY KEY ("session_id", "role");
@@ -167,6 +186,9 @@ CREATE OR REPLACE TRIGGER "trg_touch_game_sessions" BEFORE UPDATE ON "public"."g
 
 
 CREATE OR REPLACE TRIGGER "trg_touch_player_profiles" BEFORE UPDATE ON "public"."player_profiles" FOR EACH ROW EXECUTE FUNCTION "public"."touch_updated_at"();
+
+
+CREATE OR REPLACE TRIGGER "trg_touch_session_chat_messages" BEFORE UPDATE ON "public"."session_chat_messages" FOR EACH ROW EXECUTE FUNCTION "public"."touch_updated_at"();
 
 
 
@@ -183,14 +205,22 @@ ALTER TABLE ONLY "public"."session_memberships"
     ADD CONSTRAINT "session_memberships_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "public"."game_sessions"("session_id") ON DELETE CASCADE;
 
 
+ALTER TABLE ONLY "public"."session_chat_messages"
+    ADD CONSTRAINT "session_chat_messages_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "public"."game_sessions"("session_id") ON DELETE CASCADE;
+
+
 
 ALTER TABLE "public"."game_sessions" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."player_profiles" ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE "public"."session_chat_messages" ENABLE ROW LEVEL SECURITY;
+
 
 CREATE POLICY "public insert player profiles" ON "public"."player_profiles" FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "public insert session chat messages" ON "public"."session_chat_messages" FOR INSERT WITH CHECK (true);
 
 
 
@@ -204,6 +234,8 @@ CREATE POLICY "public insert sessions" ON "public"."game_sessions" FOR INSERT WI
 
 CREATE POLICY "public read player profiles" ON "public"."player_profiles" FOR SELECT USING (true);
 
+CREATE POLICY "public read session chat messages" ON "public"."session_chat_messages" FOR SELECT USING (true);
+
 
 
 CREATE POLICY "public read session memberships" ON "public"."session_memberships" FOR SELECT USING (true);
@@ -215,6 +247,8 @@ CREATE POLICY "public read sessions" ON "public"."game_sessions" FOR SELECT USIN
 
 
 CREATE POLICY "public update player profiles" ON "public"."player_profiles" FOR UPDATE USING (true) WITH CHECK (true);
+
+CREATE POLICY "public update session chat messages" ON "public"."session_chat_messages" FOR UPDATE USING (true) WITH CHECK (true);
 
 
 
@@ -243,6 +277,8 @@ ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."game_sessions";
 
 
 ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."player_profiles";
+
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."session_chat_messages";
 
 
 
@@ -444,6 +480,10 @@ GRANT ALL ON TABLE "public"."player_profiles" TO "anon";
 GRANT ALL ON TABLE "public"."player_profiles" TO "authenticated";
 GRANT ALL ON TABLE "public"."player_profiles" TO "service_role";
 
+GRANT ALL ON TABLE "public"."session_chat_messages" TO "anon";
+GRANT ALL ON TABLE "public"."session_chat_messages" TO "authenticated";
+GRANT ALL ON TABLE "public"."session_chat_messages" TO "service_role";
+
 
 
 GRANT ALL ON TABLE "public"."session_memberships" TO "anon";
@@ -482,9 +522,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
-
 
 
 
