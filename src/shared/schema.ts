@@ -115,11 +115,29 @@ export const getChatMessages = (state: GameState) => {
   return Array.isArray(maybeMessages) ? maybeMessages : [];
 };
 
+export const sortAndLimitChatMessages = (
+  messages: GameChatMessage[],
+  maxMessages = 12,
+) => {
+  const uniqueById = new Map(messages.map((message) => [message.id, message]));
+  return [...uniqueById.values()]
+    .sort((left, right) => left.sentAt.localeCompare(right.sentAt))
+    .slice(-maxMessages);
+};
+
 export const appendChatMessage = (
   state: GameState,
   message: GameChatMessage,
   maxMessages = 12,
 ): GameState => ({
   ...state,
-  chatMessages: [...getChatMessages(state), message].slice(-maxMessages),
+  chatMessages: sortAndLimitChatMessages(
+    [...getChatMessages(state), message],
+    maxMessages,
+  ),
+});
+
+export const removeChatMessage = (state: GameState, messageId: string): GameState => ({
+  ...state,
+  chatMessages: getChatMessages(state).filter((message) => message.id !== messageId),
 });

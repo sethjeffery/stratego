@@ -5,10 +5,15 @@ import {
 } from "@supabase/supabase-js";
 import { customAlphabet, nanoid } from "nanoid";
 
-import type { GameState, Position } from "../shared/schema";
+import type { GameChatMessage, GameState, Position } from "../shared/schema";
 import type { Database } from "../types/database.types";
 
-import { appendChatMessage } from "../shared/schema";
+import {
+  appendChatMessage,
+  getChatMessages,
+  removeChatMessage,
+  sortAndLimitChatMessages,
+} from "../shared/schema";
 import {
   applyMoveToState,
   applySetupSwapToState,
@@ -44,6 +49,8 @@ export type GameSessionDetails = Omit<
 };
 export type PlayerProfile = Database["public"]["Tables"]["player_profiles"]["Row"];
 
+export type SessionChatMessage =
+  Database["public"]["Tables"]["session_chat_messages"]["Row"];
 export type SessionMembership =
   Database["public"]["Tables"]["session_memberships"]["Row"];
 
@@ -67,6 +74,7 @@ type Listener<T extends Record<string, any>> = (
 const sessionMembershipRegistry = new Map<string, Entry<SessionMembership>>();
 const profileRegistry = new Map<string, Entry<PlayerProfile>>();
 const gameSessionRegistry = new Map<string, Entry<GameSession>>();
+const sessionChatRegistry = new Map<string, Entry<SessionChatMessage>>();
 
 export type SessionAccess = {
   membership: null | SessionParticipant;
@@ -116,12 +124,72 @@ const PROFILE_TABLE = "player_profiles";
 const SESSION_CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const createSessionCode = customAlphabet(SESSION_CODE_ALPHABET, 8);
 const MAX_SESSION_UPDATE_ATTEMPTS = 4;
+const MAX_SESSION_CHAT_MESSAGES = 12;
 
 const getCurrentDeviceId = () => {
   return getOrCreateStoredDeviceIdentity().deviceId;
 };
 
 const getNowIsoString = () => new Date().toISOString();
+
+const toPlayerChatMessage = (
+  row: Pick<SessionChatMessage, "id" | "player_id" | "sender_name" | "sent_at" | "text">,
+): GameChatMessage => ({
+  id: row.id,
+  playerId: row.player_id,
+  senderName: row.sender_name,
+  sentAt: row.sent_at,
+  text: row.text,
+  type: "player",
+});
+
+const getBattleChatMessages = (state: GameState) =>
+  getChatMessages(state).filter((message) => message.type === "battle");
+
+const mergeSessionChatMessages = (
+  session: GameSession,
+  playerMessages: SessionChatMessage[],
+): GameSession => {
+  if (!session.state) return session;
+
+  return {
+    ...session,
+    state: {
+      ...session.state,
+      chatMessages: sortAndLimitChatMessages(
+        [
+          ...getBattleChatMessages(session.state),
+          ...playerMessages.map((message) => toPlayerChatMessage(message)),
+        ],
+        MAX_SESSION_CHAT_MESSAGES,
+      ),
+    },
+  };
+};
+
+export const applyChatMessageToSession = (
+  session: GameSession,
+  message: SessionChatMessage,
+): GameSession => {
+  if (!session.state) return session;
+
+  return {
+    ...session,
+    state: appendChatMessage(session.state, toPlayerChatMessage(message), MAX_SESSION_CHAT_MESSAGES),
+  };
+};
+
+export const removeChatMessageFromSession = (
+  session: GameSession,
+  messageId: string,
+): GameSession => {
+  if (!session.state) return session;
+
+  return {
+    ...session,
+    state: removeChatMessage(session.state, messageId),
+  };
+};
 
 const upsertMembership = async (membership: {
   archived_at?: null | string;
@@ -404,16 +472,31 @@ export const getProfile = async (
   return created;
 };
 
-export const getSession = async (sessionId: string): Promise<GameSession> => {
+export const getSessionChatMessages = async (sessionId: string) => {
   if (!client) throw new Error("Supabase is not configured.");
 
   const { data } = await client
-    .from(TABLE)
+    .from("session_chat_messages")
     .select("*")
     .eq("session_id", sessionId)
-    .maybeSingle()
+    .order("sent_at", { ascending: true })
     .throwOnError();
-  return data as GameSession;
+
+  return data as SessionChatMessage[];
+};
+
+export const getSession = async (sessionId: string): Promise<GameSession> => {
+  if (!client) throw new Error("Supabase is not configured.");
+
+  const [{ data: session }, chatMessages] = await Promise.all([
+    client.from(TABLE).select("*").eq("session_id", sessionId).maybeSingle().throwOnError(),
+    getSessionChatMessages(sessionId),
+  ]);
+
+  const nextSession = session as GameSession | null;
+  if (!nextSession?.state) return nextSession as GameSession;
+
+  return mergeSessionChatMessages(nextSession, chatMessages);
 };
 
 export const requireSession = async (sessionId: string) => {
@@ -673,6 +756,31 @@ export const subscribeToSessionMemberships = (
             filter: `session_id=eq.${sessionId}`,
             schema: "public",
             table: MEMBERSHIP_TABLE,
+          },
+          handler,
+        )
+        .subscribe(),
+    onUpdate,
+  );
+};
+
+export const subscribeToSessionChatMessages = (
+  sessionId: string,
+  onUpdate: Listener<SessionChatMessage>,
+) => {
+  return withRegistry(
+    `session-chat:${sessionId}`,
+    sessionChatRegistry,
+    (handler) =>
+      client
+        .channel(`session-chat:${sessionId}`)
+        .on<SessionChatMessage>(
+          "postgres_changes",
+          {
+            event: "*",
+            filter: `session_id=eq.${sessionId}`,
+            schema: "public",
+            table: "session_chat_messages",
           },
           handler,
         )

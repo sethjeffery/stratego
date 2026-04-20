@@ -3,8 +3,10 @@ import useSWR, { mutate, useSWRConfig } from "swr";
 import useSWRMutation from "swr/mutation";
 
 import type {
+  GameSession,
   GameSessionDetails,
   SessionAccess,
+  SessionChatMessage,
   SessionMembership,
   SessionSummary,
 } from "../lib/supabaseGameService";
@@ -18,6 +20,7 @@ import {
 } from "../lib/gameServiceCache";
 import { getMemberByRole } from "../lib/playerProfile";
 import {
+  applyChatMessageToSession,
   archiveSession,
   createInitiatedSession,
   getCurrentUser,
@@ -27,8 +30,10 @@ import {
   joinSessionAsCurrentUser,
   listMySessions,
   listOpenSessions,
+  removeChatMessageFromSession,
   subscribeToProfile,
   subscribeToSession,
+  subscribeToSessionChatMessages,
   subscribeToSessionMemberships,
 } from "../lib/supabaseGameService";
 import { useCurrentUser } from "./useProfile";
@@ -76,6 +81,12 @@ const hasSessionMembershipRole = (
   value: Partial<SessionMembership> | Record<string, never>,
 ): value is SessionMembership => {
   return typeof value.role === "string";
+};
+
+const hasSessionChatMessageId = (
+  value: Partial<SessionChatMessage> | Record<string, never>,
+): value is Partial<SessionChatMessage> & Pick<SessionChatMessage, "id"> => {
+  return typeof value.id === "string";
 };
 
 export function useArchiveSession() {
@@ -235,6 +246,38 @@ export function useSession(sessionId: null | string) {
           revalidate: false,
         });
       }
+    });
+  }, [cacheKey, mutate, sessionId]);
+
+  useEffect(() => {
+    if (!sessionId || !cacheKey) return;
+
+    return subscribeToSessionChatMessages(sessionId, (payload) => {
+      const newEntry = payload.new;
+      const oldEntry = payload.old;
+
+      void mutate(
+        cacheKey,
+        (currentSession?: GameSession | null) => {
+          if (!currentSession) return currentSession;
+
+          if (hasSessionChatMessageId(newEntry)) {
+            return applyChatMessageToSession(
+              currentSession,
+              newEntry as SessionChatMessage,
+            );
+          }
+
+          if (hasSessionChatMessageId(oldEntry)) {
+            return removeChatMessageFromSession(currentSession, oldEntry.id);
+          }
+
+          return currentSession;
+        },
+        {
+          revalidate: false,
+        },
+      );
     });
   }, [cacheKey, mutate, sessionId]);
 
