@@ -2,7 +2,7 @@ import type { GameSessionDetails, SessionSummary } from "../../lib/supabaseGameS
 
 import { getMemberById } from "../../lib/playerProfile";
 
-export type SessionOutcomeIcon = "flag" | "medal" | "skull";
+export type SessionOutcomeIcon = "active" | "flag" | "medal" | "skull";
 
 export const formatSessionTimestamp = (timestamp?: number | string) => {
   if (!timestamp) return "Unknown activity";
@@ -10,14 +10,12 @@ export const formatSessionTimestamp = (timestamp?: number | string) => {
 };
 
 export const getSessionPlayerName = (
-  participant?:
-    | null
-    | {
-        player_name?: null | string;
-        profile?: null | {
-          player_name?: null | string;
-        };
-      },
+  participant?: null | {
+    player_name?: null | string;
+    profile?: null | {
+      player_name?: null | string;
+    };
+  },
 ) => participant?.profile?.player_name ?? participant?.player_name ?? "Unknown player";
 
 export const canArchiveSession = (

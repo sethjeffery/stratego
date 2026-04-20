@@ -1,4 +1,10 @@
-import { ArchiveIcon, FlagIcon, MedalIcon, SkullIcon } from "@phosphor-icons/react";
+import {
+  ArchiveIcon,
+  FlagIcon,
+  MedalIcon,
+  PlayIcon,
+  SkullIcon,
+} from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -19,6 +25,8 @@ import styles from "./SessionsList.module.css";
 
 const renderOutcomeIcon = (icon: null | SessionOutcomeIcon) => {
   switch (icon) {
+    case "active":
+      return <PlayIcon size={16} weight="fill" />;
     case "flag":
       return <FlagIcon size={16} />;
     case "medal":
@@ -36,7 +44,7 @@ export function SessionsListItem({
   session,
 }: {
   onArchive?: () => Promise<void>;
-  openPath?: string;
+  openPath?: null | string;
   session: SessionSummary;
 }) {
   const [archiveConfirmVisible, setArchiveConfirmVisible] = useState(false);
@@ -57,7 +65,7 @@ export function SessionsListItem({
         ? "Waiting for challenger"
         : "Open for a challenger"
       : "In progress";
-  const statusIcon = isFinished ? completionSummary.icon : null;
+  const statusIcon = isFinished ? completionSummary.icon : "active";
   const playerLabel = `${getSessionPlayerName(initiator)} vs ${
     challenger ? getSessionPlayerName(challenger) : "Open seat"
   }`;
