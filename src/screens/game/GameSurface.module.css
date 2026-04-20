@@ -1,7 +1,11 @@
 .arenaShell {
+  --arena-inline-gap: clamp(1rem, 2vw, 1.5rem);
+  --arena-block-gap: clamp(1.5rem, 3vw, 3.5rem);
+  --arena-toolbar-height: 52px;
   min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--arena-sidebar-width, 320px);
+  gap: 0;
 }
 
 .arenaMain {
@@ -9,15 +13,21 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 3.5rem;
-  padding: 1rem 1.5rem 2rem;
+  gap: var(--arena-block-gap);
+  padding: 1rem var(--arena-inline-gap) 2rem;
 }
 
 .toolbar {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 1rem;
+}
+
+.toolbarStatus {
+  min-width: 0;
+  display: flex;
+  justify-content: center;
 }
 
 .toolbarActions {
@@ -335,11 +345,7 @@
 
   .arenaMain {
     min-height: auto;
-    padding: 1rem;
-  }
-
-  .toolbar {
-    grid-template-columns: auto 1fr auto;
+    padding-bottom: 1.25rem;
   }
 
   .gameSidebar {
@@ -348,24 +354,181 @@
     height: auto;
     border-left: none;
     border-top: 1px solid rgba(209, 191, 145, 0.18);
-    background: none;
+    padding: 1rem var(--arena-inline-gap) 1.25rem;
+    background: rgba(16, 22, 14, 0.16);
+    backdrop-filter: blur(4px);
   }
 
   .gameSidebarMain {
     min-height: auto;
-    padding-bottom: 0;
+    display: grid;
+    gap: 1.1rem;
+    padding: 0;
     pointer-events: auto;
     background: none;
   }
 
+  .gamePiecePanel {
+    margin: 0;
+  }
+
+  .gamePieceHero {
+    margin-left: 0;
+  }
+
   .gameChatDock {
     position: static;
+    inset: auto;
     right: auto;
     bottom: auto;
     left: auto;
+    min-height: 0;
+    margin-top: 1rem;
+    padding: 1rem 0 0;
+    border-top: 1px solid rgba(209, 191, 145, 0.16);
   }
 
   .gameFaceoff {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .gamePlayerAvatar {
+    width: 4.6rem;
+  }
+
+  .gamePlayerName {
+    font-size: 0.85rem;
+  }
+
+  .gameChatStack {
+    max-height: min(12rem, 32vh);
+  }
+}
+
+@media (max-width: 900px) and (min-width: 700px) and (max-height: 560px) {
+  .arenaShell {
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 31vw);
+  }
+
+  .arenaMain {
+    min-height: 100svh;
+    padding-bottom: 1rem;
+  }
+
+  .gameSidebar {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    padding: 0;
+    border-top: none;
+    border-left: 1px solid rgba(209, 191, 145, 0.18);
+    background: rgba(25, 30, 20, 0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  .gameSidebarMain {
+    position: relative;
+    z-index: 2;
+    display: block;
+    gap: 0;
+    padding: 1rem 1rem 10rem;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgb(38, 59, 38) 0%, rgba(38, 59, 38, 0) 100%),
+      linear-gradient(180deg, rgb(38, 59, 38) 0%, rgba(38, 59, 38, 1) 100%);
+    background-position: bottom, top;
+    background-size:
+      100% 10rem,
+      100% calc(100% - 10rem);
+    background-repeat: no-repeat;
+  }
+
+  .gamePiecePanel {
+    margin-top: 1.25rem;
+  }
+
+  .gameChatDock {
+    position: absolute;
+    top: 0.25rem;
+    right: 1rem;
+    bottom: 0.25rem;
+    left: 1rem;
+    margin-top: 0;
+    padding-top: 0.5rem;
+    border-top: none;
+  }
+
+  .gameChatStack {
+    max-height: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .arenaShell {
+    --arena-inline-gap: 0.75rem;
+    --arena-block-gap: 1rem;
+  }
+
+  .arenaMain {
+    padding-top: 0.75rem;
+  }
+
+  .archivedBanner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .gameSidebar {
+    padding-top: 0.85rem;
+  }
+
+  .gameSidebarMain {
+    gap: 0.9rem;
+  }
+
+  .gameFaceoff {
+    gap: 0.45rem;
+  }
+
+  .gamePlayer {
+    gap: 0.5rem;
+  }
+
+  .gamePlayerAvatar {
+    width: 4rem;
+  }
+
+  .gameVersus {
+    font-size: 1rem;
+  }
+
+  .gamePieceHero {
+    gap: 0.75rem;
+  }
+
+  .gamePieceIcon {
+    width: 2.4rem;
+    height: 3.35rem;
+    font-size: 1.6rem;
+  }
+
+  .gamePieceCopy p {
+    font-size: 0.92rem;
+  }
+
+  .gamePieceTrait {
+    font-size: 0.82rem;
+  }
+
+  .gameChatDock {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+  }
+
+  .gameChatMessage,
+  .gameChatMessageBattle {
+    max-width: 100%;
   }
 }

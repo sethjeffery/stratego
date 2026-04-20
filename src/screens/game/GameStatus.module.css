@@ -2,6 +2,8 @@
   justify-self: center;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   min-height: 2.85rem;
   padding: 0.55rem 1.2rem;
   border-radius: 999px;
@@ -37,5 +39,14 @@
   }
   100% {
     transform: scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .statusLozenge {
+    min-height: 2.65rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.92rem;
+    line-height: 1.2;
   }
 }

@@ -31,7 +31,9 @@ export function GameToolbar({
       >
         <ArrowLeftIcon />
       </IconButton>
-      <GameStatus otherPlayerName={otherPlayerName} status={mainStatus} />
+      <div className={styles.toolbarStatus}>
+        <GameStatus otherPlayerName={otherPlayerName} status={mainStatus} />
+      </div>
       <div className={styles.toolbarActions}>
         <IconButton
           aria-label="Surrender"
