@@ -1,5 +1,3 @@
-import type { CSSProperties } from "react";
-
 import { ArrowClockwiseIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
@@ -10,6 +8,7 @@ import {
   resolveAvatarUrl,
 } from "../../lib/playerProfile";
 import styles from "../../screens/DashboardScreen.module.css";
+import { Sunburst } from "../../screens/Sunburst";
 import { Button } from "../Button";
 
 type DashboardTopbarProps = {
@@ -41,31 +40,7 @@ export function DashboardTopbar({
 
   return (
     <div className={styles.topbarContainer}>
-      <div className={styles.sunbursts}>
-        <div className={styles.sunburst} />
-        <div
-          className={styles.sunburst}
-          style={
-            {
-              "--sunburst-delay": "-0.3s",
-              "--sunburst-rotation": "5deg",
-              "--sunburst-scale": 0.8,
-              "--sunburst-speed": "1.4s",
-            } as CSSProperties
-          }
-        />
-        <div
-          className={styles.sunburst}
-          style={
-            {
-              "--sunburst-delay": "-0.4s",
-              "--sunburst-rotation": "10deg",
-              "--sunburst-scale": 0.65,
-              "--sunburst-speed": "2.5s",
-            } as CSSProperties
-          }
-        />
-      </div>
+      <Sunburst />
       <header className={`${styles.topbar} card`}>
         <div className={styles.identityHero}>
           <Avatar
@@ -73,6 +48,7 @@ export function DashboardTopbar({
             avatarUrl={resolveAvatarUrl(avatarId)}
             className={styles.avatarButton}
             onClick={randomizeAvatar}
+            shadow
             title="Randomize avatar"
           />
           <div className={styles.identityCopy}>

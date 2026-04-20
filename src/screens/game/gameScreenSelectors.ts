@@ -16,10 +16,12 @@ export const getPlayerColorClass = (playerId: string, playerOneId: null | string
 
 export const getPieceTraits = (piece: PieceDefinition) =>
   [
+    piece.id === "flag" ? "Capturing it wins the game." : null,
     piece.canTraverseMany ? "Moves multiple spaces in a line." : null,
-    piece.canDefuseBomb ? "Defuses bombs when attacking." : null,
     piece.immovable ? "Cannot move once deployed." : null,
-    piece.canKillMarshal ? "Kills the Marshal if attacking." : null,
+    piece.canKill
+      ? `Kills the ${pieceById.get(piece.canKill)?.label} if attacking.`
+      : null,
   ].filter((trait): trait is string => Boolean(trait));
 
 export const getInspectedPieceState = (
@@ -30,8 +32,7 @@ export const getInspectedPieceState = (
   const inspectedUnit = selected
     ? (getAliveUnits(state).find(
         (unit) => unit.x === selected.x && unit.y === selected.y,
-      ) ??
-      null)
+      ) ?? null)
     : null;
   const inspectedPiece = inspectedUnit
     ? (pieceById.get(inspectedUnit.pieceId) ?? null)
@@ -136,6 +137,7 @@ export const getCompletionStats = (state: GameState) => {
   };
 };
 
+export type CompletionOutcomeIcon = "flag" | "medal" | "skull";
 export type GameCompletionStats = ReturnType<typeof getCompletionStats>;
 
 export const formatDuration = (durationMs: null | number) => {
@@ -146,20 +148,35 @@ export const formatDuration = (durationMs: null | number) => {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
-export const getCompletionCopy = (state: GameState, players: GameDisplayPlayer[]) => {
+export const getCompletionCopy = (
+  state: GameState,
+  players: GameDisplayPlayer[],
+  myId: null | string,
+) => {
   const winner = players.find((player) => player.id === state.winnerId) ?? null;
   const surrenderedPlayer =
     players.find((player) => player.id === state.surrenderedById) ?? null;
+  const didISurrender = state.surrenderedById === myId;
+  const didIWin = Boolean(myId) && state.winnerId === myId;
+
+  let completionDescription = "Flag secured. Match complete.";
+  let completionIcon: CompletionOutcomeIcon = didIWin ? "medal" : "skull";
+  let completionTitle = didIWin ? "You won" : "You lost";
+
+  if (state.completionReason === "surrender") {
+    completionIcon = "flag";
+    completionDescription = didISurrender
+      ? "You surrendered."
+      : `${surrenderedPlayer?.name ?? "A player"} surrendered.`;
+    completionTitle = didISurrender
+      ? "You surrendered"
+      : `${surrenderedPlayer?.name ?? "A player"} surrendered`;
+  }
 
   return {
-    completionDescription:
-      state.completionReason === "surrender"
-        ? `${surrenderedPlayer?.name ?? "A player"} surrendered.`
-        : "Flag secured. Match complete.",
-    completionTitle:
-      state.completionReason === "surrender" && surrenderedPlayer
-        ? `${surrenderedPlayer.name} surrendered`
-        : `${winner?.name ?? "Commander"} wins!`,
+    completionDescription,
+    completionIcon,
+    completionTitle,
     surrenderedPlayer,
     winner,
   };

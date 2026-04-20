@@ -1,17 +1,20 @@
+import { FlagIcon, MedalIcon, SkullIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import type { GameDisplayPlayer } from "../../lib/gamePlayers";
-import type { GameCompletionStats } from "./gameScreenSelectors";
+import type { CompletionOutcomeIcon, GameCompletionStats } from "./gameScreenSelectors";
 
-import Avatar from "../../components/Avatar";
+import victoryBlue from "../../assets/victory-blue.png";
+import victoryRed from "../../assets/victory-red.png";
 import { Button } from "../../components/Button";
-import { resolveAvatarUrl } from "../../lib/playerProfile";
 import { GameBattlePieceBadge } from "./GameBattlePieceBadge";
-import { formatDuration, pieceById } from "./gameScreenSelectors";
-import styles from "./GameSurface.module.css";
+import styles from "./GameCompletionModal.module.css";
+import { pieceById } from "./gameScreenSelectors";
+import { Modal } from "./Modal";
 
 type GameCompletionModalProps = {
   completionDescription: string;
+  completionIcon: CompletionOutcomeIcon;
   completionStats: GameCompletionStats;
   completionTitle: string;
   isClosed: boolean;
@@ -19,10 +22,23 @@ type GameCompletionModalProps = {
   onPlayAgain: () => Promise<void>;
   playerOneId: null | string;
   winner: GameDisplayPlayer | null;
+  winnerColor: "blue" | "red";
+};
+
+const renderCompletionIcon = (icon: CompletionOutcomeIcon) => {
+  switch (icon) {
+    case "flag":
+      return <FlagIcon size={22} weight="fill" />;
+    case "medal":
+      return <MedalIcon size={22} weight="fill" />;
+    case "skull":
+      return <SkullIcon size={22} weight="fill" />;
+  }
 };
 
 export function GameCompletionModal({
   completionDescription,
+  completionIcon,
   completionStats,
   completionTitle,
   isClosed,
@@ -30,56 +46,16 @@ export function GameCompletionModal({
   onPlayAgain,
   playerOneId,
   winner,
+  winnerColor,
 }: GameCompletionModalProps) {
   const [actionPending, setActionPending] = useState(false);
 
   if (!winner) return null;
 
   return (
-    <div className={styles.completionModalBackdrop} role="presentation">
-      <section
-        aria-labelledby="completion-modal-title"
-        aria-modal="true"
-        className={styles.completionModal}
-        role="dialog"
-      >
-        <Avatar
-          alt={winner.name}
-          avatarUrl={resolveAvatarUrl(winner.avatarId)}
-          className={styles.completionAvatar}
-          color={winner.id === playerOneId ? "red" : "blue"}
-          title={winner.name}
-        />
-        <h2 id="completion-modal-title">{completionTitle}</h2>
-        <p>{completionDescription}</p>
-        <div className={styles.completionStats}>
-          <p>
-            <strong>Match Time:</strong> {formatDuration(completionStats.matchTimeMs)}
-          </p>
-          <p>
-            <strong>Battles:</strong> {completionStats.battleCount}
-          </p>
-          <p className={styles.completionMvp}>
-            <strong>Most Valuable Piece:</strong>
-            {completionStats.mvp ? (
-              <>
-                <GameBattlePieceBadge
-                  ownerId={completionStats.mvp.ownerId}
-                  pieceId={completionStats.mvp.pieceId}
-                  playerOneId={playerOneId}
-                />
-                <span>
-                  {pieceById.get(completionStats.mvp.pieceId)?.label ?? "Unknown unit"}{" "}
-                  · {completionStats.mvp.kills} kills
-                </span>
-              </>
-            ) : (
-              <span>No qualifying kills</span>
-            )}
-          </p>
-        </div>
-
-        <div className={styles.completionActions}>
+    <Modal
+      actions={
+        <>
           <Button
             disabled={actionPending || isClosed}
             onClick={() => {
@@ -102,8 +78,43 @@ export function GameCompletionModal({
           >
             Finish
           </Button>
+        </>
+      }
+      description={completionDescription}
+      sunburst
+      title={
+        <span className={styles.completionTitle}>
+          <span className={styles.completionTitleIcon}>
+            {renderCompletionIcon(completionIcon)}
+          </span>
+          <span>{completionTitle}</span>
+        </span>
+      }
+      titleText={completionTitle}
+    >
+      <img
+        alt="Victory soldier"
+        className={styles.victoryImage}
+        src={winnerColor === "red" ? victoryRed : victoryBlue}
+      />
+      <div className={styles.completionStats}>
+        <div className={styles.completionMvp}>
+          {completionStats.mvp ? (
+            <>
+              <GameBattlePieceBadge
+                ownerId={completionStats.mvp.ownerId}
+                pieceId={completionStats.mvp.pieceId}
+                playerOneId={playerOneId}
+              />
+              <strong>Most Valuable Piece</strong>
+              <span>
+                {pieceById.get(completionStats.mvp.pieceId)?.label ?? "Unknown unit"} ·{" "}
+                {completionStats.mvp.kills} kills
+              </span>
+            </>
+          ) : null}
         </div>
-      </section>
-    </div>
+      </div>
+    </Modal>
   );
 }

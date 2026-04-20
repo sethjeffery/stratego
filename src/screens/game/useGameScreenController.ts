@@ -268,6 +268,7 @@ export function useGameScreenController(session: GameSessionDetails) {
       await mutateSessionState(nextState, () =>
         closeSessionFinishedGame(state.roomCode, myId),
       );
+      navigate("/");
     } catch {
       // SWR rolls back the optimistic session cache automatically.
     }

@@ -143,7 +143,7 @@ CREATE OR REPLACE VIEW "public"."open_game_sessions" AS
    FROM "public"."game_sessions" "s"
   WHERE (NOT (EXISTS ( SELECT 1
            FROM "public"."session_memberships" "m"
-          WHERE (("m"."session_id" = "s"."session_id") AND ("m"."role" = 'challenger'::"public"."session_role")))));
+          WHERE (("m"."session_id" = "s"."session_id") AND (("m"."role" = 'challenger'::"public"."session_role") OR ("m"."archived_at" IS NOT NULL))))));
 
 
 ALTER VIEW "public"."open_game_sessions" OWNER TO "postgres";
@@ -174,6 +174,20 @@ CREATE TABLE IF NOT EXISTS "public"."session_chat_messages" (
 
 
 ALTER TABLE "public"."session_chat_messages" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."unarchived_game_sessions" AS
+ SELECT "session_id",
+    "state",
+    "created_at",
+    "updated_at"
+   FROM "public"."game_sessions" "s"
+  WHERE (NOT (EXISTS ( SELECT 1
+           FROM "public"."session_memberships" "m"
+          WHERE (("m"."session_id" = "s"."session_id") AND ("m"."archived_at" IS NOT NULL)))));
+
+
+ALTER VIEW "public"."unarchived_game_sessions" OWNER TO "postgres";
 
 
 ALTER TABLE ONLY "public"."game_sessions"
@@ -523,6 +537,12 @@ GRANT ALL ON TABLE "public"."player_profiles" TO "service_role";
 GRANT ALL ON TABLE "public"."session_chat_messages" TO "anon";
 GRANT ALL ON TABLE "public"."session_chat_messages" TO "authenticated";
 GRANT ALL ON TABLE "public"."session_chat_messages" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."unarchived_game_sessions" TO "anon";
+GRANT ALL ON TABLE "public"."unarchived_game_sessions" TO "authenticated";
+GRANT ALL ON TABLE "public"."unarchived_game_sessions" TO "service_role";
 
 
 

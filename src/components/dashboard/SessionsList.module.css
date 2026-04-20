@@ -8,24 +8,132 @@
   gap: var(--space-3);
 }
 
+.sessionCard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(180deg, rgba(58, 64, 48, 0.38), rgba(37, 42, 30, 0.3)),
+    var(--color-surface-2);
+}
+
+.sessionCardOpenable {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.sessionCardOpenable:hover {
+  border-color: var(--color-border);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.22);
+  transform: translateY(-1px);
+}
+
+.sessionCard:focus-within {
+  border-color: var(--color-border);
+}
+
+.sessionCardLink {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.sessionCardLink:focus-visible {
+  outline: 2px solid rgba(231, 227, 219, 0.75);
+  outline-offset: 3px;
+}
+
 .sessionSummary {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  min-width: 0;
+  flex: 1;
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .playerStrip {
   display: flex;
-  gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 .playerAvatar {
-  width: 40px;
+  margin: -0.25rem 0;
+  width: 52px;
+  z-index: 1;
+}
+
+.playerAvatar + .playerAvatar {
+  margin-left: -0.75rem;
+}
+
+.sessionText {
+  min-width: 0;
+}
+
+.sessionId,
+.playerNames,
+.sessionStatus {
+  margin: 0;
+}
+
+.sessionId {
+  display: block;
+  letter-spacing: 0.08em;
+}
+
+.playerNames {
+  margin-top: 0.1rem;
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.sessionStatus {
+  margin-top: 0.2rem;
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.sessionStatusIcon {
+  display: inline-flex;
+  align-items: center;
+  color: #e7d7a4;
 }
 
 .inlineActions {
   display: flex;
-  gap: var(--space-2);
   align-items: center;
-  flex-wrap: wrap;
+  justify-content: flex-end;
+  position: relative;
+  z-index: 2;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.archiveButton {
+  background: rgba(24, 30, 20, 0.22);
+}
+
+@media (max-width: 640px) {
+  .sessionCard {
+    align-items: flex-start;
+  }
+
+  .inlineActions {
+    align-self: center;
+  }
 }

@@ -1,22 +1,17 @@
-import type { GameSession } from "../../lib/supabaseGameService";
+import type { SessionSummary } from "../../lib/supabaseGameService";
 
-import { useCurrentUser } from "../../hooks/useProfile";
+import { buildGamePath } from "../../app/sessionRouting";
 import styles from "./SessionsList.module.css";
 import { SessionsListItem } from "./SessionsListItem";
 
 export default function SessionsList({
   onArchiveSession,
-  onJoinSession,
-  onResumeSession,
   sessions,
 }: {
-  onArchiveSession?: (sessionId: string) => void;
-  onJoinSession?: (sessionId: string) => void;
-  onResumeSession?: (sessionId: string) => void;
-  sessions: GameSession[];
+  onArchiveSession?: (sessionId: string) => Promise<void>;
+  sessions: SessionSummary[];
 }) {
-  const { data: currentUser } = useCurrentUser();
-  if (!currentUser || !sessions || sessions.length === 0) {
+  if (!sessions || sessions.length === 0) {
     return null;
   }
 
@@ -26,8 +21,7 @@ export default function SessionsList({
         <SessionsListItem
           key={session.session_id}
           onArchive={onArchiveSession && (() => onArchiveSession(session.session_id))}
-          onJoin={onJoinSession && (() => onJoinSession(session.session_id))}
-          onResume={onResumeSession && (() => onResumeSession(session.session_id))}
+          openPath={buildGamePath(session.session_id)}
           session={session}
         />
       ))}

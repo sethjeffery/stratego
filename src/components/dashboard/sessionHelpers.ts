@@ -1,28 +1,65 @@
-import type { CurrentUser, GameSessionDetails } from "../../lib/supabaseGameService";
+import type { GameSessionDetails, SessionSummary } from "../../lib/supabaseGameService";
 
 import { getMemberById } from "../../lib/playerProfile";
+
+export type SessionOutcomeIcon = "flag" | "medal" | "skull";
 
 export const formatSessionTimestamp = (timestamp?: number | string) => {
   if (!timestamp) return "Unknown activity";
   return new Date(timestamp).toLocaleString();
 };
 
-export const getCompletionLabel = (
-  row: GameSessionDetails,
-  currentUser: CurrentUser,
-) => {
+export const getSessionPlayerName = (
+  participant?:
+    | null
+    | {
+        player_name?: null | string;
+        profile?: null | {
+          player_name?: null | string;
+        };
+      },
+) => participant?.profile?.player_name ?? participant?.player_name ?? "Unknown player";
+
+export const canArchiveSession = (
+  row: Pick<GameSessionDetails | SessionSummary, "state">,
+) => !row.state || row.state.phase === "finished" || row.state.phase === "closed";
+
+export const getCompletionSummary = (
+  row: GameSessionDetails | SessionSummary,
+  currentDeviceId?: null | string,
+): { icon: null | SessionOutcomeIcon; text: string } => {
   const winner = getMemberById(row.memberships, row.state?.winnerId);
-  if (!winner) return "Completed";
+  if (!winner) {
+    return {
+      icon: null,
+      text: "Completed",
+    };
+  }
+  const winnerName = getSessionPlayerName(winner);
 
   const surrenderedById = row.state?.surrenderedById;
   if (surrenderedById) {
-    if (surrenderedById === currentUser.device_id) {
-      return "You surrendered";
+    if (surrenderedById === currentDeviceId) {
+      return {
+        icon: "flag",
+        text: "You surrendered",
+      };
     }
-    return `${winner.profile?.player_name} won by surrender`;
+    const surrenderedPlayer = getMemberById(row.memberships, surrenderedById);
+
+    return {
+      icon: "flag",
+      text: `${getSessionPlayerName(surrenderedPlayer) ?? winnerName} surrendered`,
+    };
   }
 
-  return currentUser.device_id === winner.device_id
-    ? "You won"
-    : `${winner.profile?.player_name} won`;
+  return currentDeviceId === winner.device_id
+    ? {
+        icon: "medal",
+        text: "You won",
+      }
+    : {
+        icon: "skull",
+        text: "You lost",
+      };
 };

@@ -14,12 +14,5 @@
       { "x": 7, "y": 5 }
     ]
   },
-  "hiddenInformation": true,
-  "attack": {
-    "bombId": "bomb",
-    "flagId": "flag",
-    "spyId": "spy",
-    "marshalId": "marshal"
-  },
   "setupRowsPerPlayer": 2
 }

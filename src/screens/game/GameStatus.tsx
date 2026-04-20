@@ -1,10 +1,10 @@
 import {
   ArchiveIcon,
-  FlagIcon,
   HandPointingIcon,
   HourglassIcon,
+  MedalIcon,
   PlayIcon,
-  SmileySadIcon,
+  SkullIcon,
 } from "@phosphor-icons/react";
 import clsx from "clsx";
 
@@ -37,7 +37,7 @@ const statusMessage = ({
     case "loser":
       return (
         <>
-          <SmileySadIcon size={16} />
+          <SkullIcon size={16} />
           You lost
         </>
       );
@@ -58,7 +58,7 @@ const statusMessage = ({
     case "winner":
       return (
         <>
-          <FlagIcon size={16} />
+          <MedalIcon size={16} />
           You won
         </>
       );

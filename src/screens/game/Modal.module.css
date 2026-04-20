@@ -1,0 +1,67 @@
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 5, 8, 0.68);
+  display: grid;
+  place-items: center;
+  z-index: 120;
+  padding: 1.25rem;
+}
+
+.modal {
+  width: min(30rem, 100%);
+  border-radius: 1rem;
+  border: 1px solid rgba(220, 196, 147, 0.35);
+  background: linear-gradient(
+    155deg in oklab,
+    rgba(62, 64, 34, 0.85),
+    rgba(31, 42, 19, 0.85)
+  );
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+  animation: zoom-in 400ms cubic-bezier(0.18, 0.9, 0.36, 1.2);
+  backdrop-filter: blur(4px);
+}
+
+.actions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: center;
+}
+
+.modal h2 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(2rem, 8vw, 2.75rem);
+  line-height: 1;
+  color: #f8df9c;
+  text-shadow: 0 3px 4px rgba(0, 0, 0, 0.45);
+  position: relative;
+}
+
+.modal h2::after {
+  position: absolute;
+  inset: 0;
+  content: attr(title);
+  color: transparent;
+  background: linear-gradient(to right in oklab, white, #e9be4b, #ff8c00);
+  text-shadow: none;
+  background-clip: text;
+  pointer-events: none;
+}
+
+.modal p {
+  margin: 0 0 1rem;
+  color: #e9dbc0;
+}
+
+@keyframes zoom-in {
+  0% {
+    transform: translateY(10px) scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}

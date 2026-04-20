@@ -142,15 +142,12 @@ const resolveBattle = (
   attacker: Unit,
   defender: Unit,
   pieceById: Map<string, PieceDefinition>,
-  rules: RulesConfig,
 ): "attacker" | "both" | "defender" => {
   const a = pieceById.get(attacker.pieceId)!;
   const d = pieceById.get(defender.pieceId)!;
 
-  if (d.id === rules.attack.flagId) return "attacker";
-  if (d.id === rules.attack.bombId) return a.canDefuseBomb ? "attacker" : "defender";
-  if (a.id === rules.attack.spyId && d.id === rules.attack.marshalId) return "attacker";
-
+  if (a.canKill === d.id) return "attacker";
+  if (a.explodes && a.rank > d.rank) return "both";
   if (a.rank > d.rank) return "attacker";
   if (a.rank < d.rank) return "defender";
   return "both";
@@ -417,18 +414,23 @@ export const applyMoveToState = (
   } else {
     revealUnitToPlayers(moving, nextState.players);
     revealUnitToPlayers(defender, nextState.players);
-    const winner = resolveBattle(moving, defender, pieceById, rules);
+    const winner = resolveBattle(moving, defender, pieceById);
     moving.x = to.x;
     moving.y = to.y;
 
     if (winner === "attacker") {
-      if (defender.pieceId === rules.attack.flagId) nextState.winnerId = playerId;
       defender.status = "captured";
     } else if (winner === "defender") {
       moving.status = "captured";
     } else {
       moving.status = "captured";
       defender.status = "captured";
+    }
+
+    for (const piece of [defender, moving]) {
+      if (piece.status === "captured" && pieceById.get(piece.pieceId)?.goal) {
+        nextState.winnerId = playerId;
+      }
     }
 
     nextState.lastBattle = {

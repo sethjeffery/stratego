@@ -31,10 +31,13 @@ import {
   listMySessions,
   listOpenSessions,
   removeChatMessageFromSession,
+  subscribeToMemberships,
   subscribeToProfile,
+  subscribeToProfiles,
   subscribeToSession,
   subscribeToSessionChatMessages,
   subscribeToSessionMemberships,
+  subscribeToSessions,
 } from "../lib/supabaseGameService";
 import { useCurrentUser } from "./useProfile";
 
@@ -184,24 +187,32 @@ export function useMySessions() {
   const cacheScope = getGameServiceCacheScope();
   const { data: currentUser } = useCurrentUser();
   const key = currentUser ? mySessionsKey(cacheScope, currentUser.device_id) : null;
-
-  return useSWR(key, ([, , deviceId]) => listMySessions(deviceId), {
+  const sessions = useSWR(key, ([, , deviceId]) => listMySessions(deviceId), {
     keepPreviousData: true,
     revalidateIfStale: false,
     revalidateOnFocus: false,
+    revalidateOnMount: true,
   });
+
+  useLobbyListSubscriptions(key);
+
+  return sessions;
 }
 
 export function useOpenSessions(limit = 5) {
   const cacheScope = getGameServiceCacheScope();
   const { data: currentUser } = useCurrentUser();
   const key = currentUser ? openSessionsKey(cacheScope, limit) : null;
-
-  return useSWR(key, ([, , nextLimit]) => listOpenSessions(nextLimit), {
+  const sessions = useSWR(key, ([, , nextLimit]) => listOpenSessions(nextLimit), {
     keepPreviousData: true,
     revalidateIfStale: false,
     revalidateOnFocus: false,
+    revalidateOnMount: true,
   });
+
+  useLobbyListSubscriptions(key);
+
+  return sessions;
 }
 
 export function useProfile(deviceId?: null | string, createIfEmpty?: boolean) {
@@ -356,6 +367,31 @@ export function useSessionMemberships(sessionId: null | string) {
   }, [cacheKey, mutate, sessionId]);
 
   return memberships;
+}
+
+function useLobbyListSubscriptions(
+  cacheKey: null | readonly unknown[] | string | undefined,
+) {
+  const { mutate } = useSWRConfig();
+
+  useEffect(() => {
+    if (!cacheKey) return;
+
+    const revalidate = () => {
+      void mutate(cacheKey);
+    };
+    const unsubscribers = [
+      subscribeToSessions(revalidate),
+      subscribeToMemberships(revalidate),
+      subscribeToProfiles(revalidate),
+    ];
+
+    return () => {
+      for (const unsubscribe of unsubscribers) {
+        unsubscribe();
+      }
+    };
+  }, [cacheKey, mutate]);
 }
 
 function useModel<T extends Record<string, any>>(

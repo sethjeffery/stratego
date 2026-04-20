@@ -1,10 +1,11 @@
 import { z } from "zod";
 
 export const pieceDefinitionSchema = z.object({
-  canDefuseBomb: z.boolean().default(false),
-  canKillMarshal: z.boolean().default(false),
+  canKill: z.string().optional(),
   canTraverseMany: z.boolean().default(false),
   count: z.number().int().positive(),
+  explodes: z.string().optional().describe("Explodes when attacking"),
+  goal: z.boolean().optional().describe("Wins the game when captured"),
   id: z.string(),
   immovable: z.boolean().default(false),
   label: z.string(),
@@ -36,15 +37,8 @@ export const boardSchema = z.object({
 });
 
 export const rulesSchema = z.object({
-  attack: z.object({
-    bombId: z.string(),
-    flagId: z.string(),
-    marshalId: z.string(),
-    spyId: z.string(),
-  }),
   board: boardSchema,
   gameName: z.string(),
-  hiddenInformation: z.boolean(),
   setupRowsPerPlayer: z.number().int().positive(),
 });
 

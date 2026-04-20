@@ -1,87 +1,139 @@
-import type { GameSession } from "../../lib/supabaseGameService";
+import {
+  ArchiveIcon,
+  FlagIcon,
+  MedalIcon,
+  SkullIcon,
+} from "@phosphor-icons/react";
+import clsx from "clsx";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 
-import { useProfile, useSessionMemberships } from "../../hooks/useGameService";
-import { useCurrentUser } from "../../hooks/useProfile";
-import { getMemberByRole, resolveAvatarUrl } from "../../lib/playerProfile";
+import type { SessionSummary } from "../../lib/supabaseGameService";
+
+import { resolveAvatarUrl } from "../../lib/playerProfile";
 import Avatar from "../Avatar";
-import { Button } from "../Button";
-import { getCompletionLabel } from "./sessionHelpers";
+import { IconButton } from "../IconButton";
+import { ArchiveSessionModal } from "./ArchiveSessionModal";
+import {
+  canArchiveSession,
+  getCompletionSummary,
+  getSessionPlayerName,
+  type SessionOutcomeIcon,
+} from "./sessionHelpers";
 import styles from "./SessionsList.module.css";
+
+const renderOutcomeIcon = (icon: null | SessionOutcomeIcon) => {
+  switch (icon) {
+    case "flag":
+      return <FlagIcon size={16} />;
+    case "medal":
+      return <MedalIcon size={16} />;
+    case "skull":
+      return <SkullIcon size={16} />;
+    default:
+      return null;
+  }
+};
 
 export function SessionsListItem({
   onArchive,
-  onJoin,
-  onResume,
+  openPath,
   session,
 }: {
-  onArchive?: () => void;
-  onJoin?: () => void;
-  onResume?: () => void;
-  session: GameSession;
+  onArchive?: () => Promise<void>;
+  openPath?: string;
+  session: SessionSummary;
 }) {
-  const { data: currentUser } = useCurrentUser();
-  const { data: memberships, isLoading } = useSessionMemberships(session.session_id);
-  const { data: initiator, isLoading: isLoadingInitiator } = useProfile(
-    getMemberByRole(memberships, "initiator")?.device_id,
-  );
-  const { data: challenger, isLoading: isLoadingChallenger } = useProfile(
-    getMemberByRole(memberships, "challenger")?.device_id,
-  );
-
+  const [archiveConfirmVisible, setArchiveConfirmVisible] = useState(false);
   const isFinished =
     session.state?.phase === "finished" || session.state?.phase === "closed";
   const isWaitingForChallenger = !session.state;
-  const hasOpenSeat = !challenger;
-  const completionLabel = getCompletionLabel(session, currentUser!);
-  const isCurrentHost = initiator?.device_id === currentUser?.device_id;
-
-  if (isLoading || isLoadingChallenger || isLoadingInitiator) {
-    return null;
-  }
+  const initiator = session.initiator;
+  const challenger = session.challenger;
+  const isCurrentHost = session.currentMembership?.role === "initiator";
+  const completionSummary = getCompletionSummary(
+    session,
+    session.currentMembership?.device_id,
+  );
+  const statusLabel = isFinished
+    ? completionSummary.text
+    : isWaitingForChallenger
+      ? isCurrentHost
+        ? "Waiting for challenger"
+        : "Open for a challenger"
+      : "In progress";
+  const statusIcon = isFinished ? completionSummary.icon : null;
+  const playerLabel = `${getSessionPlayerName(initiator)} vs ${
+    challenger ? getSessionPlayerName(challenger) : "Open seat"
+  }`;
+  const archiveAllowed = Boolean(onArchive) && canArchiveSession(session);
+  const isOpenable = Boolean(openPath);
 
   return (
-    <article className={styles.sessionCard} key={session.session_id}>
+    <article
+      className={clsx(styles.sessionCard, isOpenable && styles.sessionCardOpenable)}
+      key={session.session_id}
+    >
+      {openPath ? (
+        <Link
+          aria-label={`Open session ${session.session_id}`}
+          className={styles.sessionCardLink}
+          to={openPath}
+        />
+      ) : null}
+
       <div className={styles.sessionSummary}>
         <div className={styles.playerStrip}>
-          {[initiator, challenger].filter(Boolean).map((profile, index) => (
+          {[initiator, challenger].map((profile, index) => (
             <Avatar
-              alt={profile!.player_name}
-              avatarUrl={resolveAvatarUrl(profile!.avatar_id)}
+              alt={profile ? getSessionPlayerName(profile) : "Open seat"}
+              avatarUrl={profile ? resolveAvatarUrl(profile.avatar_id) : undefined}
               className={styles.playerAvatar}
               color={index === 0 ? "red" : "blue"}
-              key={`${session.session_id}-${profile!.device_id}`}
-              title={profile!.player_name}
+              key={`${session.session_id}-${profile?.device_id ?? `open-${index}`}`}
+              shadow
+              title={profile ? getSessionPlayerName(profile) : "Open seat"}
             />
           ))}
         </div>
-        <div>
-          <strong>{session.session_id}</strong>
-          <p>
-            {isFinished
-              ? completionLabel
-              : isWaitingForChallenger
-                ? "Waiting for challenger"
-                : "In progress"}
+
+        <div className={styles.sessionText}>
+          <strong className={styles.sessionId}>{session.session_id}</strong>
+          <p className={styles.playerNames}>{playerLabel}</p>
+          <p className={styles.sessionStatus}>
+            {statusIcon ? (
+              <span className={styles.sessionStatusIcon}>{renderOutcomeIcon(statusIcon)}</span>
+            ) : null}
+            <span>{statusLabel}</span>
           </p>
         </div>
       </div>
+
       <div className={styles.inlineActions}>
-        {onResume && (
-          <Button onClick={onResume} variant="secondary">
-            Continue
-          </Button>
-        )}
-        {hasOpenSeat && !isCurrentHost && onJoin && (
-          <Button onClick={onJoin} variant="secondary">
-            Join
-          </Button>
-        )}
-        {onArchive && (
-          <Button onClick={onArchive} variant="secondary">
-            Archive
-          </Button>
+        {archiveAllowed && (
+          <IconButton
+            aria-label={`Archive session ${session.session_id}`}
+            className={styles.archiveButton}
+            onClick={() => setArchiveConfirmVisible(true)}
+            title="Archive session"
+            type="button"
+          >
+            <ArchiveIcon />
+          </IconButton>
         )}
       </div>
+
+      {archiveConfirmVisible && onArchive ? (
+        <ArchiveSessionModal
+          onCancel={() => setArchiveConfirmVisible(false)}
+          onConfirm={() =>
+            onArchive().then(() => {
+              setArchiveConfirmVisible(false);
+            })
+          }
+          sessionId={session.session_id}
+        />
+      ) : null}
     </article>
   );
 }

@@ -1,7 +1,14 @@
 {
   "setName": "Classic Stratego",
   "pieces": [
-    { "id": "flag", "label": "Flag", "rank": 0, "count": 1, "immovable": true },
+    {
+      "id": "flag",
+      "label": "Flag",
+      "rank": 0,
+      "count": 1,
+      "immovable": true,
+      "goal": true
+    },
     {
       "id": "bomb",
       "label": "Bomb",
@@ -21,7 +28,7 @@
       "label": "Miner",
       "rank": 3,
       "count": 3,
-      "canDefuseBomb": true
+      "canKill": "bomb"
     },
     {
       "id": "scout",
@@ -35,7 +42,7 @@
       "label": "Spy",
       "rank": 1,
       "count": 1,
-      "canKillMarshal": true
+      "canKill": "marshal"
     }
   ]
 }

@@ -1,14 +1,17 @@
 import { useState } from "react";
 
-import { Button } from "../../components/Button";
-import { Modal } from "./Modal";
+import { Modal } from "../../screens/game/Modal";
+import { Button } from "../Button";
 
-type GameSurrenderModalProps = {
+export function ArchiveSessionModal({
+  onCancel,
+  onConfirm,
+  sessionId,
+}: {
   onCancel: () => void;
   onConfirm: () => Promise<void>;
-};
-
-export function GameSurrenderModal({ onCancel, onConfirm }: GameSurrenderModalProps) {
+  sessionId: string;
+}) {
   const [actionPending, setActionPending] = useState(false);
 
   return (
@@ -25,14 +28,13 @@ export function GameSurrenderModal({ onCancel, onConfirm }: GameSurrenderModalPr
               setActionPending(true);
               void onConfirm().finally(() => setActionPending(false));
             }}
-            variant="primary"
           >
-            Surrender
+            Archive
           </Button>
         </>
       }
-      description="This ends the game immediately for both players."
-      title="Surrender match?"
-    ></Modal>
+      description={`This will remove ${sessionId} from your lobby.`}
+      title="Archive session?"
+    />
   );
 }
