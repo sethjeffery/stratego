@@ -46,11 +46,11 @@ export function DashboardScreen() {
         <DashboardTopbar
           avatarId={currentUser.avatar_id}
           createSession={handleCreateSession}
-          onPlayerNameChange={(value) => {
-            void updateProfile({ ...currentUser, player_name: value });
-          }}
           onPlayerAvatarChange={(value) => {
             void updateProfile({ ...currentUser, avatar_id: value });
+          }}
+          onPlayerNameChange={(value) => {
+            void updateProfile({ ...currentUser, player_name: value });
           }}
           playerName={currentUser.player_name}
         />
@@ -70,9 +70,9 @@ export function DashboardScreen() {
                 <h2>Your Recent Games</h2>
               </div>
               <SessionsList
-                sessions={mySessions}
-                onResumeSession={handleResumeSession}
                 onArchiveSession={handleArchiveSession}
+                onResumeSession={handleResumeSession}
+                sessions={mySessions}
               />
             </section>
           ) : null}

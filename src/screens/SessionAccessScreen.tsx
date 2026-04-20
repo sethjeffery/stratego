@@ -2,9 +2,10 @@ import clsx from "clsx";
 import { Link, useParams } from "react-router";
 
 import { buildSessionUrl } from "../app/sessionRouting";
+import imageDead from "../assets/dead.png";
 import Avatar from "../components/Avatar";
 import { Button } from "../components/Button";
-import { useJoinSession, useSession } from "../hooks/useGameService";
+import { useJoinSession, useSessionDetails } from "../hooks/useGameService";
 import { useCurrentUser } from "../hooks/useProfile";
 import { resolveAvatarUrl } from "../lib/playerProfile";
 import { GameScreen } from "./GameScreen";
@@ -13,7 +14,7 @@ import styles from "./SessionAccessScreen.module.css";
 export function SessionAccessScreen() {
   const { sessionId: rawSessionId } = useParams();
   const sessionId = rawSessionId ? rawSessionId.toUpperCase() : "";
-  const { data: session, isLoading: isLoadingSession } = useSession(sessionId);
+  const { data: session, isLoading: isLoadingSession } = useSessionDetails(sessionId);
   const { data: currentUser, isLoading: isLoadingUser } = useCurrentUser();
   const { trigger: joinSession } = useJoinSession();
 
@@ -42,16 +43,16 @@ export function SessionAccessScreen() {
   if (isMissing) {
     return (
       <main className={styles.sessionAccess}>
-        <section className={clsx("card", styles.statusCard)}>
-          <p className="eyebrow">Session Unavailable</p>
-          <h1>{sessionId}</h1>
+        <section className={styles.statusCard}>
+          <h1>{sessionId} ?</h1>
+          <img alt="Dead soldier" className={styles.statusImage} src={imageDead} />
           <p>
             This session could not be found. It may have expired, or the link may be
             incorrect.
           </p>
           <div className={styles.statusActions}>
             <Link to="/">
-              <Button variant="secondary">Back To Dashboard</Button>
+              <Button>Back To Dashboard</Button>
             </Link>
           </div>
         </section>
@@ -59,7 +60,7 @@ export function SessionAccessScreen() {
     );
   }
 
-  const { initiator, challenger } = session;
+  const { challenger, initiator } = session;
   const isMember = [challenger?.device_id, initiator?.device_id].includes(
     currentUser?.device_id,
   );
@@ -91,10 +92,10 @@ export function SessionAccessScreen() {
         {initiator ? (
           <article className={styles.playerRow}>
             <Avatar
-              width={128}
               avatarUrl={resolveAvatarUrl(initiator.avatar_id)}
-              shadow
               color="red"
+              shadow
+              width={128}
             />
             <div className={styles.playerName}>{initiator.player_name}</div>
           </article>
@@ -103,16 +104,16 @@ export function SessionAccessScreen() {
         {challenger ? (
           <article className={styles.playerRow}>
             <Avatar
-              width={128}
               avatarUrl={resolveAvatarUrl(challenger.avatar_id)}
-              shadow
               color="blue"
+              shadow
+              width={128}
             />
             <div className={styles.playerName}>{challenger.player_name}</div>
           </article>
         ) : (
           <article className={clsx(styles.playerRow)}>
-            <Avatar width={128} shadow color="blue" />
+            <Avatar color="blue" shadow width={128} />
           </article>
         )}
       </div>
@@ -131,8 +132,8 @@ export function SessionAccessScreen() {
           )}
           {isMember && hasOpenSlot && !isClosed && !isArchived && (
             <Button
-              variant="secondary"
               onClick={() => void copySessionLink(session.session_id)}
+              variant="secondary"
             >
               Copy Link
             </Button>

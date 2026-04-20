@@ -32,7 +32,7 @@ Then open the app with a fixture route:
 http://localhost:5173/?fixture=opening-skirmish&as=initiator
 ```
 
-This bypasses Supabase, seeds an in-memory `SessionRow` fixture, and impersonates the selected player role so you can inspect board geometry, hidden information, and interaction state in the browser.
+This bypasses Supabase, seeds an in-memory `GameSessionDetails` fixture, and impersonates the selected player role so you can inspect board geometry, hidden information, and interaction state in the browser.
 
 Available fixture ids currently include:
 

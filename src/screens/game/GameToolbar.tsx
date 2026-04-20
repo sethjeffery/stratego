@@ -1,44 +1,44 @@
 import { ArrowLeftIcon, FlagIcon } from "@phosphor-icons/react";
 
-import { IconButton } from "../../components/IconButton";
-import type { SessionRow } from "../../lib/supabaseGameService";
 import type { MainStatus } from "./gameScreenSelectors";
+
+import { IconButton } from "../../components/IconButton";
 import { GameStatus } from "./GameStatus";
 import styles from "./GameSurface.module.css";
 
 type GameToolbarProps = {
   canSurrender: boolean;
   mainStatus: MainStatus;
-  session: SessionRow;
   onLeave: () => void;
   onRequestSurrender: () => void;
+  otherPlayerName: string;
 };
 
 export function GameToolbar({
   canSurrender,
   mainStatus,
-  session,
   onLeave,
   onRequestSurrender,
+  otherPlayerName,
 }: GameToolbarProps) {
   return (
     <div className={styles.toolbar}>
       <IconButton
+        aria-label="Leave session"
         className={styles.exitButton}
         onClick={onLeave}
-        aria-label="Leave session"
         title="Leave session"
       >
         <ArrowLeftIcon />
       </IconButton>
-      <GameStatus status={mainStatus} session={session} />
+      <GameStatus otherPlayerName={otherPlayerName} status={mainStatus} />
       <div className={styles.toolbarActions}>
         <IconButton
-          className={styles.surrenderButton}
-          onClick={onRequestSurrender}
           aria-label="Surrender"
-          title="Surrender"
+          className={styles.surrenderButton}
           disabled={!canSurrender}
+          onClick={onRequestSurrender}
+          title="Surrender"
         >
           <FlagIcon />
         </IconButton>

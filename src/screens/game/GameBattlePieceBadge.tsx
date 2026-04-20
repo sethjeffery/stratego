@@ -7,7 +7,7 @@ import styles from "./GameSurface.module.css";
 type GameBattlePieceBadgeProps = {
   ownerId: string;
   pieceId: string;
-  playerOneId: string | null;
+  playerOneId: null | string;
 };
 
 export function GameBattlePieceBadge({
@@ -21,14 +21,14 @@ export function GameBattlePieceBadge({
 
   return (
     <span
+      aria-hidden="true"
       className={clsx(
         styles.gameChatPieceBadge,
         colorClass === "player-one" ? styles.playerOne : styles.playerTwo,
       )}
-      aria-hidden="true"
     >
       {pieceIcon ? (
-        <img src={pieceIcon} alt="" />
+        <img alt="" src={pieceIcon} />
       ) : (
         <span>{piece?.label.slice(0, 2) ?? "?"}</span>
       )}

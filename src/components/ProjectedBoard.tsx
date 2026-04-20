@@ -1,26 +1,27 @@
 import clsx from "clsx";
 
+import type { ProjectedBoardProps } from "./projectedBoard/types";
+
 import boardMapUrl from "../assets/map.png";
 import styles from "./projectedBoard/ProjectedBoard.module.css";
 import { ProjectedBoardCells } from "./projectedBoard/ProjectedBoardCells";
 import { ProjectedBoardPieces } from "./projectedBoard/ProjectedBoardPieces";
-import type { ProjectedBoardProps } from "./projectedBoard/types";
 import { useProjectedBoardGhosts } from "./projectedBoard/useProjectedBoardGhosts";
 import { useProjectedBoardViewModel } from "./projectedBoard/useProjectedBoardViewModel";
 
 export function ProjectedBoard({
-  state,
-  rules,
-  pieces,
-  myId,
-  pendingBoardAction = null,
-  selected = null,
-  legalTargets = [],
-  selectablePieceKeys = new Set<string>(),
   disabled = false,
+  interactive = true,
+  legalTargets = [],
+  myId,
   onCellClick,
   onPieceHover,
-  interactive = true,
+  pendingBoardAction = null,
+  pieces,
+  rules,
+  selectablePieceKeys = new Set<string>(),
+  selected = null,
+  state,
   visibilityMode = "player",
 }: ProjectedBoardProps) {
   const {
@@ -52,12 +53,12 @@ export function ProjectedBoard({
     <div className={styles.boardStage}>
       <div className={styles.boardPlane}>
         <img
-          src={boardMapUrl}
+          alt=""
           className={clsx(
             styles.boardMap,
             isPerspectiveFlipped && styles.boardMapRotated,
           )}
-          alt=""
+          src={boardMapUrl}
         />
         <div className={styles.boardOverlay}>
           <ProjectedBoardCells

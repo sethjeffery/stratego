@@ -6,7 +6,7 @@ import type { GhostUnitState } from "./types";
 
 type UseProjectedBoardGhostsArgs = {
   isUnitVisibleToViewer: (unit: Unit) => boolean;
-  pendingBoardAction: PendingBoardAction | null;
+  pendingBoardAction: null | PendingBoardAction;
   state: GameState;
   toDisplayPosition: (position: Position) => Position;
 };
@@ -19,7 +19,7 @@ export function useProjectedBoardGhosts({
 }: UseProjectedBoardGhostsArgs) {
   const [ghostUnit, setGhostUnit] = useState<GhostUnitState | null>(null);
   const [ghostResolving, setGhostResolving] = useState(false);
-  const animatedActionKeyRef = useRef<string | null>(null);
+  const animatedActionKeyRef = useRef<null | string>(null);
   const previousStateRef = useRef(state);
 
   useLayoutEffect(() => {

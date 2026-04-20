@@ -1,9 +1,11 @@
+import type { GameDisplayPlayer } from "../../lib/gamePlayers";
 import type {
   GameChatMessage,
   GameState,
   PieceDefinition,
   Unit,
 } from "../../shared/schema";
+
 import { GameChatDock } from "./GameChatDock";
 import { GamePiecePanel } from "./GamePiecePanel";
 import { GamePlayerFaceoff } from "./GamePlayerFaceoff";
@@ -13,14 +15,15 @@ import styles from "./GameSurface.module.css";
 type GameSidebarProps = {
   canMarkReady: boolean;
   canSendChat: boolean;
-  inspectedPiece: PieceDefinition | null;
+  inspectedPiece: null | PieceDefinition;
   inspectedPieceTraits: string[];
-  inspectedUnit: Unit | null;
+  inspectedUnit: null | Unit;
   inspectedVisible: boolean;
   messages: GameChatMessage[];
-  myId: string | null;
-  onMarkReady: () => void | Promise<void>;
+  myId: null | string;
+  onMarkReady: () => Promise<void> | void;
   onSendMessage: (message: string) => Promise<void>;
+  players: GameDisplayPlayer[];
   state: GameState;
 };
 
@@ -35,6 +38,7 @@ export function GameSidebar({
   myId,
   onMarkReady,
   onSendMessage,
+  players,
   state,
 }: GameSidebarProps) {
   const playerOneId = state.players[0]?.id ?? null;
@@ -42,7 +46,7 @@ export function GameSidebar({
   return (
     <aside className={styles.gameSidebar}>
       <div className={styles.gameSidebarMain}>
-        <GamePlayerFaceoff players={state.players} turnPlayerId={state.turnPlayerId} />
+        <GamePlayerFaceoff players={players} turnPlayerId={state.turnPlayerId} />
 
         <GamePiecePanel
           inspectedPiece={inspectedPiece}

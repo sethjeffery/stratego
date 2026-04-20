@@ -2,15 +2,16 @@ import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 
 import type { GameChatMessage } from "../../shared/schema";
+
 import { GameBattleMessage } from "./GameBattleMessage";
 import styles from "./GameSurface.module.css";
 
 type GameChatDockProps = {
   canSendChat: boolean;
   messages: GameChatMessage[];
-  myId: string | null;
+  myId: null | string;
   onSendMessage: (message: string) => Promise<void>;
-  playerOneId: string | null;
+  playerOneId: null | string;
   roomCode: string;
 };
 
@@ -58,8 +59,8 @@ export function GameChatDock({
   };
 
   return (
-    <section className={styles.gameChatDock} aria-label="Match chat">
-      <div ref={chatStackRef} className={styles.gameChatStack} aria-live="polite">
+    <section aria-label="Match chat" className={styles.gameChatDock}>
+      <div aria-live="polite" className={styles.gameChatStack} ref={chatStackRef}>
         {messages.length === 0 ? (
           <p className={styles.gameChatPlaceholder}>
             Open channel. Keep it brief and tactical.
@@ -81,11 +82,11 @@ export function GameChatDock({
 
             return (
               <article
-                key={message.id}
                 className={clsx(
                   styles.gameChatMessage,
                   isOwnMessage && styles.gameChatMessageOwn,
                 )}
+                key={message.id}
               >
                 <span className={styles.gameChatAuthor}>
                   {isOwnMessage ? "You" : message.senderName}
@@ -99,15 +100,15 @@ export function GameChatDock({
 
       <form className={styles.gameChatForm} onSubmit={handleSubmit}>
         <input
-          ref={chatInputRef}
+          autoComplete="off"
           className={styles.gameChatInput}
-          type="text"
-          value={draft}
+          disabled={!myId}
+          maxLength={180}
           onChange={(event) => setDraft(event.target.value)}
           placeholder={canSendChat ? "Send a message…" : "Join a seat to chat"}
-          autoComplete="off"
-          maxLength={180}
-          disabled={!myId}
+          ref={chatInputRef}
+          type="text"
+          value={draft}
         />
       </form>
     </section>

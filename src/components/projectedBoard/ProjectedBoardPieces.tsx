@@ -1,11 +1,12 @@
 import clsx from "clsx";
 
 import type { GameState, PieceDefinition, Position, Unit } from "../../shared/schema";
+import type { GhostUnitState } from "./types";
+
 import styles from "./ProjectedBoard.module.css";
 import { ProjectedBoardBattleBurst } from "./ProjectedBoardBattleBurst";
 import { colorForOwner, getPieceStyle } from "./projectedBoardHelpers";
 import { ProjectedBoardPieceVisual } from "./ProjectedBoardPieceVisual";
-import type { GhostUnitState } from "./types";
 
 type ProjectedBoardPiecesProps = {
   boardColumns: number;
@@ -16,13 +17,13 @@ type ProjectedBoardPiecesProps = {
   interactive: boolean;
   isUnitVisibleToViewer: (unit: Unit) => boolean;
   legalTargetKeys: Set<string>;
-  myId: string | null;
-  onCellClick?: (target: Position) => void | Promise<void>;
-  onPieceHover?: (position: Position | null) => void;
+  myId: null | string;
+  onCellClick?: (target: Position) => Promise<void> | void;
+  onPieceHover?: (position: null | Position) => void;
   pieceById: Map<string, PieceDefinition>;
-  playerOneId: string | null;
+  playerOneId: null | string;
   selectablePieceKeys: Set<string>;
-  selected: Position | null;
+  selected: null | Position;
   state: GameState;
   toDisplayPosition: (position: Position) => Position;
 };
@@ -56,7 +57,7 @@ export function ProjectedBoardPieces({
 
   return (
     <>
-      {positionedUnits.map(({ unit, display }) => {
+      {positionedUnits.map(({ display, unit }) => {
         const isSelected = selected?.x === unit.x && selected?.y === unit.y;
         const isPicked =
           isSelected &&
@@ -82,7 +83,7 @@ export function ProjectedBoardPieces({
 
         return (
           <button
-            key={unit.id}
+            aria-label={piece?.label ?? unit.pieceId}
             className={clsx(
               styles.pieceHit,
               interactive && styles.canHover,
@@ -91,6 +92,13 @@ export function ProjectedBoardPieces({
               isSelected && styles.selectedPiece,
               isPicked && styles.picked,
             )}
+            disabled={!interactive}
+            key={unit.id}
+            onBlur={() => onPieceHover?.(null)}
+            onClick={() => interactive && onCellClick?.({ x: unit.x, y: unit.y })}
+            onFocus={() => onPieceHover?.({ x: unit.x, y: unit.y })}
+            onMouseEnter={() => onPieceHover?.({ x: unit.x, y: unit.y })}
+            onMouseLeave={() => onPieceHover?.(null)}
             style={getPieceStyle(
               display.x,
               display.y,
@@ -98,13 +106,6 @@ export function ProjectedBoardPieces({
               boardRows,
               10 + display.y,
             )}
-            onClick={() => interactive && onCellClick?.({ x: unit.x, y: unit.y })}
-            onMouseEnter={() => onPieceHover?.({ x: unit.x, y: unit.y })}
-            onMouseLeave={() => onPieceHover?.(null)}
-            onFocus={() => onPieceHover?.({ x: unit.x, y: unit.y })}
-            onBlur={() => onPieceHover?.(null)}
-            disabled={!interactive}
-            aria-label={piece?.label ?? unit.pieceId}
           >
             <ProjectedBoardPieceVisual
               isWinningBattlePiece={isWinningBattlePiece}
@@ -120,12 +121,13 @@ export function ProjectedBoardPieces({
 
       {ghostUnit && (
         <span
-          key={ghostUnit.key}
+          aria-hidden="true"
           className={clsx(
             styles.pieceHit,
             styles.ghost,
             ghostResolving && styles.resolving,
           )}
+          key={ghostUnit.key}
           style={getPieceStyle(
             (ghostResolving ? ghostUnit.endDisplay : ghostUnit.startDisplay).x,
             (ghostResolving ? ghostUnit.endDisplay : ghostUnit.startDisplay).y,
@@ -133,7 +135,6 @@ export function ProjectedBoardPieces({
             boardRows,
             10 + ghostUnit.endDisplay.y,
           )}
-          aria-hidden="true"
         >
           <ProjectedBoardPieceVisual
             decorative

@@ -1,16 +1,17 @@
-import clsx from "clsx";
 import type { ReactNode } from "react";
+
+import clsx from "clsx";
 
 import styles from "./IconButton.module.css";
 
 export function IconButton({
-  className,
   children,
+  className,
   ...rest
-}: {
-  className?: string;
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   children?: ReactNode;
-} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  className?: string;
+}) {
   return (
     <button className={clsx(styles.iconButton, className)} {...rest}>
       {children}

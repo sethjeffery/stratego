@@ -15,7 +15,7 @@ export function GameLoadingState({ onLeave, sessionId }: GameLoadingStateProps) 
         <p className="eyebrow">Preparing Match</p>
         <h1>Session {sessionId}</h1>
         <p>Waiting for both players to be ready.</p>
-        <Button variant="secondary" onClick={onLeave}>
+        <Button onClick={onLeave} variant="secondary">
           Back To Dashboard
         </Button>
       </section>

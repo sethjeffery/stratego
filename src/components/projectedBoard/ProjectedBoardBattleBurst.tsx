@@ -1,7 +1,9 @@
-import clsx from "clsx";
 import type { CSSProperties } from "react";
 
+import clsx from "clsx";
+
 import type { Position } from "../../shared/schema";
+
 import styles from "./ProjectedBoard.module.css";
 import { impactParticles } from "./projectedBoardConstants";
 import { getPieceStyle } from "./projectedBoardHelpers";
@@ -25,8 +27,9 @@ export function ProjectedBoardBattleBurst({
 
   return (
     <span
-      key={`battle-burst-${moveCount}`}
+      aria-hidden="true"
       className={clsx(styles.pieceHit, styles.battleBurst)}
+      key={`battle-burst-${moveCount}`}
       style={getPieceStyle(
         display.x,
         display.y,
@@ -34,14 +37,13 @@ export function ProjectedBoardBattleBurst({
         boardRows,
         14 + display.y,
       )}
-      aria-hidden="true"
     >
       <span className={clsx(styles.pieceImpactBurst, styles.impactBoth)}>
         <span className={styles.pieceImpactFlash} />
         {impactParticles.map((particle, index) => (
           <span
-            key={`battle-burst-particle-${moveCount}-${index}`}
             className={styles.pieceImpactParticle}
+            key={`battle-burst-particle-${moveCount}-${index}`}
             style={
               {
                 "--impact-angle": `${particle.angle}deg`,

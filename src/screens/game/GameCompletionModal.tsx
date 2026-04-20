@@ -1,11 +1,12 @@
 import { useState } from "react";
 
+import type { GameDisplayPlayer } from "../../lib/gamePlayers";
+import type { GameCompletionStats } from "./gameScreenSelectors";
+
 import Avatar from "../../components/Avatar";
 import { Button } from "../../components/Button";
 import { resolveAvatarUrl } from "../../lib/playerProfile";
-import type { GameState } from "../../shared/schema";
 import { GameBattlePieceBadge } from "./GameBattlePieceBadge";
-import type { GameCompletionStats } from "./gameScreenSelectors";
 import { formatDuration, pieceById } from "./gameScreenSelectors";
 import styles from "./GameSurface.module.css";
 
@@ -16,8 +17,8 @@ type GameCompletionModalProps = {
   isClosed: boolean;
   onFinish: () => Promise<void>;
   onPlayAgain: () => Promise<void>;
-  playerOneId: string | null;
-  winner: GameState["players"][number] | null;
+  playerOneId: null | string;
+  winner: GameDisplayPlayer | null;
 };
 
 export function GameCompletionModal({
@@ -37,17 +38,17 @@ export function GameCompletionModal({
   return (
     <div className={styles.completionModalBackdrop} role="presentation">
       <section
+        aria-labelledby="completion-modal-title"
+        aria-modal="true"
         className={styles.completionModal}
         role="dialog"
-        aria-modal="true"
-        aria-labelledby="completion-modal-title"
       >
         <Avatar
-          avatarUrl={resolveAvatarUrl(winner.avatarId)}
           alt={winner.name}
-          title={winner.name}
-          color={winner.id === playerOneId ? "red" : "blue"}
+          avatarUrl={resolveAvatarUrl(winner.avatarId)}
           className={styles.completionAvatar}
+          color={winner.id === playerOneId ? "red" : "blue"}
+          title={winner.name}
         />
         <h2 id="completion-modal-title">{completionTitle}</h2>
         <p>{completionDescription}</p>
@@ -63,8 +64,8 @@ export function GameCompletionModal({
             {completionStats.mvp ? (
               <>
                 <GameBattlePieceBadge
-                  pieceId={completionStats.mvp.pieceId}
                   ownerId={completionStats.mvp.ownerId}
+                  pieceId={completionStats.mvp.pieceId}
                   playerOneId={playerOneId}
                 />
                 <span>
@@ -80,24 +81,24 @@ export function GameCompletionModal({
 
         <div className={styles.completionActions}>
           <Button
-            variant="primary"
+            disabled={actionPending || isClosed}
             onClick={() => {
               if (actionPending) return;
               setActionPending(true);
               void onPlayAgain().finally(() => setActionPending(false));
             }}
-            disabled={actionPending || isClosed}
+            variant="primary"
           >
             Play Again
           </Button>
           <Button
-            variant="secondary"
+            disabled={actionPending || isClosed}
             onClick={() => {
               if (actionPending) return;
               setActionPending(true);
               void onFinish().finally(() => setActionPending(false));
             }}
-            disabled={actionPending || isClosed}
+            variant="secondary"
           >
             Finish
           </Button>

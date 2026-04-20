@@ -13,21 +13,21 @@ export function GameSurrenderModal({ onCancel, onConfirm }: GameSurrenderModalPr
 
   return (
     <div className={styles.completionModalBackdrop} role="presentation">
-      <section className={styles.completionModal} role="dialog" aria-modal="true">
+      <section aria-modal="true" className={styles.completionModal} role="dialog">
         <h2>Surrender match?</h2>
         <p>This ends the game immediately for both players.</p>
         <div className={styles.completionActions}>
-          <Button variant="secondary" onClick={onCancel} disabled={actionPending}>
+          <Button disabled={actionPending} onClick={onCancel} variant="secondary">
             Cancel
           </Button>
           <Button
-            variant="primary"
+            disabled={actionPending}
             onClick={() => {
               if (actionPending) return;
               setActionPending(true);
               void onConfirm().finally(() => setActionPending(false));
             }}
-            disabled={actionPending}
+            variant="primary"
           >
             Surrender
           </Button>

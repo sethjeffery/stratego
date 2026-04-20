@@ -1,17 +1,23 @@
-import { HourglassIcon, PlayIcon, SmileySadIcon } from "@phosphor-icons/react";
+import {
+  ArchiveIcon,
+  FlagIcon,
+  HandPointingIcon,
+  HourglassIcon,
+  PlayIcon,
+  SmileySadIcon,
+} from "@phosphor-icons/react";
 import clsx from "clsx";
 
-import { useCurrentUser } from "../../hooks/useProfile";
-import type { SessionRow } from "../../lib/supabaseGameService";
 import type { MainStatus } from "./gameScreenSelectors";
+
 import styles from "./GameStatus.module.css";
 
 const statusMessage = ({
-  status,
   otherPlayerName,
+  status,
 }: {
-  status: MainStatus;
   otherPlayerName: string;
+  status: MainStatus;
 }) => {
   switch (status) {
     case "active":
@@ -22,7 +28,12 @@ const statusMessage = ({
         </>
       );
     case "archived":
-      return "Game is archived";
+      return (
+        <>
+          <ArchiveIcon size={16} />
+          Game is archived
+        </>
+      );
     case "loser":
       return (
         <>
@@ -33,7 +44,7 @@ const statusMessage = ({
     case "setup":
       return (
         <>
-          <PlayIcon size={14} />
+          <HandPointingIcon size={16} />
           Set up your pieces
         </>
       );
@@ -45,26 +56,25 @@ const statusMessage = ({
         </>
       );
     case "winner":
-      return "You won";
+      return (
+        <>
+          <FlagIcon size={16} />
+          You won
+        </>
+      );
   }
 };
 
 export function GameStatus({
+  otherPlayerName,
   status,
-  session,
 }: {
+  otherPlayerName: string;
   status: MainStatus;
-  session: SessionRow;
 }) {
-  const { data: currentUser } = useCurrentUser();
-  const otherPlayerName =
-    session.memberships?.find(
-      (membership) => membership.device_id !== currentUser?.device_id,
-    )?.player.player_name ?? "";
-
   return (
     <div className={clsx(styles.statusLozenge, styles[status])}>
-      {statusMessage({ status, otherPlayerName })}
+      {statusMessage({ otherPlayerName, status })}
     </div>
   );
 }

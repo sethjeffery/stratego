@@ -1,17 +1,16 @@
 import { z } from "zod";
 
 export const pieceDefinitionSchema = z.object({
+  canDefuseBomb: z.boolean().default(false),
+  canKillMarshal: z.boolean().default(false),
+  canTraverseMany: z.boolean().default(false),
+  count: z.number().int().positive(),
   id: z.string(),
+  immovable: z.boolean().default(false),
   label: z.string(),
   rank: z.number().int(),
-  count: z.number().int().positive(),
-  immovable: z.boolean().default(false),
-  canDefuseBomb: z.boolean().default(false),
-  canTraverseMany: z.boolean().default(false),
-  canKillMarshal: z.boolean().default(false),
   setup: z
     .object({
-      playerCanReposition: z.boolean().default(true),
       fixedPositions: z
         .array(
           z.object({
@@ -20,39 +19,86 @@ export const pieceDefinitionSchema = z.object({
           }),
         )
         .default([]),
+      playerCanReposition: z.boolean().default(true),
     })
     .default({}),
 });
 
 export const piecesConfigSchema = z.object({
-  setName: z.string(),
   pieces: z.array(pieceDefinitionSchema),
+  setName: z.string(),
 });
 
 export const boardSchema = z.object({
-  width: z.number().int().positive(),
-  height: z.number().int().positive(),
   blockedCells: z.array(z.object({ x: z.number().int(), y: z.number().int() })),
+  height: z.number().int().positive(),
+  width: z.number().int().positive(),
 });
 
 export const rulesSchema = z.object({
-  gameName: z.string(),
-  board: boardSchema,
-  hiddenInformation: z.boolean(),
   attack: z.object({
     bombId: z.string(),
     flagId: z.string(),
-    spyId: z.string(),
     marshalId: z.string(),
+    spyId: z.string(),
   }),
+  board: boardSchema,
+  gameName: z.string(),
+  hiddenInformation: z.boolean(),
   setupRowsPerPlayer: z.number().int().positive(),
 });
 
+export type BattleChatMessage = {
+  attackerOwnerId: string;
+  attackerPieceId: string;
+  defenderOwnerId: string;
+  defenderPieceId: string;
+  winner: "attacker" | "both" | "defender";
+};
+export type GameChatMessage = {
+  battle?: BattleChatMessage;
+  id: string;
+  playerId?: string;
+  senderName?: string;
+  sentAt: string;
+  text?: string;
+  type?: "battle" | "player";
+};
+export type GameState = {
+  chatMessages: GameChatMessage[];
+  completionReason?: "flag_capture" | "surrender";
+  finishedAt: null | string;
+  lastBattle?: {
+    at: Position;
+    attackerPieceId: string;
+    defenderPieceId: string;
+    winner: "attacker" | "both" | "defender";
+    winnerOwnerId: null | string;
+  };
+  moveCount: number;
+  phase: "battle" | "closed" | "finished" | "setup";
+  players: PlayerState[];
+  roomCode: string;
+  setupReadyPlayerIds: string[];
+  startedAt: null | string;
+  surrenderedById?: null | string;
+  turnPlayerId: null | string;
+  units: Unit[];
+  winnerId: null | string;
+};
+
 export type PieceDefinition = z.infer<typeof pieceDefinitionSchema>;
+
 export type PiecesConfig = z.infer<typeof piecesConfigSchema>;
-export type RulesConfig = z.infer<typeof rulesSchema>;
+
+export type PlayerState = {
+  connected: boolean;
+  id: string;
+};
 
 export type Position = { x: number; y: number };
+
+export type RulesConfig = z.infer<typeof rulesSchema>;
 
 export type Unit = {
   id: string;
@@ -63,86 +109,10 @@ export type Unit = {
   y: number;
 };
 
-export type PlayerState = {
-  id: string;
-  name: string;
-  avatarId?: string;
-  connected: boolean;
-};
-
-export type BattleChatMessage = {
-  attackerOwnerId: string;
-  defenderOwnerId: string;
-  attackerPieceId: string;
-  defenderPieceId: string;
-  winner: "attacker" | "defender" | "both";
-};
-
-export type GameChatMessage = {
-  id: string;
-  type?: "player" | "battle";
-  playerId?: string;
-  senderName?: string;
-  text?: string;
-  sentAt: string;
-  battle?: BattleChatMessage;
-};
-
-export type GameState = {
-  roomCode: string;
-  phase: "setup" | "battle" | "finished" | "closed";
-  completionReason?: "flag_capture" | "surrender";
-  surrenderedById?: string | null;
-  setupReadyPlayerIds: string[];
-  turnPlayerId: string | null;
-  winnerId: string | null;
-  startedAt: string | null;
-  finishedAt: string | null;
-  players: PlayerState[];
-  units: Unit[];
-  moveCount: number;
-  chatMessages: GameChatMessage[];
-  lastBattle?: {
-    at: Position;
-    attackerPieceId: string;
-    defenderPieceId: string;
-    winner: "attacker" | "defender" | "both";
-    winnerOwnerId: string | null;
-  };
-};
-
 export const getChatMessages = (state: GameState) => {
   const maybeMessages = (state as GameState & { chatMessages?: GameChatMessage[] })
     .chatMessages;
   return Array.isArray(maybeMessages) ? maybeMessages : [];
-};
-
-export const normalizeGameState = (state: GameState | null): GameState | null => {
-  if (!state) return null;
-
-  const phase = (state as GameState & { phase?: string }).phase;
-  const normalizedPhase =
-    phase === "setup" ||
-    phase === "battle" ||
-    phase === "finished" ||
-    phase === "closed"
-      ? phase
-      : "setup";
-
-  return {
-    ...state,
-    phase: normalizedPhase,
-    completionReason:
-      (state as GameState & { completionReason?: "flag_capture" | "surrender" })
-        .completionReason ?? "flag_capture",
-    surrenderedById:
-      (state as GameState & { surrenderedById?: string | null }).surrenderedById ??
-      null,
-    startedAt: (state as GameState & { startedAt?: string | null }).startedAt ?? null,
-    finishedAt:
-      (state as GameState & { finishedAt?: string | null }).finishedAt ?? null,
-    chatMessages: getChatMessages(state),
-  };
 };
 
 export const appendChatMessage = (

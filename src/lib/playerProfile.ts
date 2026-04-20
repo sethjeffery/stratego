@@ -1,3 +1,5 @@
+import type { Database } from "../types/database.types";
+
 const avatarModules = import.meta.glob("../assets/avatars/*.png", {
   eager: true,
   import: "default",
@@ -87,3 +89,18 @@ export const generatePlayerName = (exceptName?: string) => {
 
   return nextName;
 };
+
+export function getMemberById<
+  T extends Database["public"]["Tables"]["session_memberships"]["Row"],
+>(memberships?: null | T[], id?: null | string): null | T {
+  return (id && memberships?.find((membership) => membership.device_id === id)) || null;
+}
+
+export function getMemberByRole<
+  T extends Database["public"]["Tables"]["session_memberships"]["Row"],
+>(
+  memberships?: null | T[],
+  role?: Database["public"]["Enums"]["session_role"],
+): null | T {
+  return memberships?.find((membership) => membership.role === role) ?? null;
+}

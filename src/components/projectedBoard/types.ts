@@ -7,22 +7,6 @@ import type {
 } from "../../shared/schema";
 import type { PendingBoardAction } from "../../types/ui";
 
-export type ProjectedBoardProps = {
-  state: GameState;
-  rules: RulesConfig;
-  pieces: PieceDefinition[];
-  myId: string | null;
-  pendingBoardAction?: PendingBoardAction | null;
-  selected?: Position | null;
-  legalTargets?: Position[];
-  selectablePieceKeys?: Set<string>;
-  disabled?: boolean;
-  onCellClick?: (target: Position) => void | Promise<void>;
-  onPieceHover?: (position: Position | null) => void;
-  interactive?: boolean;
-  visibilityMode?: "player" | "all";
-};
-
 export type BoardCell = {
   key: string;
   x: number;
@@ -38,3 +22,19 @@ export type GhostUnitState = {
 };
 
 export type PieceColor = "player-one" | "player-two";
+
+export type ProjectedBoardProps = {
+  disabled?: boolean;
+  interactive?: boolean;
+  legalTargets?: Position[];
+  myId: null | string;
+  onCellClick?: (target: Position) => Promise<void> | void;
+  onPieceHover?: (position: null | Position) => void;
+  pendingBoardAction?: null | PendingBoardAction;
+  pieces: PieceDefinition[];
+  rules: RulesConfig;
+  selectablePieceKeys?: Set<string>;
+  selected?: null | Position;
+  state: GameState;
+  visibilityMode?: "all" | "player";
+};

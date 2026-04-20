@@ -1,16 +1,17 @@
 import { useMemo } from "react";
 
-import { getLegalMovesForUnit, getSetupSwapTargets } from "../lib/engine";
-import { gamePieces, gameRules } from "../lib/gameConfig";
 import type { GameState, Position } from "../shared/schema";
 import type { PendingBoardAction } from "../types/ui";
 
+import { getLegalMovesForUnit, getSetupSwapTargets } from "../lib/engine";
+import { gamePieces, gameRules } from "../lib/gameConfig";
+
 type UseBoardInteractionStateArgs = {
-  state: GameState | null;
-  myId: string | null;
-  selected: Position | null;
-  pendingBoardAction: PendingBoardAction | null;
   isCurrentSessionArchived: boolean;
+  myId: null | string;
+  pendingBoardAction: null | PendingBoardAction;
+  selected: null | Position;
+  state: GameState | null;
 };
 
 export function useBoardInteractionState({

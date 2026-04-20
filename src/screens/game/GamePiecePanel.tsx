@@ -1,11 +1,12 @@
-import { pieceIconById } from "../../components/board/pieceIcons";
 import type { PieceDefinition, Unit } from "../../shared/schema";
+
+import { pieceIconById } from "../../components/board/pieceIcons";
 import styles from "./GameSurface.module.css";
 
 type GamePiecePanelProps = {
-  inspectedPiece: PieceDefinition | null;
+  inspectedPiece: null | PieceDefinition;
   inspectedPieceTraits: string[];
-  inspectedUnit: Unit | null;
+  inspectedUnit: null | Unit;
   inspectedVisible: boolean;
 };
 
@@ -19,10 +20,10 @@ export function GamePiecePanel({
     <section className={styles.gamePiecePanel}>
       {inspectedUnit ? (
         <div className={styles.gamePieceHero}>
-          <div className={styles.gamePieceIcon} aria-hidden="true">
+          <div aria-hidden="true" className={styles.gamePieceIcon}>
             {inspectedVisible && inspectedPiece ? (
               pieceIconById[inspectedPiece.id] ? (
-                <img src={pieceIconById[inspectedPiece.id]} alt="" />
+                <img alt="" src={pieceIconById[inspectedPiece.id]} />
               ) : (
                 inspectedPiece.label.slice(0, 2)
               )

@@ -1,21 +1,19 @@
+import type { GameSession } from "../../lib/supabaseGameService";
+
 import { useCurrentUser } from "../../hooks/useProfile";
-import { resolveAvatarUrl } from "../../lib/playerProfile";
-import type { SessionRow } from "../../lib/supabaseGameService";
-import Avatar from "../Avatar";
-import { Button } from "../Button";
-import { getCompletionLabel } from "./sessionHelpers";
 import styles from "./SessionsList.module.css";
+import { SessionsListItem } from "./SessionsListItem";
 
 export default function SessionsList({
-  sessions,
   onArchiveSession,
   onJoinSession,
   onResumeSession,
+  sessions,
 }: {
-  sessions: SessionRow[];
-  onResumeSession?: (sessionId: string) => void;
-  onJoinSession?: (sessionId: string) => void;
   onArchiveSession?: (sessionId: string) => void;
+  onJoinSession?: (sessionId: string) => void;
+  onResumeSession?: (sessionId: string) => void;
+  sessions: GameSession[];
 }) {
   const { data: currentUser } = useCurrentUser();
   if (!currentUser || !sessions || sessions.length === 0) {
@@ -24,76 +22,15 @@ export default function SessionsList({
 
   return (
     <div className={styles.list}>
-      {sessions.map((session) => {
-        const isFinished =
-          session.state?.phase === "finished" || session.state?.phase === "closed";
-        const isWaitingForChallenger = !session.state;
-        const hasOpenSeat = !session.challenger;
-        const isArchived = Boolean(
-          session.memberships?.some((membership) => membership.archived_at),
-        );
-        const completionLabel = getCompletionLabel(session, currentUser);
-        const isCurrentHost = session.initiator?.device_id === currentUser.device_id;
-
-        if (isArchived) {
-          return null;
-        }
-
-        return (
-          <article key={session.session_id} className={styles.sessionCard}>
-            <div className={styles.sessionSummary}>
-              <div className={styles.playerStrip}>
-                {session.memberships?.map((membership, index) => (
-                  <Avatar
-                    key={`${session.session_id}-${membership.device_id}`}
-                    className={styles.playerAvatar}
-                    avatarUrl={resolveAvatarUrl(membership.player.avatar_id)}
-                    alt={membership.player.player_name}
-                    title={membership.player.player_name}
-                    color={index === 0 ? "red" : "blue"}
-                  />
-                ))}
-              </div>
-              <div>
-                <strong>{session.session_id}</strong>
-                <p>
-                  {isFinished
-                    ? completionLabel
-                    : isWaitingForChallenger
-                      ? "Waiting for challenger"
-                      : "In progress"}
-                </p>
-              </div>
-            </div>
-            <div className={styles.inlineActions}>
-              {onResumeSession && (
-                <Button
-                  variant="secondary"
-                  onClick={() => void onResumeSession(session.session_id)}
-                >
-                  Continue
-                </Button>
-              )}
-              {hasOpenSeat && !isCurrentHost && onJoinSession && (
-                <Button
-                  variant="secondary"
-                  onClick={() => void onJoinSession(session.session_id)}
-                >
-                  Join
-                </Button>
-              )}
-              {onArchiveSession && (
-                <Button
-                  variant="secondary"
-                  onClick={() => void onArchiveSession(session.session_id)}
-                >
-                  Archive
-                </Button>
-              )}
-            </div>
-          </article>
-        );
-      })}
+      {sessions.map((session) => (
+        <SessionsListItem
+          key={session.session_id}
+          onArchive={onArchiveSession && (() => onArchiveSession(session.session_id))}
+          onJoin={onJoinSession && (() => onJoinSession(session.session_id))}
+          onResume={onResumeSession && (() => onResumeSession(session.session_id))}
+          session={session}
+        />
+      ))}
     </div>
   );
 }

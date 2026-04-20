@@ -1,7 +1,7 @@
 import type {
   CurrentUser,
+  GameSessionDetails,
   SessionRole,
-  SessionRow,
   UserDeviceProfile,
 } from "../lib/supabaseGameService";
 import type { GameState } from "../shared/schema";
@@ -29,10 +29,10 @@ const createProfile = (
 });
 
 const fixtureProfiles = {
-  ember: createProfile("fixture-ember", "Commander Ember", "char01"),
-  slate: createProfile("fixture-slate", "Marshal Slate", "char20"),
   aurora: createProfile("fixture-aurora", "Scout Aurora", "char08"),
+  ember: createProfile("fixture-ember", "Commander Ember", "char01"),
   grove: createProfile("fixture-grove", "Captain Grove", "char16"),
+  slate: createProfile("fixture-slate", "Marshal Slate", "char20"),
 } as const;
 
 const createMembership = (
@@ -40,10 +40,10 @@ const createMembership = (
   role: SessionRole,
   player: UserDeviceProfile,
   options?: {
-    archivedAt?: string | null;
+    archivedAt?: null | string;
     createdAt?: string;
-    updatedAt?: string;
     lastOpenedAt?: string;
+    updatedAt?: string;
   },
 ) => ({
   archived_at: options?.archivedAt ?? null,
@@ -63,10 +63,8 @@ const createSessionState = (
 ): GameState => ({
   ...state,
   players: players.map((player) => ({
-    avatarId: player.avatar_id,
     connected: true,
     id: player.device_id,
-    name: player.player_name,
   })),
   roomCode,
 });
@@ -86,7 +84,7 @@ const waitingForChallenger = {
   session_id: waitingForChallengerSessionId,
   state: null,
   updated_at: "2026-04-19T09:05:00.000Z",
-} satisfies SessionRow;
+} satisfies GameSessionDetails;
 
 const setupDuel = {
   challenger: fixtureProfiles.slate,
@@ -189,7 +187,7 @@ const setupDuel = {
     },
   ),
   updated_at: "2026-04-19T09:10:00.000Z",
-} satisfies SessionRow;
+} satisfies GameSessionDetails;
 
 const openingSkirmish = {
   challenger: fixtureProfiles.grove,
@@ -317,7 +315,7 @@ const openingSkirmish = {
     },
   ),
   updated_at: "2026-04-19T09:16:00.000Z",
-} satisfies SessionRow;
+} satisfies GameSessionDetails;
 
 const finishedFlag = {
   challenger: fixtureProfiles.slate,
@@ -370,7 +368,7 @@ const finishedFlag = {
     },
   ),
   updated_at: "2026-04-19T09:24:00.000Z",
-} satisfies SessionRow;
+} satisfies GameSessionDetails;
 
 export const DEFAULT_SESSION_FIXTURE_ID = "opening-skirmish";
 
@@ -379,7 +377,7 @@ const sessionFixtures = {
   "opening-skirmish": openingSkirmish,
   "setup-duel": setupDuel,
   "waiting-for-challenger": waitingForChallenger,
-} as const satisfies Record<string, SessionRow>;
+} as const satisfies Record<string, GameSessionDetails>;
 
 export type SessionFixtureId = keyof typeof sessionFixtures;
 
@@ -397,7 +395,7 @@ export const getDefaultSessionFixture = () =>
 export const getFixturePlayerForRole = (
   fixtureId: string,
   role: SessionRole,
-): UserDeviceProfile | null => {
+): null | UserDeviceProfile => {
   const fixture = getSessionFixture(fixtureId);
   if (!fixture) return null;
 

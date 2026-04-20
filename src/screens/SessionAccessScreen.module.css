@@ -9,12 +9,24 @@
 }
 
 .statusCard {
-  width: min(40rem, 100%);
+  width: min(32rem, 100%);
   padding: var(--space-6);
   display: grid;
   gap: var(--space-3);
   justify-items: center;
   text-align: center;
+  font-size: 1.25rem;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+}
+
+.statusImage {
+  max-width: 100%;
+  display: block;
+  margin: 0 auto;
+}
+
+.statusCard h1 {
+  text-shadow: 0 2px 1px rgba(0, 0, 0, 0.25);
 }
 
 .statusCard p,

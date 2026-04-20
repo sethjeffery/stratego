@@ -1,7 +1,5 @@
 import { SESSION_QUERY_PARAM } from "./constants";
 
-export { isDebugBoardEnabled } from "./runtimeConfig";
-
 export const normalizeSessionId = (sessionId: string) => sessionId.trim().toUpperCase();
 
 export const buildSearchWithoutLegacySession = (search: string) => {

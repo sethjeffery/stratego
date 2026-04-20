@@ -1,8 +1,10 @@
 import clsx from "clsx";
 import { useState } from "react";
 
+import type { GameSessionDetails } from "../lib/supabaseGameService";
+
 import { Button } from "../components/Button";
-import type { SessionRow } from "../lib/supabaseGameService";
+import { getGameDisplayPlayers, getOtherDisplayPlayer } from "../lib/gamePlayers";
 import { GameBoardSection } from "./game/GameBoardSection";
 import { GameCompletionModal } from "./game/GameCompletionModal";
 import { GameLoadingState } from "./game/GameLoadingState";
@@ -18,7 +20,7 @@ import { GameSurrenderModal } from "./game/GameSurrenderModal";
 import { GameToolbar } from "./game/GameToolbar";
 import { useGameScreenController } from "./game/useGameScreenController";
 
-export function GameScreen({ session }: { session: SessionRow }) {
+export function GameScreen({ session }: { session: GameSessionDetails }) {
   const [surrenderConfirmVisible, setSurrenderConfirmVisible] = useState(false);
   const {
     archived,
@@ -27,8 +29,8 @@ export function GameScreen({ session }: { session: SessionRow }) {
     disabled,
     finishGame,
     isMyTurn,
-    legalTargets,
     leaveCurrentSession,
+    legalTargets,
     markReady,
     myId,
     onCellClick,
@@ -49,12 +51,18 @@ export function GameScreen({ session }: { session: SessionRow }) {
 
   const { inspectedPiece, inspectedPieceTraits, inspectedUnit, inspectedVisible } =
     getInspectedPieceState(state, selected, myId);
-  const { completionDescription, completionTitle, winner } = getCompletionCopy(state);
+  const displayPlayers = getGameDisplayPlayers(state, session.memberships);
+  const otherPlayerName =
+    getOtherDisplayPlayer(displayPlayers, myId)?.name ?? "the opponent";
+  const { completionDescription, completionTitle, winner } = getCompletionCopy(
+    state,
+    displayPlayers,
+  );
   const completionStats = getCompletionStats(state);
   const mainStatus = getMainStatus({
     archived,
-    canMarkReady,
     isMyTurn,
+    isReady: state?.setupReadyPlayerIds.includes(myId ?? ""),
     myId,
     state,
   });
@@ -69,16 +77,16 @@ export function GameScreen({ session }: { session: SessionRow }) {
       <section className={styles.arenaMain}>
         <GameToolbar
           canSurrender={canSurrender}
-          session={session}
           mainStatus={mainStatus}
           onLeave={leaveCurrentSession}
           onRequestSurrender={() => setSurrenderConfirmVisible(true)}
+          otherPlayerName={otherPlayerName}
         />
 
         {archived && (
           <section className={clsx("card", styles.archivedBanner)}>
             <p>This game is archived and disabled on this device.</p>
-            <Button variant="secondary" onClick={leaveCurrentSession}>
+            <Button onClick={leaveCurrentSession} variant="secondary">
               Return to lobby
             </Button>
           </section>
@@ -107,6 +115,7 @@ export function GameScreen({ session }: { session: SessionRow }) {
         myId={myId}
         onMarkReady={markReady}
         onSendMessage={sendChatMessage}
+        players={displayPlayers}
         state={state}
       />
 

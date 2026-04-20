@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import { ArrowClockwiseIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
@@ -21,8 +23,8 @@ type DashboardTopbarProps = {
 export function DashboardTopbar({
   avatarId,
   createSession,
-  onPlayerNameChange,
   onPlayerAvatarChange,
+  onPlayerNameChange,
   playerName,
 }: DashboardTopbarProps) {
   const [name, setName] = useState(playerName);
@@ -38,35 +40,62 @@ export function DashboardTopbar({
   };
 
   return (
-    <header className={`${styles.topbar} card`}>
-      <div className={styles.identityHero}>
-        <Avatar
-          className={styles.avatarButton}
-          onClick={randomizeAvatar}
-          avatarUrl={resolveAvatarUrl(avatarId)}
-          alt={playerName}
-          title="Randomize avatar"
+    <div className={styles.topbarContainer}>
+      <div className={styles.sunbursts}>
+        <div className={styles.sunburst} />
+        <div
+          className={styles.sunburst}
+          style={
+            {
+              "--sunburst-delay": "-0.3s",
+              "--sunburst-rotation": "5deg",
+              "--sunburst-scale": 0.8,
+              "--sunburst-speed": "1.4s",
+            } as CSSProperties
+          }
         />
-        <div className={styles.identityCopy}>
-          <div className={styles.intro}>What do they call you?</div>
-          <input
-            className={styles.nameInput}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={() => onPlayerNameChange(name)}
-            placeholder="Commander Name"
-            aria-label="Player name"
+        <div
+          className={styles.sunburst}
+          style={
+            {
+              "--sunburst-delay": "-0.4s",
+              "--sunburst-rotation": "10deg",
+              "--sunburst-scale": 0.65,
+              "--sunburst-speed": "2.5s",
+            } as CSSProperties
+          }
+        />
+      </div>
+      <header className={`${styles.topbar} card`}>
+        <div className={styles.identityHero}>
+          <Avatar
+            alt={playerName}
+            avatarUrl={resolveAvatarUrl(avatarId)}
+            className={styles.avatarButton}
+            onClick={randomizeAvatar}
+            title="Randomize avatar"
           />
-          <Button variant="secondary" onClick={randomizeName}>
-            <ArrowClockwiseIcon size={32} weight="bold" />
+          <div className={styles.identityCopy}>
+            <div className={styles.intro}>What do they call you?</div>
+            <input
+              aria-label="Player name"
+              className={styles.nameInput}
+              onBlur={() => onPlayerNameChange(name)}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Commander Name"
+              value={name}
+            />
+            <Button onClick={randomizeName} variant="secondary">
+              <ArrowClockwiseIcon size={32} weight="bold" />
+            </Button>
+          </div>
+        </div>
+        <div className={styles.topbarActions}>
+          <Button onClick={() => void createSession()} variant="primary">
+            Host new game
           </Button>
         </div>
-      </div>
-      <div className={styles.topbarActions}>
-        <Button variant="primary" onClick={() => void createSession()}>
-          Host new game
-        </Button>
-      </div>
-    </header>
+      </header>
+    </div>
   );
 }

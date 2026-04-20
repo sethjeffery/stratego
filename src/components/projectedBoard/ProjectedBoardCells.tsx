@@ -1,9 +1,10 @@
 import clsx from "clsx";
 
 import type { Position } from "../../shared/schema";
+import type { BoardCell } from "./types";
+
 import styles from "./ProjectedBoard.module.css";
 import { getCellStyle } from "./projectedBoardHelpers";
-import type { BoardCell } from "./types";
 
 type ProjectedBoardCellsProps = {
   boardColumns: number;
@@ -11,8 +12,8 @@ type ProjectedBoardCellsProps = {
   cells: BoardCell[];
   interactive: boolean;
   legalTargetKeys: Set<string>;
-  onCellClick?: (target: Position) => void | Promise<void>;
-  selected: Position | null;
+  onCellClick?: (target: Position) => Promise<void> | void;
+  selected: null | Position;
   toDisplayPosition: (position: Position) => Position;
 };
 
@@ -35,18 +36,18 @@ export function ProjectedBoardCells({
 
         return (
           <button
-            key={cell.key}
+            aria-label={`Board cell ${cell.x + 1}, ${cell.y + 1}`}
             className={clsx(
               styles.boardCellHit,
               isLegalTarget && styles.target,
               isSelected && styles.selected,
             )}
-            style={getCellStyle(display.x, display.y, boardColumns, boardRows)}
-            onClick={() => interactive && onCellClick?.({ x: cell.x, y: cell.y })}
-            disabled={!interactive}
             data-x={display.x}
             data-y={display.y}
-            aria-label={`Board cell ${cell.x + 1}, ${cell.y + 1}`}
+            disabled={!interactive}
+            key={cell.key}
+            onClick={() => interactive && onCellClick?.({ x: cell.x, y: cell.y })}
+            style={getCellStyle(display.x, display.y, boardColumns, boardRows)}
           >
             <span className={styles.boardCellHighlight} />
           </button>

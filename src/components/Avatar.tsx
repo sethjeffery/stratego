@@ -6,11 +6,11 @@ type AvatarProps = {
   alt?: string;
   avatarUrl?: string;
   className?: string;
-  title?: string;
-  color?: "red" | "blue";
+  color?: "blue" | "red";
+  onClick?: () => void;
   pulsing?: boolean;
   shadow?: boolean;
-  onClick?: () => void;
+  title?: string;
   width?: number;
 };
 
@@ -19,10 +19,10 @@ export default function Avatar({
   avatarUrl,
   className,
   color,
+  onClick,
   pulsing,
   shadow,
   title,
-  onClick,
   width,
 }: AvatarProps) {
   const wrapperClassName = clsx(
@@ -39,7 +39,7 @@ export default function Avatar({
   if (onClick) {
     return (
       <button
-        type="button"
+        aria-label={title ?? alt}
         className={clsx(
           wrapperClassName,
           shadow && styles.shadow,
@@ -47,14 +47,14 @@ export default function Avatar({
         )}
         onClick={onClick}
         title={title}
-        aria-label={title ?? alt}
+        type="button"
       >
         {empty ? (
-          <span style={{ width, fontSize }} className={styles.avatar}>
+          <span className={styles.avatar} style={{ fontSize, width }}>
             ?
           </span>
         ) : (
-          <img width={width} className={styles.avatar} src={avatarUrl} alt={alt} />
+          <img alt={alt} className={styles.avatar} src={avatarUrl} width={width} />
         )}
       </button>
     );
@@ -66,11 +66,11 @@ export default function Avatar({
       title={title}
     >
       {empty ? (
-        <span style={{ width, fontSize }} className={styles.avatar}>
+        <span className={styles.avatar} style={{ fontSize, width }}>
           ?
         </span>
       ) : (
-        <img width={width} className={styles.avatar} src={avatarUrl} alt={alt} />
+        <img alt={alt} className={styles.avatar} src={avatarUrl} width={width} />
       )}
     </div>
   );

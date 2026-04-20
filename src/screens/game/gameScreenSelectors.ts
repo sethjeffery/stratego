@@ -1,4 +1,4 @@
-import { gamePieces } from "../../lib/gameConfig";
+import type { GameDisplayPlayer } from "../../lib/gamePlayers";
 import type {
   GameChatMessage,
   GameState,
@@ -6,13 +6,12 @@ import type {
   Position,
 } from "../../shared/schema";
 
+import { gamePieces } from "../../lib/gameConfig";
+
 export const pieceById = new Map(gamePieces.map((piece) => [piece.id, piece]));
 
-export const getPlayerColorClass = (playerId: string, playerOneId: string | null) =>
+export const getPlayerColorClass = (playerId: string, playerOneId: null | string) =>
   playerId === playerOneId ? "player-one" : "player-two";
-
-export const getOtherPlayerName = (state: GameState, myId: string | null) =>
-  state.players.find((player) => player.id !== myId)?.name ?? "the opponent";
 
 export const getPieceTraits = (piece: PieceDefinition) =>
   [
@@ -24,8 +23,8 @@ export const getPieceTraits = (piece: PieceDefinition) =>
 
 export const getInspectedPieceState = (
   state: GameState,
-  selected: Position | null,
-  myId: string | null,
+  selected: null | Position,
+  myId: null | string,
 ) => {
   const inspectedUnit = selected
     ? (state.units.find((unit) => unit.x === selected.x && unit.y === selected.y) ??
@@ -48,23 +47,23 @@ export const getInspectedPieceState = (
 };
 
 export type MainStatus =
+  | "active"
   | "archived"
-  | "winner"
   | "loser"
   | "setup"
   | "waiting"
-  | "active";
+  | "winner";
 export const getMainStatus = ({
   archived,
-  canMarkReady,
   isMyTurn,
+  isReady,
   myId,
   state,
 }: {
   archived: boolean;
-  canMarkReady: boolean;
   isMyTurn: boolean;
-  myId: string | null;
+  isReady: boolean;
+  myId: null | string;
   state: GameState;
 }): MainStatus => {
   if (archived) return "archived";
@@ -74,7 +73,7 @@ export const getMainStatus = ({
   }
 
   if (state.phase === "setup") {
-    return canMarkReady ? "setup" : "waiting";
+    return isReady ? "waiting" : "setup";
   }
 
   return isMyTurn ? "active" : "waiting";
@@ -87,7 +86,7 @@ export const getCompletionStats = (state: GameState) => {
 
   const killsByPiece = new Map<
     string,
-    { pieceId: string; ownerId: string; kills: number; value: number; score: number }
+    { kills: number; ownerId: string; pieceId: string; score: number; value: number }
   >();
 
   battleMessages.forEach((message) => {
@@ -106,11 +105,11 @@ export const getCompletionStats = (state: GameState) => {
 
     const key = `${killerOwnerId}::${killerPieceId}`;
     const current = killsByPiece.get(key) ?? {
-      pieceId: killerPieceId,
-      ownerId: killerOwnerId,
       kills: 0,
-      value: 0,
+      ownerId: killerOwnerId,
+      pieceId: killerPieceId,
       score: 0,
+      value: 0,
     };
     current.kills += 1;
     current.value += defeated.rank;
@@ -136,7 +135,7 @@ export const getCompletionStats = (state: GameState) => {
 
 export type GameCompletionStats = ReturnType<typeof getCompletionStats>;
 
-export const formatDuration = (durationMs: number | null) => {
+export const formatDuration = (durationMs: null | number) => {
   if (durationMs === null) return "Unknown";
   const totalSeconds = Math.floor(durationMs / 1000);
   const minutes = Math.floor(totalSeconds / 60);
@@ -144,10 +143,10 @@ export const formatDuration = (durationMs: number | null) => {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
-export const getCompletionCopy = (state: GameState) => {
-  const winner = state.players.find((player) => player.id === state.winnerId) ?? null;
+export const getCompletionCopy = (state: GameState, players: GameDisplayPlayer[]) => {
+  const winner = players.find((player) => player.id === state.winnerId) ?? null;
   const surrenderedPlayer =
-    state.players.find((player) => player.id === state.surrenderedById) ?? null;
+    players.find((player) => player.id === state.surrenderedById) ?? null;
 
   return {
     completionDescription:
@@ -165,7 +164,7 @@ export const getCompletionCopy = (state: GameState) => {
 
 export const getBattleMessageDisplay = (
   message: GameChatMessage,
-  myId: string | null,
+  myId: null | string,
 ) => {
   const battle = message.battle;
   if (!battle) return null;

@@ -1,15 +1,14 @@
-import { createClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  type RealtimeChannel,
+  type RealtimePostgresChangesPayload,
+} from "@supabase/supabase-js";
 import { customAlphabet, nanoid } from "nanoid";
 
-import {
-  getConfiguredPlayerSessionStorageMode,
-  getDebugSessionSelection,
-  getRequestedGameServiceMode,
-} from "../app/runtimeConfig";
-import { getFixturePlayerForRole } from "../fixtures/sessionFixtures";
 import type { GameState, Position } from "../shared/schema";
-import { appendChatMessage, normalizeGameState } from "../shared/schema";
 import type { Database } from "../types/database.types";
+
+import { appendChatMessage } from "../shared/schema";
 import {
   applyMoveToState,
   applySetupSwapToState,
@@ -20,78 +19,81 @@ import {
 import { gamePieces, gameRules } from "./gameConfig";
 import { getOrCreateStoredDeviceIdentity } from "./localSessionStore";
 import {
-  ensureMemoryFixtureSession,
-  memoryApplyMove,
-  memoryApplySetupSwap,
-  memoryArchiveSession,
-  memoryCloseFinishedGame,
-  memoryCreateInitiatedSession,
-  memoryGetCurrentUser,
-  memoryGetSession,
-  memoryJoinSessionAsCurrentUser,
-  memoryListMySessions,
-  memoryListOpenSessions,
-  memoryListSessions,
-  memoryMarkSetupReady,
-  memoryResetFinishedGame,
-  memorySendChatMessage,
-  memorySubscribeToSession,
-  memorySurrenderGame,
-  memoryUpdateCurrentUserProfile,
-} from "./memoryGameService";
-import { generatePlayerName, pickRandomAvatarId } from "./playerProfile";
+  generatePlayerName,
+  getMemberByRole,
+  pickRandomAvatarId,
+} from "./playerProfile";
 
-export type SessionRole = "initiator" | "challenger";
-
-export type SessionRow = Omit<
+export type CurrentUser = Database["public"]["Tables"]["player_profiles"]["Row"];
+export type GameSession = Omit<
+  Database["public"]["Tables"]["game_sessions"]["Row"],
+  "state"
+> & { state: GameState | null };
+export type GameSessionDetails = Omit<
   Database["public"]["Tables"]["game_sessions"]["Row"],
   "state"
 > & {
-  initiator?: UserDeviceProfile | null;
-  challenger?: UserDeviceProfile | null;
-  memberships?: (Database["public"]["Tables"]["session_memberships"]["Row"] & {
-    player: UserDeviceProfile;
-  })[];
+  challenger?: null | UserDeviceProfile;
+  initiator?: null | UserDeviceProfile;
+  memberships?:
+    | (Database["public"]["Tables"]["session_memberships"]["Row"] & {
+        profile?: null | UserDeviceProfile;
+      })[]
+    | null;
   state: GameState | null;
 };
+export type PlayerProfile = Database["public"]["Tables"]["player_profiles"]["Row"];
 
-export type CurrentUser = Database["public"]["Tables"]["player_profiles"]["Row"];
+export type SessionMembership =
+  Database["public"]["Tables"]["session_memberships"]["Row"];
 
-export type UserProfile = Pick<CurrentUser, "player_name" | "avatar_id">;
+export type SessionRole = Database["public"]["Enums"]["session_role"];
+
 export type UserDeviceProfile = Pick<
   CurrentUser,
-  "player_name" | "avatar_id" | "device_id"
+  "avatar_id" | "device_id" | "player_name"
 >;
+export type UserProfile = Pick<CurrentUser, "avatar_id" | "player_name">;
 
-type SessionMembershipRow = {
-  session_id: string;
-  device_id: string;
-  role: SessionRole;
-  player_id: string;
-  archived_at: string | null;
-  last_opened_at: string | null;
-  created_at: string;
-  updated_at: string;
+type Entry<T extends Record<string, any>> = {
+  channel: RealtimeChannel;
+  listeners: Set<Listener<T>>;
 };
 
-type SessionChatMessageRow =
-  Database["public"]["Tables"]["session_chat_messages"]["Row"];
+type Listener<T extends Record<string, any>> = (
+  payload: RealtimePostgresChangesPayload<T>,
+) => void;
 
-export type SessionParticipant = SessionMembershipRow & {
-  player_name: string;
-  avatar_id: string;
-};
-
-export type SessionSummary = SessionRow & {
-  memberships: SessionParticipant[];
-  initiator: SessionParticipant | null;
-  challenger: SessionParticipant | null;
-  currentMembership: SessionParticipant | null;
-};
+const sessionMembershipRegistry = new Map<string, Entry<SessionMembership>>();
+const profileRegistry = new Map<string, Entry<PlayerProfile>>();
+const gameSessionRegistry = new Map<string, Entry<GameSession>>();
 
 export type SessionAccess = {
+  membership: null | SessionParticipant;
   session: SessionSummary;
-  membership: SessionParticipant | null;
+};
+
+export type SessionParticipant = SessionMembershipRow & {
+  avatar_id: string;
+  player_name: string;
+};
+
+export type SessionSummary = GameSessionDetails & {
+  challenger: null | SessionParticipant;
+  currentMembership: null | SessionParticipant;
+  initiator: null | SessionParticipant;
+  memberships: SessionParticipant[];
+};
+
+type SessionMembershipRow = {
+  archived_at: null | string;
+  created_at: string;
+  device_id: string;
+  last_opened_at: null | string;
+  player_id: string;
+  role: SessionRole;
+  session_id: string;
+  updated_at: string;
 };
 
 const supabaseUrl =
@@ -104,87 +106,29 @@ const supabaseAnonKey =
   (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
   (import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY as string | undefined);
 
-export const isSupabaseMode = Boolean(supabaseUrl && supabaseAnonKey);
-
-const client = isSupabaseMode
-  ? createClient<Database>(supabaseUrl!, supabaseAnonKey!)
-  : null;
+const client = createClient<Database>(supabaseUrl!, supabaseAnonKey!);
 
 const TABLE = "game_sessions";
+const UNARCHIVED_TABLE = "unarchived_game_sessions";
+const OPEN_TABLE = "open_game_sessions";
 const MEMBERSHIP_TABLE = "session_memberships";
 const PROFILE_TABLE = "player_profiles";
 const SESSION_CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const createSessionCode = customAlphabet(SESSION_CODE_ALPHABET, 8);
 const MAX_SESSION_UPDATE_ATTEMPTS = 4;
-const MAX_SESSION_CHAT_MESSAGES = 12;
-
-const normalizeSessionRow = (row: SessionRow): SessionRow => ({
-  ...row,
-  state: normalizeGameState(row.state),
-});
-
-const shouldUseMemoryGameService = () => {
-  const debugSelection = getDebugSessionSelection();
-  if (debugSelection?.fixtureId) return true;
-
-  const requestedMode = getRequestedGameServiceMode();
-  if (requestedMode) return requestedMode === "memory";
-
-  return !isSupabaseMode;
-};
-
-export const getGameServiceCacheScope = () => {
-  const debugSelection = getDebugSessionSelection();
-
-  return [
-    shouldUseMemoryGameService() ? "memory" : "supabase",
-    getConfiguredPlayerSessionStorageMode(),
-    debugSelection?.fixtureId ?? "-",
-    debugSelection?.role ?? "-",
-  ].join(":");
-};
 
 const getCurrentDeviceId = () => {
-  const debugSelection = getDebugSessionSelection();
-  if (debugSelection?.fixtureId) {
-    ensureMemoryFixtureSession(debugSelection.fixtureId);
-    const fixturePlayer = getFixturePlayerForRole(
-      debugSelection.fixtureId,
-      debugSelection.role,
-    );
-    if (fixturePlayer) {
-      return fixturePlayer.device_id;
-    }
-  }
-
   return getOrCreateStoredDeviceIdentity().deviceId;
 };
 
 const getNowIsoString = () => new Date().toISOString();
 
-const buildInitialSessionState = (session: SessionRow) => {
-  if (!session.initiator || !session.challenger) return null;
-
-  const initialized = createSessionGame(
-    session.initiator,
-    session.challenger,
-    gameRules,
-    gamePieces,
-    {
-      initiatorId: session.initiator.device_id,
-      challengerId: session.challenger.device_id,
-    },
-  );
-  initialized.state.roomCode = session.session_id;
-  return initialized.state;
-};
-
 const upsertMembership = async (membership: {
-  session_id: string;
+  archived_at?: null | string;
   device_id: string;
+  last_opened_at?: null | string;
   role: SessionRole;
-  archived_at?: string | null;
-  last_opened_at?: string | null;
+  session_id: string;
 }) => {
   if (!client) throw new Error("Supabase is not configured.");
 
@@ -204,27 +148,30 @@ const upsertMembership = async (membership: {
 
 const updateSessionState = async (
   sessionId: string,
-  buildNextState: (row: SessionRow) => { nextState?: GameState; error?: string },
-) => {
+  buildNextState: (row: GameSession) => {
+    error?: string;
+    nextState?: GameState;
+  },
+): Promise<GameSession> => {
   if (!client) throw new Error("Supabase is not configured.");
 
   for (let attempt = 0; attempt < MAX_SESSION_UPDATE_ATTEMPTS; attempt += 1) {
-    const row = await getSession(sessionId);
+    const row = await requireSession(sessionId);
     const result = buildNextState(row);
     if (result.error || !result.nextState) {
       throw new Error(result.error ?? "Could not update session state.");
     }
 
-    const { data, error } = await client
+    const { data } = await client
       .from(TABLE)
       .update({ state: result.nextState })
       .eq("session_id", sessionId)
       .eq("updated_at", row.updated_at)
       .select("*")
-      .maybeSingle<SessionRow>();
+      .single()
+      .throwOnError();
 
-    if (error) throw error;
-    if (data) return normalizeSessionRow(data);
+    return data as GameSession;
   }
 
   throw new Error("Session changed before the update could be saved. Try again.");
@@ -232,9 +179,6 @@ const updateSessionState = async (
 
 export const getCurrentUser = async () => {
   const deviceId = getCurrentDeviceId();
-  if (shouldUseMemoryGameService()) {
-    return await memoryGetCurrentUser(deviceId);
-  }
   if (!client) throw new Error("Supabase is not configured.");
 
   const { data, error } = await client
@@ -249,9 +193,9 @@ export const getCurrentUser = async () => {
   const { data: created, error: createError } = await client
     .from(PROFILE_TABLE)
     .insert({
+      avatar_id: pickRandomAvatarId(),
       device_id: deviceId,
       player_name: generatePlayerName(),
-      avatar_id: pickRandomAvatarId(),
     })
     .select("*")
     .single<CurrentUser>();
@@ -264,17 +208,13 @@ export const getCurrentUser = async () => {
 };
 
 export const updateCurrentUserProfile = async (profile: UserProfile) => {
-  const deviceId = getCurrentDeviceId();
-  if (shouldUseMemoryGameService()) {
-    return await memoryUpdateCurrentUserProfile(deviceId, profile);
-  }
   if (!client) throw new Error("Supabase is not configured.");
 
   const currentUser = await getCurrentUser();
   const nextUser = {
+    avatar_id: profile.avatar_id,
     device_id: currentUser.device_id,
     player_name: profile.player_name,
-    avatar_id: profile.avatar_id,
   };
 
   const { data, error } = await client
@@ -293,9 +233,6 @@ export const updateCurrentUserProfile = async (profile: UserProfile) => {
 };
 
 export const createInitiatedSession = async (initiator: CurrentUser) => {
-  if (shouldUseMemoryGameService()) {
-    return await memoryCreateInitiatedSession(initiator);
-  }
   if (!client) throw new Error("Supabase is not configured.");
 
   const sessionId = createSessionCode();
@@ -306,89 +243,99 @@ export const createInitiatedSession = async (initiator: CurrentUser) => {
       state: null,
     })
     .select("*")
-    .single<SessionRow>();
+    .single<GameSessionDetails>();
 
   if (error || !data) throw error ?? new Error("Could not create session.");
 
   await upsertMembership({
-    session_id: sessionId,
     device_id: initiator.device_id,
     role: "initiator",
+    session_id: sessionId,
   });
 
   return {
     ...data,
     initiator: {
+      avatar_id: initiator.avatar_id,
       device_id: initiator.device_id,
       player_name: initiator.player_name,
-      avatar_id: initiator.avatar_id,
     },
     session_memberships: [
       {
         archived_at: null,
         created_at: "",
-        last_opened_at: "",
-        updated_at: "",
-        session_id: sessionId,
         device_id: initiator.device_id,
-        role: "initiator",
+        last_opened_at: "",
         player: {
+          avatar_id: initiator.avatar_id,
           device_id: initiator.device_id,
           player_name: initiator.player_name,
-          avatar_id: initiator.avatar_id,
         },
+        role: "initiator",
+        session_id: sessionId,
+        updated_at: "",
       },
     ],
-  } as SessionRow;
+  } as GameSessionDetails;
 };
 
 export const joinSessionAsCurrentUser = async (sessionId: string) => {
-  const deviceId = getCurrentDeviceId();
-  if (shouldUseMemoryGameService()) {
-    return await memoryJoinSessionAsCurrentUser(sessionId, deviceId);
-  }
   if (!client) throw new Error("Supabase is not configured.");
 
   const currentUser = await getCurrentUser();
   const existingAccess = await getSession(sessionId);
-  if (existingAccess.memberships?.some(({ archived_at }) => archived_at)) {
+  if (!existingAccess) {
+    throw new Error("Session not found");
+  }
+
+  const memberships = await getSessionMemberships(sessionId);
+  if (memberships?.some(({ archived_at }) => archived_at)) {
     throw new Error("Cannot join archived session");
   }
 
+  const initiator = await getProfile(
+    getMemberByRole(memberships, "initiator")?.device_id,
+  );
+  const challenger = await getProfile(
+    getMemberByRole(memberships, "challenger")?.device_id,
+  );
+
   if (
-    existingAccess.initiator?.device_id === currentUser.device_id ||
-    existingAccess.challenger?.device_id === currentUser.device_id
+    initiator?.device_id === currentUser.device_id ||
+    challenger?.device_id === currentUser.device_id
   ) {
     const role =
-      existingAccess.initiator?.device_id === currentUser.device_id
-        ? "initiator"
-        : "challenger";
+      initiator?.device_id === currentUser.device_id ? "initiator" : "challenger";
 
     await upsertMembership({
-      session_id: sessionId,
+      archived_at: null,
       device_id: currentUser.device_id,
       role,
-      archived_at: null,
+      session_id: sessionId,
     });
     return getSession(sessionId);
   }
 
-  if (
-    existingAccess.challenger &&
-    existingAccess.challenger.device_id !== currentUser.device_id
-  ) {
+  if (challenger && challenger.device_id !== currentUser.device_id) {
     throw new Error("Session is already full.");
   }
 
-  if (!existingAccess.initiator) {
+  if (!initiator) {
     throw new Error("Host of session not found.");
   }
 
   await upsertMembership({
-    session_id: sessionId,
     device_id: currentUser.device_id,
     role: "challenger",
+    session_id: sessionId,
   });
+
+  const initialized = createSessionGame(initiator, currentUser, gameRules, gamePieces, {
+    challengerId: currentUser.device_id,
+    initiatorId: initiator.device_id,
+  });
+  initialized.state.roomCode = sessionId;
+  await updateSessionState(sessionId, () => ({ nextState: initialized.state }));
 
   return getSession(sessionId);
 };
@@ -397,9 +344,6 @@ export const archiveSession = async (
   sessionId: string,
   deviceId = getCurrentDeviceId(),
 ) => {
-  if (shouldUseMemoryGameService()) {
-    return await memoryArchiveSession(sessionId, deviceId);
-  }
   if (!client) throw new Error("Supabase is not configured.");
 
   const { error } = await client
@@ -416,137 +360,96 @@ export const archiveSession = async (
   return await getSession(sessionId);
 };
 
-export const getSession = async (sessionId: string): Promise<SessionRow> => {
-  if (shouldUseMemoryGameService()) {
-    return await memoryGetSession(sessionId);
-  }
+export const getSessionMemberships = async (sessionId: string) => {
   if (!client) throw new Error("Supabase is not configured.");
   const { data } = await client
-    .from(TABLE)
-    .select(
-      "*, memberships:session_memberships(*, player:player_profiles(*)), chat_messages:session_chat_messages(*)",
-    )
-    .eq("session_id", sessionId)
-    .single()
-    .throwOnError();
-
-  const hydrated = hydrateSessionData(data);
-  if (hydrated.state || !hydrated.initiator || !hydrated.challenger) {
-    return hydrated;
-  }
-
-  const initialState = buildInitialSessionState(hydrated);
-  if (!initialState) return hydrated;
-
-  await client
-    .from(TABLE)
-    .update({
-      state: initialState,
-    })
+    .from(MEMBERSHIP_TABLE)
+    .select("*")
     .eq("session_id", sessionId)
     .throwOnError();
 
-  return {
-    ...hydrated,
-    state: initialState,
-  };
+  return data;
 };
 
-export const hydrateSessionData = (
-  data: Database["public"]["Tables"]["game_sessions"]["Row"] & {
-    memberships: (Database["public"]["Tables"]["session_memberships"]["Row"] & {
-      player: Database["public"]["Tables"]["player_profiles"]["Row"];
-    })[];
-    chat_messages?: SessionChatMessageRow[];
-  },
+export const getProfile = async (
+  deviceId: string | undefined,
+  createIfEmpty?: boolean,
 ) => {
-  const baseState = normalizeGameState(data.state as GameState | null);
-  const battleMessages =
-    baseState?.chatMessages.filter((message) => message.type === "battle") ?? [];
-  const playerMessages = (data.chat_messages ?? []).map((message) => ({
-    id: message.id,
-    type: "player" as const,
-    playerId: message.player_id,
-    senderName: message.sender_name,
-    text: message.text,
-    sentAt: message.sent_at,
-  }));
-  const chatMessages = [...battleMessages, ...playerMessages]
-    .sort((a, b) => a.sentAt.localeCompare(b.sentAt))
-    .slice(-MAX_SESSION_CHAT_MESSAGES);
+  if (!deviceId) return null;
 
-  return {
-    ...data,
-    initiator: data.memberships.find((membership) => membership.role === "initiator")
-      ?.player,
-    challenger: data.memberships.find((membership) => membership.role === "challenger")
-      ?.player,
-    state: baseState
-      ? {
-          ...baseState,
-          chatMessages,
-        }
-      : null,
-  } as SessionRow;
-};
-
-export const listSessions = async (sessionIds: string[]) => {
-  if (shouldUseMemoryGameService()) {
-    return await memoryListSessions(sessionIds);
-  }
   if (!client) throw new Error("Supabase is not configured.");
-  if (sessionIds.length === 0) return [] as SessionRow[];
-
   const { data } = await client
-    .from(TABLE)
-    .select("*, memberships:session_memberships(*, player:player_profiles(*))")
-    .in("session_id", sessionIds)
-    .order("updated_at", { ascending: false })
+    .from(PROFILE_TABLE)
+    .select("*")
+    .eq("device_id", deviceId)
+    .maybeSingle()
     .throwOnError();
 
-  return data.map(hydrateSessionData);
+  if (data || !createIfEmpty) return data;
+
+  const { data: created, error: createError } = await client
+    .from(PROFILE_TABLE)
+    .insert({
+      avatar_id: pickRandomAvatarId(),
+      device_id: deviceId,
+      player_name: generatePlayerName(),
+    })
+    .select("*")
+    .single<CurrentUser>();
+
+  if (createError || !created) {
+    throw createError ?? new Error("Could not create player profile.");
+  }
+
+  return created;
 };
 
-export const listMySessions = async (deviceId = getCurrentDeviceId()) => {
-  if (shouldUseMemoryGameService()) {
-    return await memoryListMySessions(deviceId);
-  }
+export const getSession = async (sessionId: string): Promise<GameSession> => {
   if (!client) throw new Error("Supabase is not configured.");
 
   const { data } = await client
     .from(TABLE)
-    .select(
-      "*, memberships:session_memberships!inner(*, player:player_profiles!inner(*))",
-    )
+    .select("*")
+    .eq("session_id", sessionId)
+    .maybeSingle()
+    .throwOnError();
+  return data as GameSession;
+};
+
+export const requireSession = async (sessionId: string) => {
+  const session = await getSession(sessionId);
+  if (!session) {
+    throw new Error("Session could not be found.");
+  }
+  return session;
+};
+
+export const listMySessions = async (
+  deviceId = getCurrentDeviceId(),
+): Promise<GameSession[]> => {
+  if (!client) throw new Error("Supabase is not configured.");
+
+  const { data } = await client
+    .from(UNARCHIVED_TABLE)
+    .select("*, memberships:session_memberships(device_id,archived_at)")
     .eq("session_memberships.device_id", deviceId)
     .order("updated_at", { ascending: false })
     .throwOnError();
 
-  return data
-    .map(hydrateSessionData)
-    .filter(
-      (value) =>
-        !value.memberships?.some(
-          (membership) => membership.archived_at && membership.device_id === deviceId,
-        ),
-    );
+  return data as GameSession[];
 };
 
-export const listOpenSessions = async (limit = 5) => {
-  if (shouldUseMemoryGameService()) {
-    return await memoryListOpenSessions(limit);
-  }
+export const listOpenSessions = async (limit = 5): Promise<GameSession[]> => {
   if (!client) throw new Error("Supabase is not configured.");
 
   const { data } = await client
-    .from(TABLE)
-    .select("*, memberships:session_memberships(*, player:player_profiles(*))")
-    .is("memberships(challenger_id)", null)
+    .from(OPEN_TABLE)
+    .select("*")
     .order("updated_at", { ascending: false })
     .limit(Math.max(limit * 3, limit))
     .throwOnError();
 
-  return data.map(hydrateSessionData);
+  return data as GameSession[];
 };
 
 export const applyMove = async (
@@ -555,9 +458,6 @@ export const applyMove = async (
   from: Position,
   to: Position,
 ) => {
-  if (shouldUseMemoryGameService()) {
-    return await memoryApplyMove(sessionId, playerId, from, to);
-  }
   const row = await updateSessionState(sessionId, (currentRow) => {
     if (!currentRow.state) return { error: "Waiting for challenger to join." };
     return applyMoveToState(
@@ -579,9 +479,6 @@ export const applySetupSwap = async (
   from: Position,
   to: Position,
 ) => {
-  if (shouldUseMemoryGameService()) {
-    return await memoryApplySetupSwap(sessionId, playerId, from, to);
-  }
   const row = await updateSessionState(sessionId, (currentRow) => {
     if (!currentRow.state) return { error: "Waiting for challenger to join." };
 
@@ -599,9 +496,6 @@ export const applySetupSwap = async (
 };
 
 export const markSetupReady = async (sessionId: string, playerId: string) => {
-  if (shouldUseMemoryGameService()) {
-    return await memoryMarkSetupReady(sessionId, playerId);
-  }
   const row = await updateSessionState(sessionId, (currentRow) => {
     if (!currentRow.state) return { error: "Waiting for challenger to join." };
     return markPlayerSetupReady(currentRow.state, playerId);
@@ -611,9 +505,18 @@ export const markSetupReady = async (sessionId: string, playerId: string) => {
 };
 
 export const resetFinishedGame = async (sessionId: string, playerId: string) => {
-  if (shouldUseMemoryGameService()) {
-    return await memoryResetFinishedGame(sessionId, playerId);
+  const memberships = await getSessionMemberships(sessionId);
+  const initiator = await getProfile(
+    getMemberByRole(memberships, "initiator")?.device_id,
+  );
+  const challenger = await getProfile(
+    getMemberByRole(memberships, "challenger")?.device_id,
+  );
+
+  if (!initiator || !challenger) {
+    throw new Error("Both player profiles are required to start a rematch.");
   }
+
   const row = await updateSessionState(sessionId, (currentRow) => {
     if (!currentRow.state) return { error: "Waiting for challenger to join." };
     if (!currentRow.state.players.some((player) => player.id === playerId)) {
@@ -624,7 +527,12 @@ export const resetFinishedGame = async (sessionId: string, playerId: string) => 
     }
 
     return {
-      nextState: createRematchState(currentRow.state, gameRules, gamePieces),
+      nextState: createRematchState(
+        currentRow.state,
+        [initiator, challenger],
+        gameRules,
+        gamePieces,
+      ),
     };
   });
 
@@ -632,9 +540,6 @@ export const resetFinishedGame = async (sessionId: string, playerId: string) => 
 };
 
 export const closeFinishedGame = async (sessionId: string, playerId: string) => {
-  if (shouldUseMemoryGameService()) {
-    return await memoryCloseFinishedGame(sessionId, playerId);
-  }
   const row = await updateSessionState(sessionId, (currentRow) => {
     if (!currentRow.state) return { error: "Waiting for challenger to join." };
     if (!currentRow.state.players.some((player) => player.id === playerId)) {
@@ -646,7 +551,7 @@ export const closeFinishedGame = async (sessionId: string, playerId: string) => 
 
     return {
       nextState: {
-        ...currentRow.state,
+        ...(currentRow.state ?? {}),
         phase: "closed",
         turnPlayerId: null,
       },
@@ -657,9 +562,6 @@ export const closeFinishedGame = async (sessionId: string, playerId: string) => 
 };
 
 export const surrenderGame = async (sessionId: string, playerId: string) => {
-  if (shouldUseMemoryGameService()) {
-    return await memorySurrenderGame(sessionId, playerId);
-  }
   const row = await updateSessionState(sessionId, (currentRow) => {
     if (!currentRow.state) return { error: "Waiting for challenger to join." };
     if (!currentRow.state.players.some((player) => player.id === playerId)) {
@@ -673,12 +575,12 @@ export const surrenderGame = async (sessionId: string, playerId: string) => {
     return {
       nextState: {
         ...currentRow.state,
+        completionReason: "surrender",
+        finishedAt: getNowIsoString(),
         phase: "finished",
+        surrenderedById: playerId,
         turnPlayerId: null,
         winnerId: winner?.id ?? null,
-        completionReason: "surrender",
-        surrenderedById: playerId,
-        finishedAt: getNowIsoString(),
       },
     };
   });
@@ -695,126 +597,149 @@ export const sendChatMessage = async (
     sentAt?: string;
   },
 ) => {
-  if (shouldUseMemoryGameService()) {
-    return await memorySendChatMessage(sessionId, playerId, text, options);
-  }
   if (!client) throw new Error("Supabase is not configured.");
   const trimmedText = text.trim();
   if (!trimmedText) throw new Error("Enter a message first.");
-  const session = await getSession(sessionId);
+
+  const session = await requireSession(sessionId);
   if (!session.state) throw new Error("Waiting for challenger to join.");
-  const sender = session.state.players.find((player) => player.id === playerId);
-  if (!sender) throw new Error("Unknown player.");
+  if (!session.state.players.some((player) => player.id === playerId)) {
+    throw new Error("Unknown player.");
+  }
+  const sender = await getProfile(playerId);
+  const senderName = sender?.player_name ?? "Commander";
 
   const messageId = options?.messageId ?? nanoid(10);
   const sentAt = options?.sentAt ?? getNowIsoString();
   const { error } = await client.from("session_chat_messages").insert({
     id: messageId,
-    session_id: sessionId,
     player_id: playerId,
-    sender_name: sender.name,
-    text: trimmedText,
+    sender_name: senderName,
     sent_at: sentAt,
+    session_id: sessionId,
+    text: trimmedText,
   });
   if (error) throw error;
 
   return appendChatMessage(session.state, {
     id: messageId,
-    type: "player",
     playerId,
-    senderName: sender.name,
-    text: trimmedText,
+    senderName,
     sentAt,
+    text: trimmedText,
+    type: "player",
   });
 };
 
 export const subscribeToSession = (
   sessionId: string,
-  onSession: (next: SessionRow) => void,
+  onUpdate: (params: RealtimePostgresChangesPayload<GameSession>) => void,
 ) => {
-  if (shouldUseMemoryGameService()) {
-    return memorySubscribeToSession(sessionId, onSession);
-  }
-  if (!client) return () => undefined;
-
-  const channel = client
-    .channel(`session:${sessionId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: TABLE,
-        filter: `session_id=eq.${sessionId}`,
-      },
-      (payload) => {
-        const next = normalizeSessionRow(payload.new as SessionRow);
-        onSession(next);
-      },
-    )
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "session_chat_messages",
-        filter: `session_id=eq.${sessionId}`,
-      },
-      () => {
-        void getSession(sessionId).then(onSession);
-      },
-    )
-    .subscribe();
-
-  return () => {
-    client.removeChannel(channel);
-  };
+  return withRegistry(
+    `session:${sessionId}`,
+    gameSessionRegistry,
+    (handler) =>
+      client
+        .channel(`session:${sessionId}`)
+        .on<GameSession>(
+          "postgres_changes",
+          {
+            event: "*",
+            filter: `session_id=eq.${sessionId}`,
+            schema: "public",
+            table: "game_sessions",
+          },
+          handler,
+        )
+        .subscribe(),
+    onUpdate,
+  );
 };
 
-export const subscribeToSessionDetails = (
+export const subscribeToSessionMemberships = (
   sessionId: string,
-  onSession: (next: SessionRow) => void,
+  onUpdate: Listener<SessionMembership>,
 ) => {
-  if (shouldUseMemoryGameService()) {
-    return memorySubscribeToSession(sessionId, onSession);
-  }
+  return withRegistry(
+    `session-memberships:${sessionId}`,
+    sessionMembershipRegistry,
+    (handler) =>
+      client
+        .channel(`session-memberships:${sessionId}`)
+        .on<SessionMembership>(
+          "postgres_changes",
+          {
+            event: "*",
+            filter: `session_id=eq.${sessionId}`,
+            schema: "public",
+            table: MEMBERSHIP_TABLE,
+          },
+          handler,
+        )
+        .subscribe(),
+    onUpdate,
+  );
+};
+
+function withRegistry<T extends Record<string, any>>(
+  key: string,
+  registry: Map<string, Entry<T>>,
+  callback: (handler: Listener<T>) => RealtimeChannel,
+  onUpdate: Listener<T>,
+) {
   if (!client) return () => undefined;
+  let entry = registry.get(key);
 
-  const publishLatestSession = () => {
-    void getSession(sessionId)
-      .then(onSession)
-      .catch(() => undefined);
-  };
+  if (!entry) {
+    const listeners = new Set<Listener<T>>();
+    entry = {
+      channel: callback((payload) => {
+        for (const listener of listeners) {
+          listener(payload);
+        }
+      }),
+      listeners,
+    };
 
-  const membershipChannel = client
-    .channel(`session-memberships:${sessionId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: MEMBERSHIP_TABLE,
-        filter: `session_id=eq.${sessionId}`,
-      },
-      publishLatestSession,
-    )
-    .subscribe();
+    registry.set(key, entry);
+  }
 
-  const profileChannel = client
-    .channel(`session-profiles:${sessionId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: PROFILE_TABLE,
-      },
-      publishLatestSession,
-    )
-    .subscribe();
+  entry.listeners.add(onUpdate);
 
   return () => {
-    client.removeChannel(membershipChannel);
-    client.removeChannel(profileChannel);
+    const current = registry.get(key);
+    if (!current) return;
+
+    current.listeners.delete(onUpdate);
+
+    if (current.listeners.size === 0) {
+      client.removeChannel(current.channel);
+      registry.delete(key);
+    }
   };
+}
+
+export const subscribeToProfile = (
+  deviceId: string,
+  onUpdate: Listener<PlayerProfile>,
+) => {
+  return withRegistry<PlayerProfile>(
+    `player-profiles:${deviceId}`,
+    profileRegistry,
+    (handler) =>
+      client
+        .channel(`player-profiles:${deviceId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            filter: `device_id=eq.${deviceId}`,
+            schema: "public",
+            table: PROFILE_TABLE,
+          },
+          handler,
+        )
+        .subscribe(),
+    onUpdate,
+  );
 };

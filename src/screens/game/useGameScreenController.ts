@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSWRConfig } from "swr";
 
+import type { GameSessionDetails } from "../../lib/supabaseGameService";
+import type { GameState, Position } from "../../shared/schema";
+import type { PendingBoardAction } from "../../types/ui";
+
 import { useBoardInteractionState } from "../../hooks/useBoardInteractionState";
-import { getSessionCacheKey } from "../../hooks/useGameService";
 import { useCurrentUser } from "../../hooks/useProfile";
 import {
   applyMoveToState,
@@ -12,6 +15,9 @@ import {
   markPlayerSetupReady,
 } from "../../lib/engine";
 import { gamePieces, gameRules } from "../../lib/gameConfig";
+import { getDisplayPlayerById, getGameDisplayPlayers } from "../../lib/gamePlayers";
+import { getSessionCacheKey } from "../../lib/gameServiceCache";
+import { getMemberById } from "../../lib/playerProfile";
 import {
   applyMove as applySessionMove,
   applySetupSwap as applySessionSetupSwap,
@@ -19,37 +25,33 @@ import {
   markSetupReady as markSessionSetupReady,
   resetFinishedGame as resetSessionFinishedGame,
   sendChatMessage as sendSessionChatMessage,
-  type SessionRow,
   surrenderGame as surrenderSessionGame,
 } from "../../lib/supabaseGameService";
-import type { GameState, Position } from "../../shared/schema";
-import type { PendingBoardAction } from "../../types/ui";
 import { serializeBoardActionState } from "../../types/ui";
 
-export function useGameScreenController(session: SessionRow) {
+export function useGameScreenController(session: GameSessionDetails) {
   const navigate = useNavigate();
   const { mutate: mutateCache } = useSWRConfig();
   const { data: currentUser } = useCurrentUser();
-  const [selected, setSelected] = useState<Position | null>(null);
+  const [selected, setSelected] = useState<null | Position>(null);
   const [pendingBoardAction, setPendingBoardAction] =
-    useState<PendingBoardAction | null>(null);
+    useState<null | PendingBoardAction>(null);
 
   const myMembership =
-    session.memberships?.find(
-      (membership) => membership.device_id === currentUser?.device_id,
-    ) ?? null;
+    getMemberById(session.memberships, currentUser?.device_id) ?? null;
   const myId = myMembership?.device_id ?? null;
   const archived = Boolean(myMembership?.archived_at);
   const state = session.state;
   const sessionCacheKey = getSessionCacheKey(session.session_id);
+  const displayPlayers = getGameDisplayPlayers(state, session.memberships);
 
   const { disabled, isSetupPhase, legalTargets, selectablePieceKeys } =
     useBoardInteractionState({
-      state,
-      myId,
-      selected,
-      pendingBoardAction,
       isCurrentSessionArchived: archived,
+      myId,
+      pendingBoardAction,
+      selected,
+      state,
     });
 
   useEffect(() => {
@@ -80,7 +82,7 @@ export function useGameScreenController(session: SessionRow) {
 
     await mutateCache(
       sessionCacheKey,
-      async (currentSession?: SessionRow) => {
+      async (currentSession?: GameSessionDetails) => {
         const nextState = await commit();
         const baseSession = currentSession ?? session;
         return {
@@ -90,7 +92,7 @@ export function useGameScreenController(session: SessionRow) {
         };
       },
       {
-        optimisticData: (currentSession?: SessionRow) => {
+        optimisticData: (currentSession?: GameSessionDetails) => {
           const baseSession = currentSession ?? session;
           return {
             ...baseSession,
@@ -232,8 +234,14 @@ export function useGameScreenController(session: SessionRow) {
 
   const playAgain = async () => {
     if (!state || !myId || state.phase !== "finished") return;
+    if (!session.initiator || !session.challenger) return;
 
-    const nextState = createRematchState(state, gameRules, gamePieces);
+    const nextState = createRematchState(
+      state,
+      [session.initiator, session.challenger],
+      gameRules,
+      gamePieces,
+    );
     setSelected(null);
 
     try {
@@ -271,12 +279,12 @@ export function useGameScreenController(session: SessionRow) {
     const winnerAfterSurrender = state.players.find((player) => player.id !== myId);
     const nextState = {
       ...state,
+      completionReason: "surrender" as const,
+      finishedAt: new Date().toISOString(),
       phase: "finished" as const,
+      surrenderedById: myId,
       turnPlayerId: null,
       winnerId: winnerAfterSurrender?.id ?? null,
-      completionReason: "surrender" as const,
-      surrenderedById: myId,
-      finishedAt: new Date().toISOString(),
     };
     setSelected(null);
 
@@ -295,8 +303,10 @@ export function useGameScreenController(session: SessionRow) {
     const trimmedMessage = message.trim();
     if (!trimmedMessage) return;
 
-    const sender = state.players.find((player) => player.id === myId);
-    if (!sender) return;
+    const senderName =
+      currentUser?.player_name ??
+      getDisplayPlayerById(displayPlayers, myId)?.name ??
+      "Commander";
 
     const messageId = `${myId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const sentAt = new Date().toISOString();
@@ -306,11 +316,11 @@ export function useGameScreenController(session: SessionRow) {
         ...state.chatMessages,
         {
           id: messageId,
-          type: "player" as const,
           playerId: myId,
-          senderName: sender.name,
-          text: trimmedMessage,
+          senderName,
           sentAt,
+          text: trimmedMessage,
+          type: "player" as const,
         },
       ],
     };
@@ -334,8 +344,8 @@ export function useGameScreenController(session: SessionRow) {
     disabled,
     finishGame,
     isMyTurn,
-    legalTargets,
     leaveCurrentSession,
+    legalTargets,
     markReady,
     myId,
     onCellClick,

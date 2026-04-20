@@ -43,7 +43,7 @@ const getConfiguredStorage = (): StorageLike => {
     : memoryStorage;
 };
 
-const parseJson = <T>(raw: string | null, fallback: T): T => {
+const parseJson = <T>(raw: null | string, fallback: T): T => {
   if (!raw) return fallback;
 
   try {
@@ -54,8 +54,8 @@ const parseJson = <T>(raw: string | null, fallback: T): T => {
 };
 
 const repairStoredDeviceIdentity = (
-  identity: Partial<StoredDeviceIdentity> | null,
-): StoredDeviceIdentity | null => {
+  identity: null | Partial<StoredDeviceIdentity>,
+): null | StoredDeviceIdentity => {
   if (!identity?.deviceId) return null;
 
   return {
@@ -66,7 +66,7 @@ const repairStoredDeviceIdentity = (
 export const getOrCreateStoredDeviceIdentity = (): StoredDeviceIdentity => {
   const storage = getConfiguredStorage();
 
-  const existing = parseJson<StoredDeviceIdentity | null>(
+  const existing = parseJson<null | StoredDeviceIdentity>(
     storage.getItem(DEVICE_KEY),
     null,
   );

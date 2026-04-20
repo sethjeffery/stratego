@@ -3,7 +3,7 @@ import styles from "./GameSurface.module.css";
 
 type GameSetupActionsProps = {
   canMarkReady: boolean;
-  onMarkReady: () => void | Promise<void>;
+  onMarkReady: () => Promise<void> | void;
 };
 
 export function GameSetupActions({ canMarkReady, onMarkReady }: GameSetupActionsProps) {

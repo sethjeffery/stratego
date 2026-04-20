@@ -8,9 +8,9 @@ import type {
   RulesConfig,
   Unit,
 } from "../shared/schema";
-import { appendChatMessage } from "../shared/schema";
-import { pickRandomAvatarId } from "./playerProfile";
 import type { UserProfile } from "./supabaseGameService";
+
+import { appendChatMessage } from "../shared/schema";
 
 const buildPieceMap = (pieces: PieceDefinition[]) =>
   new Map(pieces.map((piece) => [piece.id, piece]));
@@ -141,7 +141,7 @@ const resolveBattle = (
   defender: Unit,
   pieceById: Map<string, PieceDefinition>,
   rules: RulesConfig,
-): "attacker" | "defender" | "both" => {
+): "attacker" | "both" | "defender" => {
   const a = pieceById.get(attacker.pieceId)!;
   const d = pieceById.get(defender.pieceId)!;
 
@@ -158,18 +158,18 @@ const createBattleChatMessage = (
   state: GameState,
   attacker: Unit,
   defender: Unit,
-  winner: "attacker" | "defender" | "both",
+  winner: "attacker" | "both" | "defender",
 ) => ({
-  id: `system-battle-${state.moveCount + 1}`,
-  type: "battle" as const,
-  sentAt: new Date().toISOString(),
   battle: {
     attackerOwnerId: attacker.ownerId,
-    defenderOwnerId: defender.ownerId,
     attackerPieceId: attacker.pieceId,
+    defenderOwnerId: defender.ownerId,
     defenderPieceId: defender.pieceId,
     winner,
   },
+  id: `system-battle-${state.moveCount + 1}`,
+  sentAt: new Date().toISOString(),
+  type: "battle" as const,
 });
 
 export const createSessionGame = (
@@ -177,46 +177,42 @@ export const createSessionGame = (
   challengerProfile: UserProfile,
   rules: RulesConfig,
   pieces: PieceDefinition[],
-  playerIds?: { initiatorId: string; challengerId: string },
-): { state: GameState; initiatorId: string; challengerId: string } => {
+  playerIds?: { challengerId: string; initiatorId: string },
+): { challengerId: string; initiatorId: string; state: GameState } => {
   const initiatorId = playerIds?.initiatorId ?? nanoid(10);
   const challengerId = playerIds?.challengerId ?? nanoid(10);
 
   const players: PlayerState[] = [
     {
-      id: initiatorId,
-      name: initiatorProfile.player_name,
-      avatarId: initiatorProfile.avatar_id,
       connected: true,
+      id: initiatorId,
     },
     {
-      id: challengerId,
-      name: challengerProfile.player_name,
-      avatarId: challengerProfile.avatar_id,
       connected: true,
+      id: challengerId,
     },
   ];
 
   return {
-    initiatorId,
     challengerId,
+    initiatorId,
     state: {
-      roomCode: "",
-      phase: "setup",
+      chatMessages: [],
       completionReason: "flag_capture",
-      surrenderedById: null,
-      setupReadyPlayerIds: [],
-      turnPlayerId: null,
-      winnerId: null,
-      startedAt: null,
       finishedAt: null,
+      moveCount: 0,
+      phase: "setup",
       players,
+      roomCode: "",
+      setupReadyPlayerIds: [],
+      startedAt: null,
+      surrenderedById: null,
+      turnPlayerId: null,
       units: [
         ...createLineup(players[0].id, false, rules, pieces),
         ...createLineup(players[1].id, true, rules, pieces),
       ],
-      moveCount: 0,
-      chatMessages: [],
+      winnerId: null,
     },
   };
 };
@@ -284,7 +280,7 @@ export const applySetupSwapToState = (
   to: Position,
   rules: RulesConfig,
   pieces: PieceDefinition[],
-): { nextState?: GameState; error?: string } => {
+): { error?: string; nextState?: GameState } => {
   if (state.phase !== "setup") return { error: "Setup is complete." };
   if (state.setupReadyPlayerIds.includes(playerId))
     return { error: "You are already marked ready." };
@@ -315,8 +311,8 @@ export const applySetupSwapToState = (
   return {
     nextState: {
       ...state,
-      units: nextUnits,
       players: state.players.map((player) => ({ ...player })),
+      units: nextUnits,
     },
   };
 };
@@ -324,7 +320,7 @@ export const applySetupSwapToState = (
 export const markPlayerSetupReady = (
   state: GameState,
   playerId: string,
-): { nextState?: GameState; error?: string } => {
+): { error?: string; nextState?: GameState } => {
   if (state.phase !== "setup") return { error: "Setup is complete." };
   if (!state.players.some((player) => player.id === playerId))
     return { error: "Unknown player." };
@@ -338,13 +334,13 @@ export const markPlayerSetupReady = (
   return {
     nextState: {
       ...state,
-      setupReadyPlayerIds: nextReady,
+      finishedAt: everyoneReady ? null : state.finishedAt,
       phase: everyoneReady ? "battle" : "setup",
+      setupReadyPlayerIds: nextReady,
+      startedAt: everyoneReady ? new Date().toISOString() : state.startedAt,
       turnPlayerId: everyoneReady
         ? (state.players[Math.floor(Math.random() * state.players.length)]?.id ?? null)
         : null,
-      startedAt: everyoneReady ? new Date().toISOString() : state.startedAt,
-      finishedAt: everyoneReady ? null : state.finishedAt,
     },
   };
 };
@@ -356,7 +352,7 @@ export const applyMoveToState = (
   to: Position,
   rules: RulesConfig,
   pieces: PieceDefinition[],
-): { nextState?: GameState; error?: string } => {
+): { error?: string; nextState?: GameState } => {
   if (state.phase !== "battle") return { error: "Battle has not started yet." };
   if (state.winnerId) return { error: "Game already finished." };
   if (state.turnPlayerId !== playerId) return { error: "Not your turn." };
@@ -372,12 +368,12 @@ export const applyMoveToState = (
 
   const nextState: GameState = {
     ...state,
-    phase: state.phase,
     completionReason: state.completionReason ?? "flag_capture",
-    surrenderedById: state.surrenderedById ?? null,
-    setupReadyPlayerIds: [...state.setupReadyPlayerIds],
-    units: state.units.map((u) => ({ ...u, revealedTo: [...u.revealedTo] })),
+    phase: state.phase,
     players: state.players.map((p) => ({ ...p })),
+    setupReadyPlayerIds: [...state.setupReadyPlayerIds],
+    surrenderedById: state.surrenderedById ?? null,
+    units: state.units.map((u) => ({ ...u, revealedTo: [...u.revealedTo] })),
   };
 
   const pieceById = buildPieceMap(pieces);
@@ -463,6 +459,7 @@ export const applyMoveToState = (
 
 export const createRematchState = (
   state: GameState,
+  profiles: [UserProfile, UserProfile],
   rules: RulesConfig,
   pieces: PieceDefinition[],
 ): GameState => {
@@ -470,22 +467,10 @@ export const createRematchState = (
     throw new Error("Cannot reset without both players.");
   }
 
-  const next = createSessionGame(
-    {
-      player_name: state.players[0].name,
-      avatar_id: state.players[0].avatarId ?? pickRandomAvatarId(),
-    },
-    {
-      player_name: state.players[1].name,
-      avatar_id: state.players[1].avatarId ?? pickRandomAvatarId(),
-    },
-    rules,
-    pieces,
-    {
-      initiatorId: state.players[0].id,
-      challengerId: state.players[1].id,
-    },
-  ).state;
+  const next = createSessionGame(profiles[0], profiles[1], rules, pieces, {
+    challengerId: state.players[1].id,
+    initiatorId: state.players[0].id,
+  }).state;
   next.roomCode = state.roomCode;
   return next;
 };

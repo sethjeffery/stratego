@@ -3,14 +3,14 @@ import clsx from "clsx";
 import styles from "./Button.module.css";
 
 export function Button({
-  variant = "primary",
-  className,
   children,
+  className,
+  variant = "primary",
   ...rest
-}: {
-  variant?: "primary" | "secondary";
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   children: React.ReactNode;
-} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  variant?: "primary" | "secondary";
+}) {
   return (
     <button className={clsx(styles.button, styles[variant], className)} {...rest}>
       {children}
