@@ -10,8 +10,11 @@ export function GameSetupActions({ canMarkReady, onMarkReady }: GameSetupActions
   if (!canMarkReady) return null;
 
   return (
-    <Button className={styles.gameReadyButton} onClick={() => void onMarkReady()}>
-      Ready
-    </Button>
+    <>
+      <p>Click your pieces to swap their positions.</p>
+      <Button className={styles.gameReadyButton} onClick={() => void onMarkReady()}>
+        Ready
+      </Button>
+    </>
   );
 }

@@ -177,6 +177,7 @@
 
 .gameReadyButton {
   align-self: end;
+  width: 100%;
 }
 
 .gameChatDock {
