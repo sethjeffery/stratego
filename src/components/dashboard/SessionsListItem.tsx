@@ -1,9 +1,4 @@
-import {
-  ArchiveIcon,
-  FlagIcon,
-  MedalIcon,
-  SkullIcon,
-} from "@phosphor-icons/react";
+import { ArchiveIcon, FlagIcon, MedalIcon, SkullIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -98,11 +93,12 @@ export function SessionsListItem({
         </div>
 
         <div className={styles.sessionText}>
-          <strong className={styles.sessionId}>{session.session_id}</strong>
           <p className={styles.playerNames}>{playerLabel}</p>
           <p className={styles.sessionStatus}>
             {statusIcon ? (
-              <span className={styles.sessionStatusIcon}>{renderOutcomeIcon(statusIcon)}</span>
+              <span className={styles.sessionStatusIcon}>
+                {renderOutcomeIcon(statusIcon)}
+              </span>
             ) : null}
             <span>{statusLabel}</span>
           </p>

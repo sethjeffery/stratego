@@ -5,11 +5,11 @@
   display: grid;
   place-items: center;
   z-index: 120;
-  padding: 1.25rem;
+  padding: 1.25rem 0.5rem;
 }
 
 .modal {
-  width: min(30rem, 100%);
+  width: min(30rem, 90vw);
   border-radius: 1rem;
   border: 1px solid rgba(220, 196, 147, 0.35);
   background: linear-gradient(

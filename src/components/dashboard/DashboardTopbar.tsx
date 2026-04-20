@@ -61,7 +61,11 @@ export function DashboardTopbar({
               placeholder="Commander Name"
               value={name}
             />
-            <Button onClick={randomizeName} variant="secondary">
+            <Button
+              className={styles.randomButton}
+              onClick={randomizeName}
+              variant="secondary"
+            >
               <ArrowClockwiseIcon size={32} weight="bold" />
             </Button>
           </div>

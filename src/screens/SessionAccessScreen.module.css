@@ -46,13 +46,13 @@
   display: flex;
   gap: var(--space-2);
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: clamp(1.25rem, 3.5vw, 1.5rem);
   line-height: 1;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
 }
 
 .playerList > span {
-  margin-top: 96px;
+  margin-top: clamp(72px, 15vw, 96px);
 }
 
 .playerRow {
@@ -61,8 +61,13 @@
   align-items: center;
   gap: var(--space-3);
   font-weight: 600;
-  width: 196px;
+  width: clamp(160px, 30vw, 196px);
   text-align: center;
+}
+
+.playerRow img,
+.playerRow span {
+  width: clamp(96px, 20vw, 128px);
 }
 
 .linkBlock {
@@ -81,7 +86,7 @@
 
 .title {
   text-align: center;
-  font-size: 3rem;
+  font-size: clamp(2.5rem, 8vw, 3rem);
   line-height: 1;
   text-shadow: 0 2px 2px rgba(0, 0, 0, 0.5);
   margin: 0 0 2rem;

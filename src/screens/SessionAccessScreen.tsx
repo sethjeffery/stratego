@@ -95,9 +95,8 @@ export function SessionAccessScreen() {
               avatarUrl={resolveAvatarUrl(initiator.avatar_id)}
               color="red"
               shadow
-              width={128}
             />
-            <div className={styles.playerName}>{initiator.player_name}</div>
+            <div>{initiator.player_name}</div>
           </article>
         ) : null}
         <span>VS</span>
@@ -107,13 +106,12 @@ export function SessionAccessScreen() {
               avatarUrl={resolveAvatarUrl(challenger.avatar_id)}
               color="blue"
               shadow
-              width={128}
             />
-            <div className={styles.playerName}>{challenger.player_name}</div>
+            <div>{challenger.player_name}</div>
           </article>
         ) : (
           <article className={clsx(styles.playerRow)}>
-            <Avatar color="blue" shadow width={128} />
+            <Avatar color="blue" shadow />
           </article>
         )}
       </div>

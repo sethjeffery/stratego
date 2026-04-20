@@ -7,10 +7,11 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  width: 100vw;
 }
 
 .intro {
-  font-size: 1.5rem;
+  font-size: clamp(1rem, 3.5vw, 1.5rem);
   grid-column: 1 / -1;
 }
 
@@ -85,6 +86,7 @@
 
 .avatarButton {
   width: 128px;
+  max-width: 20vw;
 }
 
 .identityCopy {
@@ -94,9 +96,10 @@
 }
 
 .nameInput {
-  font-size: clamp(1.35rem, 2.4vw, 2rem);
+  font-size: clamp(1.2rem, 2.4vw, 2rem);
   font-weight: 700;
   line-height: 1.1;
+  max-width: calc(100vw - 10rem);
 }
 
 .topbarActions {
@@ -177,6 +180,15 @@
 @media (max-width: 900px) {
   .topbar {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .identityCopy {
+    grid-template-columns: 1fr;
+  }
+  .randomButton {
+    display: none;
   }
 }
 
