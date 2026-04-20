@@ -137,7 +137,6 @@ export const getCompletionStats = (state: GameState) => {
   };
 };
 
-export type CompletionOutcomeIcon = "flag" | "medal" | "skull";
 export type GameCompletionStats = ReturnType<typeof getCompletionStats>;
 
 export const formatDuration = (durationMs: null | number) => {
@@ -159,14 +158,14 @@ export const getCompletionCopy = (
   const didISurrender = state.surrenderedById === myId;
   const didIWin = Boolean(myId) && state.winnerId === myId;
 
-  let completionDescription = "Flag secured. Match complete.";
-  let completionIcon: CompletionOutcomeIcon = didIWin ? "medal" : "skull";
+  let completionDescription = didIWin
+    ? "You successfully destroyed your opponent."
+    : "Your flag is captured, you're a disgrace.";
   let completionTitle = didIWin ? "You won" : "You lost";
 
   if (state.completionReason === "surrender") {
-    completionIcon = "flag";
     completionDescription = didISurrender
-      ? "You surrendered."
+      ? "There is no shame in conceding to a superior opponent."
       : `${surrenderedPlayer?.name ?? "A player"} surrendered.`;
     completionTitle = didISurrender
       ? "You surrendered"
@@ -175,7 +174,6 @@ export const getCompletionCopy = (
 
   return {
     completionDescription,
-    completionIcon,
     completionTitle,
     surrenderedPlayer,
     winner,

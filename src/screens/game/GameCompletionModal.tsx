@@ -1,8 +1,7 @@
-import { FlagIcon, MedalIcon, SkullIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import type { GameDisplayPlayer } from "../../lib/gamePlayers";
-import type { CompletionOutcomeIcon, GameCompletionStats } from "./gameScreenSelectors";
+import type { GameCompletionStats } from "./gameScreenSelectors";
 
 import victoryBlue from "../../assets/victory-blue.png";
 import victoryRed from "../../assets/victory-red.png";
@@ -14,7 +13,6 @@ import { Modal } from "./Modal";
 
 type GameCompletionModalProps = {
   completionDescription: string;
-  completionIcon: CompletionOutcomeIcon;
   completionStats: GameCompletionStats;
   completionTitle: string;
   isClosed: boolean;
@@ -25,20 +23,8 @@ type GameCompletionModalProps = {
   winnerColor: "blue" | "red";
 };
 
-const renderCompletionIcon = (icon: CompletionOutcomeIcon) => {
-  switch (icon) {
-    case "flag":
-      return <FlagIcon size={22} weight="fill" />;
-    case "medal":
-      return <MedalIcon size={22} weight="fill" />;
-    case "skull":
-      return <SkullIcon size={22} weight="fill" />;
-  }
-};
-
 export function GameCompletionModal({
   completionDescription,
-  completionIcon,
   completionStats,
   completionTitle,
   isClosed,
@@ -82,14 +68,7 @@ export function GameCompletionModal({
       }
       description={completionDescription}
       sunburst
-      title={
-        <span className={styles.completionTitle}>
-          <span className={styles.completionTitleIcon}>
-            {renderCompletionIcon(completionIcon)}
-          </span>
-          <span>{completionTitle}</span>
-        </span>
-      }
+      title={<span className={styles.completionTitle}>{completionTitle}</span>}
       titleText={completionTitle}
     >
       <img

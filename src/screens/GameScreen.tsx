@@ -53,8 +53,7 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
   const displayPlayers = getGameDisplayPlayers(state, session.memberships);
   const otherPlayerName =
     getOtherDisplayPlayer(displayPlayers, myId)?.name ?? "the opponent";
-  const { completionDescription, completionIcon, completionTitle, winner } =
-    getCompletionCopy(
+  const { completionDescription, completionTitle, winner } = getCompletionCopy(
     state,
     displayPlayers,
     myId,
@@ -122,7 +121,6 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
       {completionVisible && (
         <GameCompletionModal
           completionDescription={completionDescription}
-          completionIcon={completionIcon}
           completionStats={completionStats}
           completionTitle={completionTitle}
           isClosed={isClosed}
