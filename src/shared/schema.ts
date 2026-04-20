@@ -105,9 +105,17 @@ export type Unit = {
   ownerId: string;
   pieceId: string;
   revealedTo: string[];
+  status?: "alive" | "captured";
   x: number;
   y: number;
 };
+
+export type UnitStatus = NonNullable<Unit["status"]>;
+
+export const isUnitAlive = (unit: Unit) => unit.status !== "captured";
+
+export const getAliveUnits = (state: Pick<GameState, "units">) =>
+  state.units.filter(isUnitAlive);
 
 export const getChatMessages = (state: GameState) => {
   const maybeMessages = (state as GameState & { chatMessages?: GameChatMessage[] })

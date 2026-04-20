@@ -7,6 +7,7 @@ import type {
 } from "../../shared/schema";
 
 import { gamePieces } from "../../lib/gameConfig";
+import { getAliveUnits } from "../../shared/schema";
 
 export const pieceById = new Map(gamePieces.map((piece) => [piece.id, piece]));
 
@@ -27,7 +28,9 @@ export const getInspectedPieceState = (
   myId: null | string,
 ) => {
   const inspectedUnit = selected
-    ? (state.units.find((unit) => unit.x === selected.x && unit.y === selected.y) ??
+    ? (getAliveUnits(state).find(
+        (unit) => unit.x === selected.x && unit.y === selected.y,
+      ) ??
       null)
     : null;
   const inspectedPiece = inspectedUnit

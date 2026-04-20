@@ -27,6 +27,7 @@ import {
   sendChatMessage as sendSessionChatMessage,
   surrenderGame as surrenderSessionGame,
 } from "../../lib/supabaseGameService";
+import { getAliveUnits } from "../../shared/schema";
 import { serializeBoardActionState } from "../../types/ui";
 
 export function useGameScreenController(session: GameSessionDetails) {
@@ -62,7 +63,7 @@ export function useGameScreenController(session: GameSessionDetails) {
   useEffect(() => {
     if (!state || !selected) return;
 
-    const stillExists = state.units.some(
+    const stillExists = getAliveUnits(state).some(
       (unit) => unit.x === selected.x && unit.y === selected.y,
     );
     if (!stillExists) {
@@ -119,7 +120,7 @@ export function useGameScreenController(session: GameSessionDetails) {
   const onCellClick = async (target: Position) => {
     if (!state) return;
 
-    const clickedUnit = state.units.find(
+    const clickedUnit = getAliveUnits(state).find(
       (unit) => unit.x === target.x && unit.y === target.y,
     );
     const targetKey = `${target.x}-${target.y}`;

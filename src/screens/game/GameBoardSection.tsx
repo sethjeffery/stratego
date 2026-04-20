@@ -1,5 +1,4 @@
 import type { GameState, Position } from "../../shared/schema";
-import type { PendingBoardAction } from "../../types/ui";
 
 import { ProjectedBoard } from "../../components/ProjectedBoard";
 import boardStyles from "../../components/projectedBoard/ProjectedBoard.module.css";
@@ -10,7 +9,6 @@ type GameBoardSectionProps = {
   legalTargets: Position[];
   myId: null | string;
   onCellClick: (target: Position) => Promise<void> | void;
-  pendingBoardAction: null | PendingBoardAction;
   selectablePieceKeys: Set<string>;
   selected: null | Position;
   state: GameState;
@@ -21,7 +19,6 @@ export function GameBoardSection({
   legalTargets,
   myId,
   onCellClick,
-  pendingBoardAction,
   selectablePieceKeys,
   selected,
   state,
@@ -34,7 +31,6 @@ export function GameBoardSection({
         legalTargets={legalTargets}
         myId={myId}
         onCellClick={(target) => void onCellClick(target)}
-        pendingBoardAction={pendingBoardAction}
         pieces={gamePieces}
         rules={gameRules}
         selectablePieceKeys={selectablePieceKeys}

@@ -34,7 +34,6 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
     markReady,
     myId,
     onCellClick,
-    pendingBoardAction,
     playAgain,
     selectablePieceKeys,
     selected,
@@ -97,7 +96,6 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
           legalTargets={legalTargets}
           myId={myId}
           onCellClick={onCellClick}
-          pendingBoardAction={pendingBoardAction}
           selectablePieceKeys={selectablePieceKeys}
           selected={selected}
           state={state}

@@ -169,10 +169,6 @@
   pointer-events: auto;
 }
 
-.ghost {
-  pointer-events: none;
-}
-
 .battleBurst {
   pointer-events: none;
 }
@@ -218,31 +214,6 @@
   opacity: 0.25;
 }
 
-.ghost .piece {
-  opacity: 0.94;
-  filter: brightness(1.08);
-  transition:
-    transform 180ms ease,
-    filter 180ms ease,
-    box-shadow 180ms ease,
-    opacity 280ms ease;
-}
-
-.resolving .piece {
-  opacity: 0;
-}
-
-.ghost .piece::before {
-  opacity: 0.45;
-  transition:
-    transform 180ms ease,
-    opacity 280ms ease;
-}
-
-.resolving .piece::before {
-  opacity: 0;
-}
-
 .piece {
   width: 90%;
   height: 120%;
@@ -273,6 +244,20 @@
   transition:
     transform 180ms ease,
     opacity 180ms ease;
+}
+
+.captured {
+  pointer-events: none;
+}
+
+.captured .piece {
+  opacity: 0;
+  filter: saturate(0.75) brightness(0.9);
+  transform: translateY(calc(-18% - var(--piece-lift))) scale(0.92);
+}
+
+.captured .piece::before {
+  opacity: 0;
 }
 
 .pieceShell {

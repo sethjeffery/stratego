@@ -42,6 +42,20 @@ export function GameBattleMessage({
             />
             <span>died</span>
           </>
+        ) : display.isLossForViewer ? (
+          <>
+            <GameBattlePieceBadge
+              ownerId={display.secondOwnerId}
+              pieceId={display.secondPieceId}
+              playerOneId={playerOneId}
+            />
+            <span>killed</span>
+            <GameBattlePieceBadge
+              ownerId={display.firstOwnerId}
+              pieceId={display.firstPieceId}
+              playerOneId={playerOneId}
+            />
+          </>
         ) : (
           <>
             <GameBattlePieceBadge
@@ -49,7 +63,7 @@ export function GameBattleMessage({
               pieceId={display.firstPieceId}
               playerOneId={playerOneId}
             />
-            <span>{display.isLossForViewer ? "killed by" : "killed"}</span>
+            <span>killed</span>
             <GameBattlePieceBadge
               ownerId={display.secondOwnerId}
               pieceId={display.secondPieceId}

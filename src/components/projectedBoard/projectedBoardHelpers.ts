@@ -23,6 +23,10 @@ export const getCellStyle = (
   zIndex: 1,
 });
 
+export const getPieceZIndex = (displayY: number) => displayY;
+
+export const getBattleBurstZIndex = (displayY: number) => displayY + 1;
+
 export const getPieceStyle = (
   x: number,
   y: number,

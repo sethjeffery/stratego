@@ -5,6 +5,7 @@ import type { PendingBoardAction } from "../types/ui";
 
 import { getLegalMovesForUnit, getSetupSwapTargets } from "../lib/engine";
 import { gamePieces, gameRules } from "../lib/gameConfig";
+import { getAliveUnits } from "../shared/schema";
 
 type UseBoardInteractionStateArgs = {
   isCurrentSessionArchived: boolean;
@@ -43,9 +44,10 @@ export function useBoardInteractionState({
   const selectablePieceKeys = useMemo(() => {
     if (!state || !myId || disabled) return new Set<string>();
 
+    const aliveUnits = getAliveUnits(state);
     const keys =
       state.phase === "setup"
-        ? state.units
+        ? aliveUnits
             .filter((unit) => unit.ownerId === myId)
             .filter(
               (unit) =>
@@ -58,7 +60,7 @@ export function useBoardInteractionState({
                 ).length > 0,
             )
             .map((unit) => `${unit.x}-${unit.y}`)
-        : state.units
+        : aliveUnits
             .filter((unit) => unit.ownerId === myId)
             .filter(
               (unit) =>

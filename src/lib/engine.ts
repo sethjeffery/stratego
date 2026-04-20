@@ -10,7 +10,7 @@ import type {
 } from "../shared/schema";
 import type { UserProfile } from "./supabaseGameService";
 
-import { appendChatMessage } from "../shared/schema";
+import { appendChatMessage, getAliveUnits, isUnitAlive } from "../shared/schema";
 
 const buildPieceMap = (pieces: PieceDefinition[]) =>
   new Map(pieces.map((piece) => [piece.id, piece]));
@@ -108,6 +108,7 @@ const createLineup = (
         ownerId,
         pieceId: piece.id,
         revealedTo: [ownerId],
+        status: "alive",
         x: absolutePosition.x,
         y: absolutePosition.y,
       });
@@ -124,11 +125,12 @@ const createLineup = (
 
   const shuffledSlots = [...freeSlots].sort(() => Math.random() - 0.5);
 
-  const randomUnits = bag.map((piece, index) => ({
+  const randomUnits: Unit[] = bag.map((piece, index) => ({
     id: allocateUnitId(piece.id),
     ownerId,
     pieceId: piece.id,
     revealedTo: [ownerId],
+    status: "alive",
     x: shuffledSlots[index].x,
     y: shuffledSlots[index].y,
   }));
@@ -255,7 +257,11 @@ export const getSetupSwapTargets = (
   const pieceById = buildPieceMap(pieces);
   const setupRows = getSetupRowsForPlayer(playerId, state, rules);
   const sourceUnit = state.units.find(
-    (unit) => unit.ownerId === playerId && unit.x === from.x && unit.y === from.y,
+    (unit) =>
+      isUnitAlive(unit) &&
+      unit.ownerId === playerId &&
+      unit.x === from.x &&
+      unit.y === from.y,
   );
   if (!sourceUnit) return [];
 
@@ -263,7 +269,7 @@ export const getSetupSwapTargets = (
   if (!sourcePiece || isSetupUnitLocked(sourceUnit, sourcePiece)) return [];
 
   return state.units
-    .filter((unit) => unit.ownerId === playerId)
+    .filter((unit) => isUnitAlive(unit) && unit.ownerId === playerId)
     .filter((unit) => setupRows.has(unit.y))
     .filter((unit) => unit.id !== sourceUnit.id)
     .filter((unit) => {
@@ -291,10 +297,18 @@ export const applySetupSwapToState = (
   }
 
   const source = state.units.find(
-    (unit) => unit.ownerId === playerId && unit.x === from.x && unit.y === from.y,
+    (unit) =>
+      isUnitAlive(unit) &&
+      unit.ownerId === playerId &&
+      unit.x === from.x &&
+      unit.y === from.y,
   )!;
   const destination = state.units.find(
-    (unit) => unit.ownerId === playerId && unit.x === to.x && unit.y === to.y,
+    (unit) =>
+      isUnitAlive(unit) &&
+      unit.ownerId === playerId &&
+      unit.x === to.x &&
+      unit.y === to.y,
   )!;
   const nextUnits = state.units.map((unit) => ({
     ...unit,
@@ -378,7 +392,7 @@ export const applyMoveToState = (
 
   const pieceById = buildPieceMap(pieces);
   const moving = nextState.units.find(
-    (u) => u.x === from.x && u.y === from.y && u.ownerId === playerId,
+    (u) => isUnitAlive(u) && u.x === from.x && u.y === from.y && u.ownerId === playerId,
   );
   if (!moving) return { error: "No controllable unit at source." };
 
@@ -390,7 +404,7 @@ export const applyMoveToState = (
   }
 
   const defender = nextState.units.find(
-    (u) => u.x === to.x && u.y === to.y && u.ownerId !== playerId,
+    (u) => isUnitAlive(u) && u.x === to.x && u.y === to.y && u.ownerId !== playerId,
   );
   const movementProvesIdentity =
     movingPiece.canTraverseMany && moveDistance(from, to) > 1;
@@ -404,18 +418,17 @@ export const applyMoveToState = (
     revealUnitToPlayers(moving, nextState.players);
     revealUnitToPlayers(defender, nextState.players);
     const winner = resolveBattle(moving, defender, pieceById, rules);
+    moving.x = to.x;
+    moving.y = to.y;
 
     if (winner === "attacker") {
       if (defender.pieceId === rules.attack.flagId) nextState.winnerId = playerId;
-      nextState.units = nextState.units.filter((u) => u.id !== defender.id);
-      moving.x = to.x;
-      moving.y = to.y;
+      defender.status = "captured";
     } else if (winner === "defender") {
-      nextState.units = nextState.units.filter((u) => u.id !== moving.id);
+      moving.status = "captured";
     } else {
-      nextState.units = nextState.units.filter(
-        (u) => u.id !== moving.id && u.id !== defender.id,
-      );
+      moving.status = "captured";
+      defender.status = "captured";
     }
 
     nextState.lastBattle = {
@@ -441,7 +454,7 @@ export const applyMoveToState = (
 
   nextState.moveCount += 1;
   const alivePlayers = nextState.players.filter((player) =>
-    nextState.units.some((u) => u.ownerId === player.id),
+    getAliveUnits(nextState).some((u) => u.ownerId === player.id),
   );
   if (alivePlayers.length === 1) nextState.winnerId = alivePlayers[0].id;
 
@@ -490,7 +503,7 @@ export const getLegalMovesForUnit = (
 
   const pieceById = buildPieceMap(pieces);
   const moving = state.units.find(
-    (u) => u.x === from.x && u.y === from.y && u.ownerId === playerId,
+    (u) => isUnitAlive(u) && u.x === from.x && u.y === from.y && u.ownerId === playerId,
   );
   if (!moving) return [];
 
@@ -498,10 +511,14 @@ export const getLegalMovesForUnit = (
   if (!movingPiece || movingPiece.immovable) return [];
 
   const occupiedBySelf = new Set(
-    state.units.filter((u) => u.ownerId === playerId).map((u) => `${u.x},${u.y}`),
+    getAliveUnits(state)
+      .filter((u) => u.ownerId === playerId)
+      .map((u) => `${u.x},${u.y}`),
   );
   const occupiedByEnemy = new Set(
-    state.units.filter((u) => u.ownerId !== playerId).map((u) => `${u.x},${u.y}`),
+    getAliveUnits(state)
+      .filter((u) => u.ownerId !== playerId)
+      .map((u) => `${u.x},${u.y}`),
   );
 
   if (!movingPiece.canTraverseMany) {

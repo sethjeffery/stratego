@@ -1,19 +1,21 @@
 import clsx from "clsx";
 
 import type { GameState, PieceDefinition, Position, Unit } from "../../shared/schema";
-import type { GhostUnitState } from "./types";
 
+import { isUnitAlive } from "../../shared/schema";
 import styles from "./ProjectedBoard.module.css";
 import { ProjectedBoardBattleBurst } from "./ProjectedBoardBattleBurst";
-import { colorForOwner, getPieceStyle } from "./projectedBoardHelpers";
+import {
+  colorForOwner,
+  getPieceStyle,
+  getPieceZIndex,
+} from "./projectedBoardHelpers";
 import { ProjectedBoardPieceVisual } from "./ProjectedBoardPieceVisual";
 
 type ProjectedBoardPiecesProps = {
   boardColumns: number;
   boardRows: number;
   disabled: boolean;
-  ghostResolving: boolean;
-  ghostUnit: GhostUnitState | null;
   interactive: boolean;
   isUnitVisibleToViewer: (unit: Unit) => boolean;
   legalTargetKeys: Set<string>;
@@ -32,8 +34,6 @@ export function ProjectedBoardPieces({
   boardColumns,
   boardRows,
   disabled,
-  ghostResolving,
-  ghostUnit,
   interactive,
   isUnitVisibleToViewer,
   legalTargetKeys,
@@ -48,33 +48,36 @@ export function ProjectedBoardPieces({
   toDisplayPosition,
 }: ProjectedBoardPiecesProps) {
   const positionedUnits = state.units
-    .filter((unit) => unit.id !== ghostUnit?.hideLiveUnitId)
     .map((unit) => ({
       display: toDisplayPosition(unit),
+      isAlive: isUnitAlive(unit),
       unit,
-    }))
-    .sort((left, right) => left.display.y - right.display.y);
+    }));
 
   return (
     <>
-      {positionedUnits.map(({ display, unit }) => {
+      {positionedUnits.map(({ display, isAlive, unit }) => {
         const isSelected = selected?.x === unit.x && selected?.y === unit.y;
         const isPicked =
+          isAlive &&
           isSelected &&
           !disabled &&
           unit.ownerId === myId &&
           selectablePieceKeys.has(`${unit.x}-${unit.y}`);
         const isSelectable =
+          isAlive &&
           !disabled &&
           unit.ownerId === myId &&
           (selected
             ? isSelected || legalTargetKeys.has(`${unit.x}-${unit.y}`)
             : selectablePieceKeys.has(`${unit.x}-${unit.y}`));
-        const isFriendlyClickable = !disabled && unit.ownerId === myId;
-        const isAttackTarget = !disabled && legalTargetKeys.has(`${unit.x}-${unit.y}`);
+        const isFriendlyClickable = isAlive && !disabled && unit.ownerId === myId;
+        const isAttackTarget =
+          isAlive && !disabled && legalTargetKeys.has(`${unit.x}-${unit.y}`);
         const isPieceActionable =
           interactive && (isFriendlyClickable || isAttackTarget);
         const isWinningBattlePiece =
+          isAlive &&
           state.lastBattle?.winnerOwnerId === unit.ownerId &&
           state.lastBattle?.at.x === unit.x &&
           state.lastBattle?.at.y === unit.y;
@@ -83,29 +86,34 @@ export function ProjectedBoardPieces({
 
         return (
           <button
+            aria-hidden={!isAlive || undefined}
             aria-label={piece?.label ?? unit.pieceId}
             className={clsx(
               styles.pieceHit,
+              !isAlive && styles.captured,
               interactive && styles.canHover,
               isPieceActionable && styles.interactive,
               isSelectable && styles.selectable,
               isSelected && styles.selectedPiece,
               isPicked && styles.picked,
             )}
-            disabled={!interactive}
+            disabled={!interactive || !isAlive}
             key={unit.id}
-            onBlur={() => onPieceHover?.(null)}
-            onClick={() => interactive && onCellClick?.({ x: unit.x, y: unit.y })}
-            onFocus={() => onPieceHover?.({ x: unit.x, y: unit.y })}
-            onMouseEnter={() => onPieceHover?.({ x: unit.x, y: unit.y })}
-            onMouseLeave={() => onPieceHover?.(null)}
+            onBlur={() => isAlive && onPieceHover?.(null)}
+            onClick={() =>
+              isAlive && interactive && onCellClick?.({ x: unit.x, y: unit.y })
+            }
+            onFocus={() => isAlive && onPieceHover?.({ x: unit.x, y: unit.y })}
+            onMouseEnter={() => isAlive && onPieceHover?.({ x: unit.x, y: unit.y })}
+            onMouseLeave={() => isAlive && onPieceHover?.(null)}
             style={getPieceStyle(
               display.x,
               display.y,
               boardColumns,
               boardRows,
-              10 + display.y,
+              getPieceZIndex(display.y),
             )}
+            tabIndex={isAlive ? undefined : -1}
           >
             <ProjectedBoardPieceVisual
               isWinningBattlePiece={isWinningBattlePiece}
@@ -113,39 +121,11 @@ export function ProjectedBoardPieces({
               pieceColor={pieceColor}
               pieceId={unit.pieceId}
               pieceKey={unit.id}
-              visible={isUnitVisibleToViewer(unit)}
+              visible={isAlive && isUnitVisibleToViewer(unit)}
             />
           </button>
         );
       })}
-
-      {ghostUnit && (
-        <span
-          aria-hidden="true"
-          className={clsx(
-            styles.pieceHit,
-            styles.ghost,
-            ghostResolving && styles.resolving,
-          )}
-          key={ghostUnit.key}
-          style={getPieceStyle(
-            (ghostResolving ? ghostUnit.endDisplay : ghostUnit.startDisplay).x,
-            (ghostResolving ? ghostUnit.endDisplay : ghostUnit.startDisplay).y,
-            boardColumns,
-            boardRows,
-            10 + ghostUnit.endDisplay.y,
-          )}
-        >
-          <ProjectedBoardPieceVisual
-            decorative
-            piece={pieceById.get(ghostUnit.unit.pieceId) ?? null}
-            pieceColor={colorForOwner(ghostUnit.unit.ownerId, playerOneId)}
-            pieceId={ghostUnit.unit.pieceId}
-            pieceKey={ghostUnit.key}
-            visible={isUnitVisibleToViewer(ghostUnit.unit)}
-          />
-        </span>
-      )}
 
       {state.lastBattle?.winner === "both" && (
         <ProjectedBoardBattleBurst

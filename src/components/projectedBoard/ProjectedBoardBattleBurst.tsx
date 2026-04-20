@@ -6,7 +6,7 @@ import type { Position } from "../../shared/schema";
 
 import styles from "./ProjectedBoard.module.css";
 import { impactParticles } from "./projectedBoardConstants";
-import { getPieceStyle } from "./projectedBoardHelpers";
+import { getBattleBurstZIndex, getPieceStyle } from "./projectedBoardHelpers";
 
 type ProjectedBoardBattleBurstProps = {
   at: Position;
@@ -35,7 +35,7 @@ export function ProjectedBoardBattleBurst({
         display.y,
         boardColumns,
         boardRows,
-        14 + display.y,
+        getBattleBurstZIndex(display.y),
       )}
     >
       <span className={clsx(styles.pieceImpactBurst, styles.impactBoth)}>

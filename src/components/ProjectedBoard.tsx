@@ -6,7 +6,6 @@ import boardMapUrl from "../assets/map.png";
 import styles from "./projectedBoard/ProjectedBoard.module.css";
 import { ProjectedBoardCells } from "./projectedBoard/ProjectedBoardCells";
 import { ProjectedBoardPieces } from "./projectedBoard/ProjectedBoardPieces";
-import { useProjectedBoardGhosts } from "./projectedBoard/useProjectedBoardGhosts";
 import { useProjectedBoardViewModel } from "./projectedBoard/useProjectedBoardViewModel";
 
 export function ProjectedBoard({
@@ -16,7 +15,6 @@ export function ProjectedBoard({
   myId,
   onCellClick,
   onPieceHover,
-  pendingBoardAction = null,
   pieces,
   rules,
   selectablePieceKeys = new Set<string>(),
@@ -41,12 +39,6 @@ export function ProjectedBoard({
     rules,
     state,
     visibilityMode,
-  });
-  const { ghostResolving, ghostUnit } = useProjectedBoardGhosts({
-    isUnitVisibleToViewer,
-    pendingBoardAction,
-    state,
-    toDisplayPosition,
   });
 
   return (
@@ -75,8 +67,6 @@ export function ProjectedBoard({
             boardColumns={boardColumns}
             boardRows={boardRows}
             disabled={disabled}
-            ghostResolving={ghostResolving}
-            ghostUnit={ghostUnit}
             interactive={interactive}
             isUnitVisibleToViewer={isUnitVisibleToViewer}
             legalTargetKeys={legalTargetKeys}
