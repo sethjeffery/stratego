@@ -1,6 +1,6 @@
 import clsx from "clsx";
 
-import { Button } from "../../components/Button";
+import { Button } from "../../components/ui";
 import styles from "../SessionAccessScreen.module.css";
 
 type GameLoadingStateProps = {

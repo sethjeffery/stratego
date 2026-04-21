@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import type { SessionRole } from "../../lib/supabaseGameService";
 import type { Position } from "../../shared/schema";
 
-import { Button } from "../../components/Button";
+import { Button } from "../../components/ui";
 import {
   getDefaultSessionFixture,
   getFixturePlayerForRole,

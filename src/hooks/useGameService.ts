@@ -2,7 +2,7 @@ import { useCallback, useEffect } from "react";
 import useSWR, { mutate, useSWRConfig } from "swr";
 import useSWRMutation from "swr/mutation";
 
-import type { CreateSessionOptions } from "../lib/aiConfig";
+import type { CreateSessionOptions } from "../lib/ai";
 import type {
   GameSession,
   GameSessionDetails,

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import type { CreateSessionOptions } from "../lib/aiConfig";
+import type { CreateSessionOptions } from "../lib/ai";
 
 import { buildGamePath } from "../app/sessionRouting";
 import { DashboardTopbar } from "../components/dashboard/DashboardTopbar";

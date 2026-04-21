@@ -5,11 +5,11 @@ import type { GameCompletionStats } from "./gameScreenSelectors";
 import deadImage from "../../assets/dead.png";
 import victoryBlue from "../../assets/victory-blue.png";
 import victoryRed from "../../assets/victory-red.png";
-import { Button } from "../../components/Button";
+import { Button } from "../../components/ui";
+import { Modal } from "../../components/ui";
 import { GameBattlePieceBadge } from "./GameBattlePieceBadge";
 import styles from "./GameCompletionModal.module.css";
 import { pieceById } from "./gameScreenSelectors";
-import { Modal } from "./Modal";
 
 type GameCompletionModalProps = {
   completionDescription: string;

@@ -12,8 +12,8 @@ import { Link } from "react-router-dom";
 import type { SessionSummary } from "../../lib/supabaseGameService";
 
 import { resolveAvatarUrl } from "../../lib/playerProfile";
-import Avatar from "../Avatar";
-import { IconButton } from "../IconButton";
+import { Avatar } from "../ui";
+import { IconButton } from "../ui";
 import { ArchiveSessionModal } from "./ArchiveSessionModal";
 import {
   canArchiveSession,

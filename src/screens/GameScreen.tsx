@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import type { GameSessionDetails } from "../lib/supabaseGameService";
 
-import { Button } from "../components/Button";
+import { Button } from "../components/ui";
 import { getGameDisplayPlayers, getOtherDisplayPlayer } from "../lib/gamePlayers";
 import { GameBoardSection } from "./game/GameBoardSection";
 import { GameCompletionModal } from "./game/GameCompletionModal";

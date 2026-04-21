@@ -1,7 +1,7 @@
 import { useState } from "react";
 
-import { Modal } from "../../screens/game/Modal";
-import { Button } from "../Button";
+import { Modal } from "../../components/ui";
+import { Button } from "../ui";
 
 export function ArchiveSessionModal({
   onCancel,

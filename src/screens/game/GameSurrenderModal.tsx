@@ -1,7 +1,7 @@
 import { useState } from "react";
 
-import { Button } from "../../components/Button";
-import { Modal } from "./Modal";
+import { Button } from "../../components/ui";
+import { Modal } from "../../components/ui";
 
 type GameSurrenderModalProps = {
   onCancel: () => void;

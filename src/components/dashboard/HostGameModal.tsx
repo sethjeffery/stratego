@@ -1,14 +1,14 @@
 import { useState } from "react";
 
+import { Modal } from "../../components/ui";
 import {
   AI_INTELLIGENCE_OPTIONS,
   type CreateSessionOptions,
   DEFAULT_AI_INTELLIGENCE,
   type HostedGameMode,
-} from "../../lib/aiConfig";
+} from "../../lib/ai";
 import { defaultGameSetupId, gameSetups } from "../../lib/gameConfig";
-import { Modal } from "../../screens/game/Modal";
-import { Button } from "../Button";
+import { Button } from "../ui";
 import styles from "./HostGameModal.module.css";
 
 type HostGameModalProps = {

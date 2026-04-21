@@ -5,8 +5,8 @@ import { Link, useParams } from "react-router";
 
 import { buildSessionUrl } from "../app/sessionRouting";
 import imageDead from "../assets/dead.png";
-import Avatar from "../components/Avatar";
-import { Button } from "../components/Button";
+import { Avatar } from "../components/ui";
+import { Button } from "../components/ui";
 import { useJoinSession, useSessionDetails } from "../hooks/useGameService";
 import { useCurrentUser } from "../hooks/useProfile";
 import { resolveAvatarUrl } from "../lib/playerProfile";

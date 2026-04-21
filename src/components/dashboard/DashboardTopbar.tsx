@@ -1,15 +1,15 @@
 import { ArrowClockwiseIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
-import Avatar from "../../components/Avatar";
+import { Avatar } from "../../components/ui";
+import { Sunburst } from "../../components/ui";
 import {
   generatePlayerName,
   pickRandomAvatarId,
   resolveAvatarUrl,
 } from "../../lib/playerProfile";
 import styles from "../../screens/DashboardScreen.module.css";
-import { Sunburst } from "../../screens/Sunburst";
-import { Button } from "../Button";
+import { Button } from "../ui";
 
 type DashboardTopbarProps = {
   avatarId: string;
