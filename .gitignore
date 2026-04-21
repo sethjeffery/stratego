@@ -4,3 +4,4 @@ dist-server
 *.tsbuildinfo
 .DS_Store
 .temp
+.env
