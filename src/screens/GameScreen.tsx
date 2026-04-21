@@ -1,10 +1,12 @@
 import clsx from "clsx";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { GameSessionDetails } from "../lib/supabaseGameService";
+import type { BattleChatMessage } from "../shared/schema";
 
 import { Button } from "../components/ui";
 import { getGameDisplayPlayers, getOtherDisplayPlayer } from "../lib/gamePlayers";
+import { GameAttackAnimation } from "./game/GameAttackAnimation";
 import { GameBoardSection } from "./game/GameBoardSection";
 import { GameCompletionModal } from "./game/GameCompletionModal";
 import { GameLoadingState } from "./game/GameLoadingState";
@@ -22,6 +24,10 @@ import { useGameScreenController } from "./game/useGameScreenController";
 
 export function GameScreen({ session }: { session: GameSessionDetails }) {
   const [surrenderConfirmVisible, setSurrenderConfirmVisible] = useState(false);
+  const [attackAnimationBattle, setAttackAnimationBattle] =
+    useState<BattleChatMessage | null>(null);
+  const animatedMoveCountRef = useRef<null | number>(null);
+  const attackAnimationTimeoutRef = useRef<null | number>(null);
   const {
     archived,
     canMarkReady,
@@ -41,6 +47,48 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
     state,
     surrenderGame,
   } = useGameScreenController(session);
+
+  useEffect(() => {
+    if (!state?.lastBattle) return;
+
+    if (animatedMoveCountRef.current === null) {
+      animatedMoveCountRef.current = state.moveCount;
+      return;
+    }
+
+    if (animatedMoveCountRef.current === state.moveCount) return;
+
+    const latestBattleMessage =
+      [...state.chatMessages]
+        .reverse()
+        .find((message) => message.type === "battle" && message.battle)?.battle ?? null;
+
+    if (!latestBattleMessage) {
+      animatedMoveCountRef.current = state.moveCount;
+      return;
+    }
+
+    animatedMoveCountRef.current = state.moveCount;
+    setAttackAnimationBattle(latestBattleMessage);
+
+    if (attackAnimationTimeoutRef.current !== null) {
+      window.clearTimeout(attackAnimationTimeoutRef.current);
+    }
+
+    attackAnimationTimeoutRef.current = window.setTimeout(() => {
+      setAttackAnimationBattle(null);
+      attackAnimationTimeoutRef.current = null;
+    }, 2400);
+  }, [state]);
+
+  useEffect(
+    () => () => {
+      if (attackAnimationTimeoutRef.current !== null) {
+        window.clearTimeout(attackAnimationTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   if (!state) {
     return (
@@ -63,8 +111,8 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
     archived,
     isAiTurn: Boolean(
       state.turnPlayerId &&
-        state.players.find((player) => player.id === state.turnPlayerId)?.controller ===
-          "ai",
+      state.players.find((player) => player.id === state.turnPlayerId)?.controller ===
+        "ai",
     ),
     isMyTurn,
     isReady: state?.setupReadyPlayerIds.includes(myId ?? ""),
@@ -122,6 +170,10 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
         players={displayPlayers}
         state={state}
       />
+
+      {attackAnimationBattle && (
+        <GameAttackAnimation battle={attackAnimationBattle} playerOneId={playerOneId} />
+      )}
 
       {completionVisible && (
         <GameCompletionModal
