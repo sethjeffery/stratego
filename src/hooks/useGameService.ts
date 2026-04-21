@@ -158,17 +158,20 @@ export function useCreateSession() {
   const { mutate } = useSWRConfig();
   const cacheScope = getGameServiceCacheScope();
 
-  return useSWRMutation("/api/create-session", async () => {
-    const currentUser = await getCurrentUser();
-    const session = await createInitiatedSession(currentUser);
-    await revalidateSessionCaches(
-      mutate,
-      cacheScope,
-      currentUser.device_id,
-      session.session_id,
-    );
-    return session;
-  });
+  return useSWRMutation(
+    "/api/create-session",
+    async (_url, { arg: { setupId } }: { arg: { setupId: string } }) => {
+      const currentUser = await getCurrentUser();
+      const session = await createInitiatedSession(currentUser, setupId);
+      await revalidateSessionCaches(
+        mutate,
+        cacheScope,
+        currentUser.device_id,
+        session.session_id,
+      );
+      return session;
+    },
+  );
 }
 
 export function useJoinSession() {

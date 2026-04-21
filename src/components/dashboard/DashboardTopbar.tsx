@@ -13,7 +13,7 @@ import { Button } from "../Button";
 
 type DashboardTopbarProps = {
   avatarId: string;
-  createSession: () => Promise<void>;
+  onHostGame: () => void;
   onPlayerAvatarChange: (value: string) => void;
   onPlayerNameChange: (value: string) => void;
   playerName: string;
@@ -21,7 +21,7 @@ type DashboardTopbarProps = {
 
 export function DashboardTopbar({
   avatarId,
-  createSession,
+  onHostGame,
   onPlayerAvatarChange,
   onPlayerNameChange,
   playerName,
@@ -71,7 +71,7 @@ export function DashboardTopbar({
           </div>
         </div>
         <div className={styles.topbarActions}>
-          <Button onClick={() => void createSession()} variant="primary">
+          <Button onClick={onHostGame} variant="primary">
             Host new game
           </Button>
         </div>

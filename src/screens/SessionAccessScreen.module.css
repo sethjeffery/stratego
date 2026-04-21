@@ -107,3 +107,13 @@
   flex-direction: column;
   align-items: center;
 }
+
+.copyLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.copyLink svg {
+  margin-top: -1px;
+}

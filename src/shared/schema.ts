@@ -25,11 +25,6 @@ export const pieceDefinitionSchema = z.object({
     .default({}),
 });
 
-export const piecesConfigSchema = z.object({
-  pieces: z.array(pieceDefinitionSchema),
-  setName: z.string(),
-});
-
 export const boardSchema = z.object({
   blockedCells: z.array(z.object({ x: z.number().int(), y: z.number().int() })),
   height: z.number().int().positive(),
@@ -40,6 +35,19 @@ export const rulesSchema = z.object({
   board: boardSchema,
   gameName: z.string(),
   setupRowsPerPlayer: z.number().int().positive(),
+});
+
+export const gameSetupSchema = z.object({
+  description: z.string(),
+  id: z.string(),
+  name: z.string(),
+  pieces: z.array(pieceDefinitionSchema),
+  rules: rulesSchema,
+});
+
+export const gameSetupCatalogSchema = z.object({
+  defaultSetupId: z.string(),
+  setups: z.array(gameSetupSchema),
 });
 
 export type BattleChatMessage = {
@@ -58,10 +66,16 @@ export type GameChatMessage = {
   text?: string;
   type?: "battle" | "player";
 };
+
+export type GameSetup = z.infer<typeof gameSetupSchema>;
+
+export type GameSetupCatalog = z.infer<typeof gameSetupCatalogSchema>;
+
 export type GameState = {
   chatMessages: GameChatMessage[];
-  completionReason?: "flag_capture" | "surrender";
+  completionReason?: "draw" | "elimination" | "flag_capture" | "surrender";
   finishedAt: null | string;
+  gameSetupId: string;
   lastBattle?: {
     at: Position;
     attackerPieceId: string;
@@ -70,7 +84,7 @@ export type GameState = {
     winnerOwnerId: null | string;
   };
   moveCount: number;
-  phase: "battle" | "closed" | "finished" | "setup";
+  phase: "battle" | "closed" | "finished" | "open" | "setup";
   players: PlayerState[];
   roomCode: string;
   setupReadyPlayerIds: string[];
@@ -82,8 +96,6 @@ export type GameState = {
 };
 
 export type PieceDefinition = z.infer<typeof pieceDefinitionSchema>;
-
-export type PiecesConfig = z.infer<typeof piecesConfigSchema>;
 
 export type PlayerState = {
   connected: boolean;

@@ -17,11 +17,12 @@ import {
 import {
   applyMoveToState,
   applySetupSwapToState,
+  createOpenSessionState,
   createRematchState,
   createSessionGame,
   markPlayerSetupReady,
 } from "./engine";
-import { gamePieces, gameRules } from "./gameConfig";
+import { defaultGameSetupId, getGameSetup } from "./gameConfig";
 import { getOrCreateStoredDeviceIdentity } from "./localSessionStore";
 import {
   generatePlayerName,
@@ -313,7 +314,10 @@ export const updateCurrentUserProfile = async (profile: UserProfile) => {
   return data;
 };
 
-export const createInitiatedSession = async (initiator: CurrentUser) => {
+export const createInitiatedSession = async (
+  initiator: CurrentUser,
+  setupId = defaultGameSetupId,
+) => {
   if (!client) throw new Error("Supabase is not configured.");
 
   const sessionId = createSessionCode();
@@ -321,7 +325,7 @@ export const createInitiatedSession = async (initiator: CurrentUser) => {
     .from("game_sessions")
     .insert({
       session_id: sessionId,
-      state: null,
+      state: createOpenSessionState(sessionId, setupId),
     })
     .select("*")
     .single<GameSessionDetails>();
@@ -411,7 +415,8 @@ export const joinSessionAsCurrentUser = async (sessionId: string) => {
     session_id: sessionId,
   });
 
-  const initialized = createSessionGame(initiator, currentUser, gameRules, gamePieces, {
+  const gameSetup = getGameSetup(existingAccess.state?.gameSetupId);
+  const initialized = createSessionGame(initiator, currentUser, gameSetup, {
     challengerId: currentUser.device_id,
     initiatorId: initiator.device_id,
   });
@@ -430,6 +435,7 @@ export const archiveSession = async (
 
   if (
     session.state &&
+    session.state.phase !== "open" &&
     session.state.phase !== "finished" &&
     session.state.phase !== "closed"
   ) {
@@ -670,13 +676,14 @@ export const applyMove = async (
 ) => {
   const row = await updateSessionState(sessionId, (currentRow) => {
     if (!currentRow.state) return { error: "Waiting for challenger to join." };
+    const gameSetup = getGameSetup(currentRow.state.gameSetupId);
     return applyMoveToState(
       currentRow.state,
       playerId,
       from,
       to,
-      gameRules,
-      gamePieces,
+      gameSetup.rules,
+      gameSetup.pieces,
     );
   });
 
@@ -691,14 +698,15 @@ export const applySetupSwap = async (
 ) => {
   const row = await updateSessionState(sessionId, (currentRow) => {
     if (!currentRow.state) return { error: "Waiting for challenger to join." };
+    const gameSetup = getGameSetup(currentRow.state.gameSetupId);
 
     return applySetupSwapToState(
       currentRow.state,
       playerId,
       from,
       to,
-      gameRules,
-      gamePieces,
+      gameSetup.rules,
+      gameSetup.pieces,
     );
   });
 
@@ -735,13 +743,13 @@ export const resetFinishedGame = async (sessionId: string, playerId: string) => 
     if (currentRow.state.phase !== "finished") {
       return { error: "Game is not in completion phase." };
     }
+    const gameSetup = getGameSetup(currentRow.state.gameSetupId);
 
     return {
       nextState: createRematchState(
         currentRow.state,
         [initiator, challenger],
-        gameRules,
-        gamePieces,
+        gameSetup,
       ),
     };
   });
@@ -912,9 +920,7 @@ export const subscribeToSessionMemberships = (
   );
 };
 
-export const subscribeToMemberships = (
-  onUpdate: Listener<SessionMembership>,
-) => {
+export const subscribeToMemberships = (onUpdate: Listener<SessionMembership>) => {
   return withRegistry(
     "session-memberships",
     sessionMembershipRegistry,

@@ -53,7 +53,7 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
   const displayPlayers = getGameDisplayPlayers(state, session.memberships);
   const otherPlayerName =
     getOtherDisplayPlayer(displayPlayers, myId)?.name ?? "the opponent";
-  const { completionDescription, completionTitle, winner } = getCompletionCopy(
+  const { completionDescription, completionTitle, isDraw, winner } = getCompletionCopy(
     state,
     displayPlayers,
     myId,
@@ -66,7 +66,7 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
     myId,
     state,
   });
-  const completionVisible = state.phase === "finished" && Boolean(winner);
+  const completionVisible = state.phase === "finished";
   const isClosed = state.phase === "closed";
   const playerOneId = state.players[0]?.id ?? null;
   const canSurrender =
@@ -124,11 +124,13 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
           completionStats={completionStats}
           completionTitle={completionTitle}
           isClosed={isClosed}
+          isDraw={isDraw}
           onFinish={finishGame}
           onPlayAgain={playAgain}
           playerOneId={playerOneId}
-          winner={winner}
-          winnerColor={state.players[0].id === winner?.id ? "red" : "blue"}
+          winnerColor={
+            winner ? (state.players[0].id === winner.id ? "red" : "blue") : undefined
+          }
         />
       )}
 

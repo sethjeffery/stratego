@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { buildGamePath } from "../app/sessionRouting";
 import { DashboardTopbar } from "../components/dashboard/DashboardTopbar";
+import { HostGameModal } from "../components/dashboard/HostGameModal";
 import SessionsList from "../components/dashboard/SessionsList";
 import {
   useArchiveSession,
@@ -18,10 +20,12 @@ export function DashboardScreen() {
   const { data: openSessions } = useOpenSessions();
   const { trigger: createSession } = useCreateSession();
   const { trigger: archiveSession } = useArchiveSession();
+  const [hostGameModalVisible, setHostGameModalVisible] = useState(false);
   const navigate = useNavigate();
 
-  const handleCreateSession = async () => {
-    const newSession = await createSession();
+  const handleCreateSession = async (setupId: string) => {
+    const newSession = await createSession({ setupId });
+    setHostGameModalVisible(false);
     navigate(buildGamePath(newSession.session_id));
   };
 
@@ -41,7 +45,7 @@ export function DashboardScreen() {
         </h1>
         <DashboardTopbar
           avatarId={currentUser.avatar_id}
-          createSession={handleCreateSession}
+          onHostGame={() => setHostGameModalVisible(true)}
           onPlayerAvatarChange={(value) => {
             void updateProfile({ ...currentUser, avatar_id: value });
           }}
@@ -71,6 +75,13 @@ export function DashboardScreen() {
           </section>
         ) : null}
       </div>
+
+      {hostGameModalVisible ? (
+        <HostGameModal
+          onCancel={() => setHostGameModalVisible(false)}
+          onConfirm={handleCreateSession}
+        />
+      ) : null}
     </div>
   );
 }

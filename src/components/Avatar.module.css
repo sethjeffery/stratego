@@ -61,7 +61,7 @@ span.avatar {
 .pulsing::before {
   animation: ping 2s infinite;
   content: "";
-  /* aspect-ratio: 1 / 1; */
+  aspect-ratio: 1 / 1;
   bottom: 0;
   left: 0;
   right: 0;
@@ -96,7 +96,8 @@ span.avatar {
 }
 
 @supports not (aspect-ratio: 23 / 30) {
-  .avatarWrapper::after {
+  .avatarWrapper::after,
+  .avatarWrapper::before {
     margin-top: 23.4%;
     height: 76.6%;
   }

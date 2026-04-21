@@ -34,6 +34,13 @@ const statusMessage = ({
           Game is archived
         </>
       );
+    case "draw":
+      return (
+        <>
+          <SkullIcon size={16} />
+          Draw
+        </>
+      );
     case "loser":
       return (
         <>

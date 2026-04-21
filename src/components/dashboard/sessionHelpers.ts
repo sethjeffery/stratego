@@ -20,12 +20,23 @@ export const getSessionPlayerName = (
 
 export const canArchiveSession = (
   row: Pick<GameSessionDetails | SessionSummary, "state">,
-) => !row.state || row.state.phase === "finished" || row.state.phase === "closed";
+) =>
+  !row.state ||
+  row.state.phase === "open" ||
+  row.state.phase === "finished" ||
+  row.state.phase === "closed";
 
 export const getCompletionSummary = (
   row: GameSessionDetails | SessionSummary,
   currentDeviceId?: null | string,
 ): { icon: null | SessionOutcomeIcon; text: string } => {
+  if (row.state?.phase === "finished" && !row.state.winnerId) {
+    return {
+      icon: "skull",
+      text: "Draw",
+    };
+  }
+
   const winner = getMemberById(row.memberships, row.state?.winnerId);
   if (!winner) {
     return {

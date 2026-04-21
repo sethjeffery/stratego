@@ -4,7 +4,7 @@ import type { GameState, Position } from "../shared/schema";
 import type { PendingBoardAction } from "../types/ui";
 
 import { getLegalMovesForUnit, getSetupSwapTargets } from "../lib/engine";
-import { gamePieces, gameRules } from "../lib/gameConfig";
+import { getGameSetupForState } from "../lib/gameConfig";
 import { getAliveUnits } from "../shared/schema";
 
 type UseBoardInteractionStateArgs = {
@@ -23,6 +23,7 @@ export function useBoardInteractionState({
   state,
 }: UseBoardInteractionStateArgs) {
   const isSetupPhase = Boolean(state && state.phase === "setup");
+  const gameSetup = getGameSetupForState(state);
 
   const disabled =
     !state ||
@@ -36,10 +37,22 @@ export function useBoardInteractionState({
   const legalTargets = useMemo(() => {
     if (!state || !myId || !selected || disabled) return [];
     if (state.phase === "setup") {
-      return getSetupSwapTargets(state, myId, selected, gameRules, gamePieces);
+      return getSetupSwapTargets(
+        state,
+        myId,
+        selected,
+        gameSetup.rules,
+        gameSetup.pieces,
+      );
     }
-    return getLegalMovesForUnit(state, myId, selected, gameRules, gamePieces);
-  }, [disabled, myId, selected, state]);
+    return getLegalMovesForUnit(
+      state,
+      myId,
+      selected,
+      gameSetup.rules,
+      gameSetup.pieces,
+    );
+  }, [disabled, gameSetup.pieces, gameSetup.rules, myId, selected, state]);
 
   const selectablePieceKeys = useMemo(() => {
     if (!state || !myId || disabled) return new Set<string>();
@@ -55,8 +68,8 @@ export function useBoardInteractionState({
                   state,
                   myId,
                   { x: unit.x, y: unit.y },
-                  gameRules,
-                  gamePieces,
+                  gameSetup.rules,
+                  gameSetup.pieces,
                 ).length > 0,
             )
             .map((unit) => `${unit.x}-${unit.y}`)
@@ -68,14 +81,14 @@ export function useBoardInteractionState({
                   state,
                   myId,
                   { x: unit.x, y: unit.y },
-                  gameRules,
-                  gamePieces,
+                  gameSetup.rules,
+                  gameSetup.pieces,
                 ).length > 0,
             )
             .map((unit) => `${unit.x}-${unit.y}`);
 
     return new Set(keys);
-  }, [disabled, myId, state]);
+  }, [disabled, gameSetup.pieces, gameSetup.rules, myId, state]);
 
   return {
     disabled,

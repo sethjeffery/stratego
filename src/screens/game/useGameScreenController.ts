@@ -14,7 +14,7 @@ import {
   createRematchState,
   markPlayerSetupReady,
 } from "../../lib/engine";
-import { gamePieces, gameRules } from "../../lib/gameConfig";
+import { getGameSetupForState } from "../../lib/gameConfig";
 import { getDisplayPlayerById, getGameDisplayPlayers } from "../../lib/gamePlayers";
 import { getSessionCacheKey } from "../../lib/gameServiceCache";
 import { getMemberById } from "../../lib/playerProfile";
@@ -43,6 +43,7 @@ export function useGameScreenController(session: GameSessionDetails) {
   const myId = myMembership?.device_id ?? null;
   const archived = Boolean(myMembership?.archived_at);
   const state = session.state;
+  const gameSetup = getGameSetupForState(state);
   const sessionCacheKey = getSessionCacheKey(session.session_id);
   const displayPlayers = getGameDisplayPlayers(state, session.memberships);
 
@@ -173,16 +174,16 @@ export function useGameScreenController(session: GameSessionDetails) {
           myId,
           previousSelection,
           target,
-          gameRules,
-          gamePieces,
+          gameSetup.rules,
+          gameSetup.pieces,
         )
       : applyMoveToState(
           previousState,
           myId,
           previousSelection,
           target,
-          gameRules,
-          gamePieces,
+          gameSetup.rules,
+          gameSetup.pieces,
         );
 
     if (result.error || !result.nextState) {
@@ -240,8 +241,7 @@ export function useGameScreenController(session: GameSessionDetails) {
     const nextState = createRematchState(
       state,
       [session.initiator, session.challenger],
-      gameRules,
-      gamePieces,
+      gameSetup,
     );
     setSelected(null);
 

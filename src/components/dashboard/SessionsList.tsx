@@ -22,9 +22,10 @@ export default function SessionsList({
           key={session.session_id}
           onArchive={onArchiveSession && (() => onArchiveSession(session.session_id))}
           openPath={
-            !session.state ||
-            session.state.phase === "battle" ||
-            session.state.phase === "setup"
+            !session.challenger ||
+            session.state?.phase === "open" ||
+            session.state?.phase === "battle" ||
+            session.state?.phase === "setup"
               ? buildGamePath(session.session_id)
               : null
           }

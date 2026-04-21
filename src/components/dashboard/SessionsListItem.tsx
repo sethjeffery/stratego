@@ -50,7 +50,8 @@ export function SessionsListItem({
   const [archiveConfirmVisible, setArchiveConfirmVisible] = useState(false);
   const isFinished =
     session.state?.phase === "finished" || session.state?.phase === "closed";
-  const isWaitingForChallenger = !session.state;
+  const isWaitingForChallenger =
+    !session.challenger || !session.state || session.state.phase === "open";
   const initiator = session.initiator;
   const challenger = session.challenger;
   const isCurrentHost = session.currentMembership?.role === "initiator";

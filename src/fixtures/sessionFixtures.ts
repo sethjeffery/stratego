@@ -59,9 +59,10 @@ const createMembership = (
 const createSessionState = (
   roomCode: string,
   players: [UserDeviceProfile, UserDeviceProfile],
-  state: Omit<GameState, "players" | "roomCode">,
+  state: Omit<GameState, "gameSetupId" | "players" | "roomCode">,
 ): GameState => ({
   ...state,
+  gameSetupId: "quick-game",
   players: players.map((player) => ({
     connected: true,
     id: player.device_id,

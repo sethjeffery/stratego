@@ -1,4 +1,6 @@
+import { ClipboardIcon } from "@phosphor-icons/react";
 import clsx from "clsx";
+import { useState } from "react";
 import { Link, useParams } from "react-router";
 
 import { buildSessionUrl } from "../app/sessionRouting";
@@ -17,6 +19,7 @@ export function SessionAccessScreen() {
   const { data: session, isLoading: isLoadingSession } = useSessionDetails(sessionId);
   const { data: currentUser, isLoading: isLoadingUser } = useCurrentUser();
   const { trigger: joinSession } = useJoinSession();
+  const [copied, setCopied] = useState(false);
 
   const handleJoinSession = async () => {
     await joinSession({ sessionId });
@@ -24,6 +27,7 @@ export function SessionAccessScreen() {
 
   const copySessionLink = async (sessionId: string) => {
     await navigator.clipboard.writeText(buildSessionUrl(sessionId));
+    setCopied(true);
   };
 
   const isLoading = isLoadingSession || isLoadingUser;
@@ -130,10 +134,11 @@ export function SessionAccessScreen() {
           )}
           {isMember && hasOpenSlot && !isClosed && !isArchived && (
             <Button
+              className={styles.copyLink}
               onClick={() => void copySessionLink(session.session_id)}
-              variant="secondary"
             >
-              Copy Link
+              <ClipboardIcon />
+              {copied ? "Copied!" : "Copy Link"}
             </Button>
           )}
           <Link to="/">

@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 
 import type {
+  GameSetup,
   GameState,
   PieceDefinition,
   PlayerState,
@@ -174,10 +175,10 @@ const createBattleChatMessage = (
 export const createSessionGame = (
   initiatorProfile: UserProfile,
   challengerProfile: UserProfile,
-  rules: RulesConfig,
-  pieces: PieceDefinition[],
+  gameSetup: GameSetup,
   playerIds?: { challengerId: string; initiatorId: string },
 ): { challengerId: string; initiatorId: string; state: GameState } => {
+  const { pieces, rules } = gameSetup;
   const initiatorId = playerIds?.initiatorId ?? nanoid(10);
   const challengerId = playerIds?.challengerId ?? nanoid(10);
 
@@ -199,6 +200,7 @@ export const createSessionGame = (
       chatMessages: [],
       completionReason: "flag_capture",
       finishedAt: null,
+      gameSetupId: gameSetup.id,
       moveCount: 0,
       phase: "setup",
       players,
@@ -215,6 +217,26 @@ export const createSessionGame = (
     },
   };
 };
+
+export const createOpenSessionState = (
+  sessionId: string,
+  gameSetupId: string,
+): GameState => ({
+  chatMessages: [],
+  completionReason: "flag_capture",
+  finishedAt: null,
+  gameSetupId,
+  moveCount: 0,
+  phase: "open",
+  players: [],
+  roomCode: sessionId,
+  setupReadyPlayerIds: [],
+  startedAt: null,
+  surrenderedById: null,
+  turnPlayerId: null,
+  units: [],
+  winnerId: null,
+});
 
 const getSetupRowsForPlayer = (
   playerId: string,
@@ -458,13 +480,25 @@ export const applyMoveToState = (
   const alivePlayers = nextState.players.filter((player) =>
     getAliveUnits(nextState).some((u) => u.ownerId === player.id),
   );
-  if (alivePlayers.length === 1) nextState.winnerId = alivePlayers[0].id;
 
   const nextPlayer = nextState.players.find((p) => p.id !== playerId);
-  nextState.turnPlayerId = nextState.winnerId ? null : (nextPlayer?.id ?? null);
-  if (nextState.winnerId) {
+  if (!nextState.winnerId) {
+    if (alivePlayers.length === 0) {
+      nextState.completionReason = "draw";
+      nextState.turnPlayerId = null;
+    } else if (alivePlayers.length === 1) {
+      nextState.completionReason = "elimination";
+      nextState.winnerId = alivePlayers[0].id;
+      nextState.turnPlayerId = null;
+    } else {
+      nextState.turnPlayerId = nextPlayer?.id ?? null;
+    }
+  } else {
+    nextState.turnPlayerId = null;
+  }
+
+  if (nextState.winnerId || nextState.completionReason === "draw") {
     nextState.phase = "finished";
-    nextState.completionReason = "flag_capture";
     nextState.surrenderedById = null;
     nextState.finishedAt = new Date().toISOString();
   }
@@ -475,14 +509,13 @@ export const applyMoveToState = (
 export const createRematchState = (
   state: GameState,
   profiles: [UserProfile, UserProfile],
-  rules: RulesConfig,
-  pieces: PieceDefinition[],
+  gameSetup: GameSetup,
 ): GameState => {
   if (state.players.length < 2) {
     throw new Error("Cannot reset without both players.");
   }
 
-  const next = createSessionGame(profiles[0], profiles[1], rules, pieces, {
+  const next = createSessionGame(profiles[0], profiles[1], gameSetup, {
     challengerId: state.players[1].id,
     initiatorId: state.players[0].id,
   }).state;

@@ -2,7 +2,7 @@ import type { GameState, Position } from "../../shared/schema";
 
 import { ProjectedBoard } from "../../components/ProjectedBoard";
 import boardStyles from "../../components/projectedBoard/ProjectedBoard.module.css";
-import { gamePieces, gameRules } from "../../lib/gameConfig";
+import { getGameSetupForState } from "../../lib/gameConfig";
 
 type GameBoardSectionProps = {
   disabled: boolean;
@@ -23,6 +23,8 @@ export function GameBoardSection({
   selected,
   state,
 }: GameBoardSectionProps) {
+  const gameSetup = getGameSetupForState(state);
+
   return (
     <section className={boardStyles.boardSection}>
       <ProjectedBoard
@@ -31,8 +33,8 @@ export function GameBoardSection({
         legalTargets={legalTargets}
         myId={myId}
         onCellClick={(target) => void onCellClick(target)}
-        pieces={gamePieces}
-        rules={gameRules}
+        pieces={gameSetup.pieces}
+        rules={gameSetup.rules}
         selectablePieceKeys={selectablePieceKeys}
         selected={selected}
         state={state}

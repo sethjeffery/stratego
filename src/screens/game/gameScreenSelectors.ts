@@ -6,10 +6,10 @@ import type {
   Position,
 } from "../../shared/schema";
 
-import { gamePieces } from "../../lib/gameConfig";
+import { allGamePieces } from "../../lib/gameConfig";
 import { getAliveUnits } from "../../shared/schema";
 
-export const pieceById = new Map(gamePieces.map((piece) => [piece.id, piece]));
+export const pieceById = new Map(allGamePieces.map((piece) => [piece.id, piece]));
 
 export const getPlayerColorClass = (playerId: string, playerOneId: null | string) =>
   playerId === playerOneId ? "player-one" : "player-two";
@@ -53,6 +53,7 @@ export const getInspectedPieceState = (
 export type MainStatus =
   | "active"
   | "archived"
+  | "draw"
   | "loser"
   | "setup"
   | "waiting"
@@ -71,6 +72,10 @@ export const getMainStatus = ({
   state: GameState;
 }): MainStatus => {
   if (archived) return "archived";
+
+  if (state.phase === "finished" && !state.winnerId) {
+    return "draw";
+  }
 
   if (state.winnerId) {
     return state.winnerId === myId ? "winner" : "loser";
@@ -157,11 +162,22 @@ export const getCompletionCopy = (
     players.find((player) => player.id === state.surrenderedById) ?? null;
   const didISurrender = state.surrenderedById === myId;
   const didIWin = Boolean(myId) && state.winnerId === myId;
+  const isDraw = state.phase === "finished" && !state.winnerId;
 
   let completionDescription = didIWin
     ? "You successfully destroyed your opponent."
     : "Your flag is captured, you're a disgrace.";
   let completionTitle = didIWin ? "You won" : "You lost";
+
+  if (isDraw) {
+    completionDescription = "Both armies were wiped out. Nobody leaves with a victory.";
+    completionTitle = "Draw";
+  } else if (state.completionReason === "elimination") {
+    completionDescription = didIWin
+      ? "You destroyed every remaining enemy piece."
+      : "Every piece in your army was destroyed.";
+    completionTitle = didIWin ? "You won" : "You lost";
+  }
 
   if (state.completionReason === "surrender") {
     completionDescription = didISurrender
@@ -175,6 +191,7 @@ export const getCompletionCopy = (
   return {
     completionDescription,
     completionTitle,
+    isDraw,
     surrenderedPlayer,
     winner,
   };

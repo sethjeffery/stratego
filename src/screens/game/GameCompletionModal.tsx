@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-import type { GameDisplayPlayer } from "../../lib/gamePlayers";
 import type { GameCompletionStats } from "./gameScreenSelectors";
 
+import deadImage from "../../assets/dead.png";
 import victoryBlue from "../../assets/victory-blue.png";
 import victoryRed from "../../assets/victory-red.png";
 import { Button } from "../../components/Button";
@@ -16,11 +16,11 @@ type GameCompletionModalProps = {
   completionStats: GameCompletionStats;
   completionTitle: string;
   isClosed: boolean;
+  isDraw: boolean;
   onFinish: () => Promise<void>;
   onPlayAgain: () => Promise<void>;
   playerOneId: null | string;
-  winner: GameDisplayPlayer | null;
-  winnerColor: "blue" | "red";
+  winnerColor?: "blue" | "red";
 };
 
 export function GameCompletionModal({
@@ -28,15 +28,19 @@ export function GameCompletionModal({
   completionStats,
   completionTitle,
   isClosed,
+  isDraw,
   onFinish,
   onPlayAgain,
   playerOneId,
-  winner,
   winnerColor,
 }: GameCompletionModalProps) {
   const [actionPending, setActionPending] = useState(false);
-
-  if (!winner) return null;
+  const illustration = isDraw
+    ? deadImage
+    : winnerColor === "red"
+      ? victoryRed
+      : victoryBlue;
+  const illustrationAlt = isDraw ? "Dead soldier" : "Victory soldier";
 
   return (
     <Modal
@@ -71,11 +75,7 @@ export function GameCompletionModal({
       title={<span className={styles.completionTitle}>{completionTitle}</span>}
       titleText={completionTitle}
     >
-      <img
-        alt="Victory soldier"
-        className={styles.victoryImage}
-        src={winnerColor === "red" ? victoryRed : victoryBlue}
-      />
+      <img alt={illustrationAlt} className={styles.victoryImage} src={illustration} />
       <div className={styles.completionStats}>
         <div className={styles.completionMvp}>
           {completionStats.mvp ? (
