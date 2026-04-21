@@ -1,4 +1,9 @@
-import type { GameSetup, GameState, PieceDefinition, Position } from "../../shared/schema";
+import type {
+  GameSetup,
+  GameState,
+  PieceDefinition,
+  Position,
+} from "../../shared/schema";
 
 import { getAliveUnits } from "../../shared/schema";
 import { applyMoveToState, getLegalMovesForUnit } from "../engine";
@@ -92,7 +97,11 @@ const scoreState = (
     score += side * getPieceValue(piece);
     score +=
       side *
-      getPositionScore(unit, gameSetup.rules.board.width, gameSetup.rules.board.height) *
+      getPositionScore(
+        unit,
+        gameSetup.rules.board.width,
+        gameSetup.rules.board.height,
+      ) *
       POSITION_WEIGHT;
 
     const revealedToEnemy = unit.revealedTo.some(
@@ -122,7 +131,12 @@ export const minimax = (
   gameSetup: GameSetup,
   pieceById: Map<string, PieceDefinition>,
 ): number => {
-  if (depth === 0 || state.phase !== "battle" || state.winnerId || !state.turnPlayerId) {
+  if (
+    depth === 0 ||
+    state.phase !== "battle" ||
+    state.winnerId ||
+    !state.turnPlayerId
+  ) {
     return scoreState(state, maximizingPlayerId, gameSetup, pieceById);
   }
 

@@ -358,10 +358,8 @@ export const createInitiatedSession = async (
       ).state;
   const state =
     options.matchup === "human_vs_ai"
-      ? (markPlayerSetupReady(
-          initialState,
-          initialState.players[1]?.id ?? "",
-        ).nextState ?? initialState)
+      ? (markPlayerSetupReady(initialState, initialState.players[1]?.id ?? "")
+          .nextState ?? initialState)
       : options.matchup === "ai_vs_ai"
         ? initialState.players.reduce(
             (nextState, player) =>
@@ -732,7 +730,9 @@ export const listOpenSessions = async (
     .throwOnError();
 
   return hydrateSessionSummaries(
-    ((data ?? []) as GameSession[]).filter((session) => session.state?.phase === "open"),
+    ((data ?? []) as GameSession[]).filter(
+      (session) => session.state?.phase === "open",
+    ),
   );
 };
 

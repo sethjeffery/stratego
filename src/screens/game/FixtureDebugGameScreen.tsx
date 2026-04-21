@@ -30,11 +30,12 @@ export function FixtureDebugGameScreen({
 }: FixtureDebugGameScreenProps) {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<null | Position>(null);
-  const { attackAnimationBattle } = useAttackAnimationPlayback();
   const session = useMemo(
     () => (fixtureId ? getSessionFixture(fixtureId) : getDefaultSessionFixture()),
     [fixtureId],
   );
+  const { attackAnimationBattle, attackAnimationKey, boardState } =
+    useAttackAnimationPlayback(session?.state ?? null);
 
   if (!session?.state) {
     return (
@@ -102,7 +103,7 @@ export function FixtureDebugGameScreen({
           onCellClick={onCellClick}
           selectablePieceKeys={new Set<string>()}
           selected={selected}
-          state={session.state}
+          state={boardState ?? session.state}
         />
       </section>
 
@@ -122,7 +123,11 @@ export function FixtureDebugGameScreen({
       />
 
       {attackAnimationBattle && (
-        <GameAttackAnimation battle={attackAnimationBattle} playerOneId={playerOneId} />
+        <GameAttackAnimation
+          battle={attackAnimationBattle}
+          key={attackAnimationKey ?? undefined}
+          playerOneId={playerOneId}
+        />
       )}
     </main>
   );

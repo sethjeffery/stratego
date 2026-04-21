@@ -12,23 +12,22 @@ const robotAvatarModules = import.meta.glob("../assets/robots/*.png", {
 
 const createAvatarCatalog = (modules: Record<string, string>) =>
   Object.entries(modules)
-  .map(([path, url]) => {
-    const match = path.match(/\/([a-z]+\d+)\.(?:png|jpg)$/);
-    return {
-      id: match?.[1] ?? path,
-      url,
-    };
-  })
-  .sort((left, right) => left.id.localeCompare(right.id));
+    .map(([path, url]) => {
+      const match = path.match(/\/([a-z]+\d+)\.(?:png|jpg)$/);
+      return {
+        id: match?.[1] ?? path,
+        url,
+      };
+    })
+    .sort((left, right) => left.id.localeCompare(right.id));
 
 export const avatarCatalog = createAvatarCatalog(avatarModules);
 
-const allAvatarCatalog = [
-  ...avatarCatalog,
-  ...createAvatarCatalog(robotAvatarModules),
-];
+const allAvatarCatalog = [...avatarCatalog, ...createAvatarCatalog(robotAvatarModules)];
 
-const avatarUrlById = new Map(allAvatarCatalog.map((avatar) => [avatar.id, avatar.url]));
+const avatarUrlById = new Map(
+  allAvatarCatalog.map((avatar) => [avatar.id, avatar.url]),
+);
 
 const titles = [
   "Commander",
@@ -104,7 +103,10 @@ export const generatePlayerName = (exceptName?: string) => {
 };
 
 export function getMemberById<
-  T extends Pick<Database["public"]["Tables"]["session_memberships"]["Row"], "device_id">,
+  T extends Pick<
+    Database["public"]["Tables"]["session_memberships"]["Row"],
+    "device_id"
+  >,
 >(memberships?: null | T[], id?: null | string): null | T {
   return (id && memberships?.find((membership) => membership.device_id === id)) || null;
 }

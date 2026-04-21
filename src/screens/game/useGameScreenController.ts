@@ -478,10 +478,10 @@ export function useGameScreenController(session: GameSessionDetails) {
 
     const aiReadyPlayer =
       state.phase === "setup"
-        ? state.players.find(
+        ? (state.players.find(
             (player) =>
               isAiPlayer(player) && !state.setupReadyPlayerIds.includes(player.id),
-          ) ?? null
+          ) ?? null)
         : null;
 
     if (aiReadyPlayer) {
@@ -514,9 +514,9 @@ export function useGameScreenController(session: GameSessionDetails) {
 
     const activeAiPlayer =
       state.phase === "battle"
-        ? state.players.find(
+        ? (state.players.find(
             (player) => player.id === state.turnPlayerId && isAiPlayer(player),
-          ) ?? null
+          ) ?? null)
         : null;
 
     if (!activeAiPlayer) return;

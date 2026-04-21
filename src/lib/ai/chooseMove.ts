@@ -2,11 +2,7 @@ import type { GameSetup, GameState, Position } from "../../shared/schema";
 import type { AiChosenMove } from "./types";
 
 import { applyMoveToState } from "../engine";
-import {
-  getAiBestMoveProbability,
-  getAiScoreMargin,
-  getAiSearchDepth,
-} from "./config";
+import { getAiBestMoveProbability, getAiScoreMargin, getAiSearchDepth } from "./config";
 import { buildPieceMap, getAllLegalMoves, minimax } from "./search";
 
 type CandidateMove = {

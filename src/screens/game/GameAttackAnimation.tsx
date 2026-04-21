@@ -2,7 +2,6 @@ import clsx from "clsx";
 
 import type { BattleChatMessage } from "../../shared/schema";
 
-import { pieceIconById } from "../../components/board/pieceIcons";
 import { ProjectedBoardPieceVisual } from "../../components/projectedBoard/ProjectedBoardPieceVisual";
 import styles from "./GameAttackAnimation.module.css";
 import { pieceById } from "./gameScreenSelectors";
@@ -18,9 +17,7 @@ const getPieceColorClass = (ownerId: string, playerOneId: null | string) =>
 export function GameAttackAnimation({ battle, playerOneId }: GameAttackAnimationProps) {
   const attackerPiece = pieceById.get(battle.attackerPieceId);
   const defenderPiece = pieceById.get(battle.defenderPieceId);
-  const attackerIcon = pieceIconById[battle.attackerPieceId];
-  const defenderIcon = pieceIconById[battle.defenderPieceId];
-  const isBombBattle = battle.defenderPieceId === "bomb";
+  const isBombBattle = pieceById.get(battle.defenderPieceId)?.explodes;
 
   return (
     <div aria-hidden="true" className={styles.backdrop}>
@@ -41,7 +38,9 @@ export function GameAttackAnimation({ battle, playerOneId }: GameAttackAnimation
               getPieceColorClass(battle.attackerOwnerId, playerOneId),
             )}
             piece={attackerPiece}
-            pieceColor="player-one"
+            pieceColor={
+              playerOneId === battle.attackerOwnerId ? "player-one" : "player-two"
+            }
             pieceId={battle.attackerPieceId}
             shadow={false}
           />
@@ -54,31 +53,13 @@ export function GameAttackAnimation({ battle, playerOneId }: GameAttackAnimation
               getPieceColorClass(battle.defenderOwnerId, playerOneId),
             )}
             piece={defenderPiece}
-            pieceColor="player-two"
+            pieceColor={
+              playerOneId === battle.attackerOwnerId ? "player-two" : "player-one"
+            }
             pieceId={battle.defenderPieceId}
             shadow={false}
           />
         ) : null}
-        {/* <div
-          className={clsx(
-            styles.piece,
-            styles.attacker,
-            getPieceColorClass(battle.attackerOwnerId, playerOneId),
-          )}
-        >
-          {attackerIcon ? <img alt="" src={attackerIcon} /> : <span>⚔️</span>}
-          <strong>{attackerPiece?.label ?? "Unknown"}</strong>
-        </div> */}
-        {/* <div
-          className={clsx(
-            styles.piece,
-            styles.defender,
-            getPieceColorClass(battle.defenderOwnerId, playerOneId),
-          )}
-        >
-          {defenderIcon ? <img alt="" src={defenderIcon} /> : <span>🛡️</span>}
-          <strong>{defenderPiece?.label ?? "Unknown"}</strong>
-        </div> */}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import type { GameSessionDetails } from "../lib/supabaseGameService";
 
@@ -24,8 +24,6 @@ import { useGameScreenController } from "./game/useGameScreenController";
 
 export function GameScreen({ session }: { session: GameSessionDetails }) {
   const [surrenderConfirmVisible, setSurrenderConfirmVisible] = useState(false);
-  const animatedMoveCountRef = useRef<null | number>(null);
-  const { attackAnimationBattle, playAttackAnimation } = useAttackAnimationPlayback();
   const {
     archived,
     canMarkReady,
@@ -45,32 +43,14 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
     state,
     surrenderGame,
   } = useGameScreenController(session);
+  const {
+    attackAnimationBattle,
+    attackAnimationKey,
+    boardState,
+    isAttackAnimationActive,
+  } = useAttackAnimationPlayback(state);
 
-  useEffect(() => {
-    if (!state?.lastBattle) return;
-
-    if (animatedMoveCountRef.current === null) {
-      animatedMoveCountRef.current = state.moveCount;
-      return;
-    }
-
-    if (animatedMoveCountRef.current === state.moveCount) return;
-
-    const latestBattleMessage =
-      [...state.chatMessages]
-        .reverse()
-        .find((message) => message.type === "battle" && message.battle)?.battle ?? null;
-
-    if (!latestBattleMessage) {
-      animatedMoveCountRef.current = state.moveCount;
-      return;
-    }
-
-    animatedMoveCountRef.current = state.moveCount;
-    playAttackAnimation(latestBattleMessage);
-  }, [playAttackAnimation, state]);
-
-  if (!state) {
+  if (!state || !boardState) {
     return (
       <GameLoadingState onLeave={leaveCurrentSession} sessionId={session.session_id} />
     );
@@ -126,13 +106,13 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
         )}
 
         <GameBoardSection
-          disabled={disabled}
-          legalTargets={legalTargets}
+          disabled={disabled || isAttackAnimationActive}
+          legalTargets={isAttackAnimationActive ? [] : legalTargets}
           myId={myId}
           onCellClick={onCellClick}
           selectablePieceKeys={selectablePieceKeys}
-          selected={selected}
-          state={state}
+          selected={isAttackAnimationActive ? null : selected}
+          state={boardState}
         />
       </section>
 
@@ -152,7 +132,11 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
       />
 
       {attackAnimationBattle && (
-        <GameAttackAnimation battle={attackAnimationBattle} playerOneId={playerOneId} />
+        <GameAttackAnimation
+          battle={attackAnimationBattle}
+          key={attackAnimationKey ?? undefined}
+          playerOneId={playerOneId}
+        />
       )}
 
       {completionVisible && (

@@ -28,8 +28,7 @@ export function HostGameModal({ onCancel, onConfirm }: HostGameModalProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const selectedSetup = gameSetups.find((setup) => setup.id === selectedSetupId);
-  const needsChallengerAi =
-    matchup === "human_vs_ai" || matchup === "ai_vs_ai";
+  const needsChallengerAi = matchup === "human_vs_ai" || matchup === "ai_vs_ai";
   const needsInitiatorAi = matchup === "ai_vs_ai";
 
   return (
@@ -82,79 +81,79 @@ export function HostGameModal({ onCancel, onConfirm }: HostGameModalProps) {
       <div className={styles.section}>
         <div className={styles.sectionLabel}>Players</div>
         <div className={styles.matchupGrid}>
-        {[
-          {
-            description: "Create an open lobby for another player to join.",
-            id: "human_vs_human",
-            title: "Human vs Human",
-          },
-          {
-            description: "Start immediately against a locally hosted AI opponent.",
-            id: "human_vs_ai",
-            title: "Human vs AI",
-          },
-          {
-            description: "Run both armies as AIs on this device for debugging.",
-            id: "ai_vs_ai",
-            title: "AI vs AI",
-          },
-        ].map((option) => (
-          <button
-            className={styles.matchupCard}
-            data-selected={option.id === matchup}
-            key={option.id}
-            onClick={() => setMatchup(option.id as HostedGameMode)}
-            type="button"
-          >
-            <div className={styles.optionHeader}>
-              <strong>{option.title}</strong>
-            </div>
-            <p>{option.description}</p>
-          </button>
-        ))}
-      </div>
+          {[
+            {
+              description: "Create an open lobby for another player to join.",
+              id: "human_vs_human",
+              title: "Human vs Human",
+            },
+            {
+              description: "Start immediately against a locally hosted AI opponent.",
+              id: "human_vs_ai",
+              title: "Human vs AI",
+            },
+            {
+              description: "Run both armies as AIs on this device for debugging.",
+              id: "ai_vs_ai",
+              title: "AI vs AI",
+            },
+          ].map((option) => (
+            <button
+              className={styles.matchupCard}
+              data-selected={option.id === matchup}
+              key={option.id}
+              onClick={() => setMatchup(option.id as HostedGameMode)}
+              type="button"
+            >
+              <div className={styles.optionHeader}>
+                <strong>{option.title}</strong>
+              </div>
+              <p>{option.description}</p>
+            </button>
+          ))}
+        </div>
       </div>
 
       {(needsInitiatorAi || needsChallengerAi) && (
         <div className={styles.section}>
           <div className={styles.sectionLabel}>AI intelligence</div>
           <div className={styles.aiSettings}>
-          {needsInitiatorAi ? (
-            <label className={styles.aiField}>
-              <span>Red AI intelligence</span>
-              <select
-                onChange={(event) =>
-                  setInitiatorAiIntelligence(Number(event.target.value))
-                }
-                value={initiatorAiIntelligence}
-              >
-                {AI_INTELLIGENCE_OPTIONS.map((level) => (
-                  <option key={`initiator-ai-${level}`} value={level}>
-                    Level {level}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
+            {needsInitiatorAi ? (
+              <label className={styles.aiField}>
+                <span>Red AI intelligence</span>
+                <select
+                  onChange={(event) =>
+                    setInitiatorAiIntelligence(Number(event.target.value))
+                  }
+                  value={initiatorAiIntelligence}
+                >
+                  {AI_INTELLIGENCE_OPTIONS.map((level) => (
+                    <option key={`initiator-ai-${level}`} value={level}>
+                      Level {level}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
 
-          {needsChallengerAi ? (
-            <label className={styles.aiField}>
-              <span>Blue AI intelligence</span>
-              <select
-                onChange={(event) =>
-                  setChallengerAiIntelligence(Number(event.target.value))
-                }
-                value={challengerAiIntelligence}
-              >
-                {AI_INTELLIGENCE_OPTIONS.map((level) => (
-                  <option key={`challenger-ai-${level}`} value={level}>
-                    Level {level}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-        </div>
+            {needsChallengerAi ? (
+              <label className={styles.aiField}>
+                <span>Blue AI intelligence</span>
+                <select
+                  onChange={(event) =>
+                    setChallengerAiIntelligence(Number(event.target.value))
+                  }
+                  value={challengerAiIntelligence}
+                >
+                  {AI_INTELLIGENCE_OPTIONS.map((level) => (
+                    <option key={`challenger-ai-${level}`} value={level}>
+                      Level {level}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
         </div>
       )}
     </Modal>

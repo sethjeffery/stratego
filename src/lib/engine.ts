@@ -150,7 +150,7 @@ const resolveBattle = (
   const d = pieceById.get(defender.pieceId)!;
 
   if (a.canKill === d.id) return "attacker";
-  if (a.explodes && a.rank > d.rank) return "both";
+  if (d.explodes && d.rank > a.rank) return "both";
   if (a.rank > d.rank) return "attacker";
   if (a.rank < d.rank) return "defender";
   return "both";
@@ -475,6 +475,7 @@ export const applyMoveToState = (
 
     nextState.lastBattle = {
       at: to,
+      attackerFrom: from,
       attackerPieceId: moving.pieceId,
       defenderPieceId: defender.pieceId,
       winner,
@@ -554,8 +555,8 @@ export const createRematchState = (
     },
     gameSetup,
     {
-    challengerId: state.players[1].id,
-    initiatorId: state.players[0].id,
+      challengerId: state.players[1].id,
+      initiatorId: state.players[0].id,
     },
   ).state;
   next.roomCode = state.roomCode;

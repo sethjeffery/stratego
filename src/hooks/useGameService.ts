@@ -334,11 +334,13 @@ export function useSessionDetails(sessionId: null | string): {
       ? {
           ...session,
           challenger:
-            resolvedMemberships?.find((participant) => participant.role === "challenger") ??
-            null,
+            resolvedMemberships?.find(
+              (participant) => participant.role === "challenger",
+            ) ?? null,
           initiator:
-            resolvedMemberships?.find((participant) => participant.role === "initiator") ??
-            null,
+            resolvedMemberships?.find(
+              (participant) => participant.role === "initiator",
+            ) ?? null,
           memberships: resolvedMemberships,
           state: session.state as GameState,
         }

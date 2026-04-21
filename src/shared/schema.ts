@@ -4,7 +4,7 @@ export const pieceDefinitionSchema = z.object({
   canKill: z.string().optional(),
   canTraverseMany: z.boolean().default(false),
   count: z.number().int().positive(),
-  explodes: z.string().optional().describe("Explodes when attacking"),
+  explodes: z.boolean().optional().describe("Explodes when attacking"),
   goal: z.boolean().optional().describe("Wins the game when captured"),
   id: z.string(),
   immovable: z.boolean().default(false),
@@ -81,6 +81,7 @@ export type GameState = {
   gameSetupId: string;
   lastBattle?: {
     at: Position;
+    attackerFrom: Position;
     attackerPieceId: string;
     defenderPieceId: string;
     winner: "attacker" | "both" | "defender";

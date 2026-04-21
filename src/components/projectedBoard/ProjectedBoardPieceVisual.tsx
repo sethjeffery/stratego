@@ -1,12 +1,10 @@
-import type { CSSProperties } from "react";
-
 import clsx from "clsx";
+import { type CSSProperties } from "react";
 
 import type { PieceDefinition } from "../../shared/schema";
 import type { PieceColor } from "./types";
 
-import bluePieceUrl from "../../assets/pieces/blue-piece.svg";
-import redPieceUrl from "../../assets/pieces/red-piece.svg";
+import Piece from "../../assets/pieces/piece.svg?react";
 import { pieceIconById } from "../board/pieceIcons";
 import styles from "./ProjectedBoard.module.css";
 import { impactParticles } from "./projectedBoardConstants";
@@ -14,9 +12,8 @@ import { shouldShowRank } from "./projectedBoardHelpers";
 
 type ProjectedBoardPieceVisualProps = {
   className?: string;
-  decorative?: boolean;
   isWinningBattlePiece?: boolean;
-  piece: null | PieceDefinition;
+  piece: PieceDefinition;
   pieceColor: PieceColor;
   pieceId: string;
   pieceKey?: string;
@@ -26,7 +23,6 @@ type ProjectedBoardPieceVisualProps = {
 
 export function ProjectedBoardPieceVisual({
   className,
-  decorative = false,
   isWinningBattlePiece = false,
   piece,
   pieceColor,
@@ -36,7 +32,6 @@ export function ProjectedBoardPieceVisual({
   visible = true,
 }: ProjectedBoardPieceVisualProps) {
   const pieceIcon = pieceIconById[pieceId];
-  const pieceShellUrl = pieceColor === "player-one" ? redPieceUrl : bluePieceUrl;
   const pieceImpactColorClass =
     pieceColor === "player-one" ? styles.impactPlayerOne : styles.impactPlayerTwo;
 
@@ -49,24 +44,26 @@ export function ProjectedBoardPieceVisual({
         shadow && styles.shadow,
       )}
     >
-      <img
-        alt=""
-        aria-hidden="true"
-        className={styles.pieceShell}
-        src={pieceShellUrl}
+      <Piece
+        className={clsx(
+          styles.pieceShell,
+          pieceColor === "player-one" ? styles.playerOne : styles.playerTwo,
+        )}
+        data-bomb={visible ? piece.explodes : null}
+        data-goal={visible ? piece.goal : null}
+        data-rank={piece.rank}
       />
       <span className={styles.pieceFace}>
-        {visible ? (
+        {visible && pieceIcon ? (
           <>
-            {piece?.rank !== undefined && shouldShowRank(pieceId) && (
+            {piece.rank !== undefined && shouldShowRank(pieceId) && (
               <span aria-hidden="true" className={styles.pieceRank}>
                 {piece.rank}
               </span>
             )}
             {pieceIcon ? (
               <img
-                alt={decorative ? "" : (piece?.label ?? pieceId)}
-                aria-hidden={decorative}
+                alt={piece?.label ?? pieceId}
                 className={styles.pieceIcon}
                 src={pieceIcon}
               />

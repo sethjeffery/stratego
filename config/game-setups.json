@@ -37,7 +37,8 @@
           "label": "Bomb",
           "rank": 11,
           "count": 2,
-          "immovable": true
+          "immovable": true,
+          "explodes": true
         },
         { "id": "marshal", "label": "Marshal", "rank": 10, "count": 1 },
         { "id": "general", "label": "General", "rank": 9, "count": 1 },
@@ -105,7 +106,8 @@
           "label": "Bomb",
           "rank": 11,
           "count": 6,
-          "immovable": true
+          "immovable": true,
+          "explodes": true
         },
         { "id": "marshal", "label": "Marshal", "rank": 10, "count": 1 },
         { "id": "general", "label": "General", "rank": 9, "count": 1 },

@@ -3,258 +3,258 @@ export type CompositeTypes<
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+    : never;
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
+    PostgrestVersion: "14.5";
+  };
   public: {
     CompositeTypes: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Enums: {
-      session_role: "challenger" | "initiator"
-    }
+      session_role: "challenger" | "initiator";
+    };
     Functions: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Tables: {
       game_sessions: {
         Insert: {
-          created_at?: string
-          session_id: string
-          state?: Json | null
-          updated_at?: string
-        }
-        Relationships: []
+          created_at?: string;
+          session_id: string;
+          state?: Json | null;
+          updated_at?: string;
+        };
+        Relationships: [];
         Row: {
-          created_at: string
-          session_id: string
-          state: Json | null
-          updated_at: string
-        }
+          created_at: string;
+          session_id: string;
+          state: Json | null;
+          updated_at: string;
+        };
         Update: {
-          created_at?: string
-          session_id?: string
-          state?: Json | null
-          updated_at?: string
-        }
-      }
+          created_at?: string;
+          session_id?: string;
+          state?: Json | null;
+          updated_at?: string;
+        };
+      };
       player_profiles: {
         Insert: {
-          avatar_id?: string
-          created_at?: string
-          device_id: string
-          player_name: string
-          updated_at?: string
-        }
-        Relationships: []
+          avatar_id?: string;
+          created_at?: string;
+          device_id: string;
+          player_name: string;
+          updated_at?: string;
+        };
+        Relationships: [];
         Row: {
-          avatar_id: string
-          created_at: string
-          device_id: string
-          player_name: string
-          updated_at: string
-        }
+          avatar_id: string;
+          created_at: string;
+          device_id: string;
+          player_name: string;
+          updated_at: string;
+        };
         Update: {
-          avatar_id?: string
-          created_at?: string
-          device_id?: string
-          player_name?: string
-          updated_at?: string
-        }
-      }
+          avatar_id?: string;
+          created_at?: string;
+          device_id?: string;
+          player_name?: string;
+          updated_at?: string;
+        };
+      };
       session_chat_messages: {
         Insert: {
-          created_at?: string
-          id: string
-          player_id: string
-          sender_name: string
-          sent_at?: string
-          session_id: string
-          text: string
-          updated_at?: string
-        }
+          created_at?: string;
+          id: string;
+          player_id: string;
+          sender_name: string;
+          sent_at?: string;
+          session_id: string;
+          text: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            columns: ["session_id"]
-            foreignKeyName: "session_chat_messages_session_id_fkey"
-            isOneToOne: false
-            referencedColumns: ["session_id"]
-            referencedRelation: "game_sessions"
+            columns: ["session_id"];
+            foreignKeyName: "session_chat_messages_session_id_fkey";
+            isOneToOne: false;
+            referencedColumns: ["session_id"];
+            referencedRelation: "game_sessions";
           },
           {
-            columns: ["session_id"]
-            foreignKeyName: "session_chat_messages_session_id_fkey"
-            isOneToOne: false
-            referencedColumns: ["session_id"]
-            referencedRelation: "open_game_sessions"
+            columns: ["session_id"];
+            foreignKeyName: "session_chat_messages_session_id_fkey";
+            isOneToOne: false;
+            referencedColumns: ["session_id"];
+            referencedRelation: "open_game_sessions";
           },
           {
-            columns: ["session_id"]
-            foreignKeyName: "session_chat_messages_session_id_fkey"
-            isOneToOne: false
-            referencedColumns: ["session_id"]
-            referencedRelation: "unarchived_game_sessions"
+            columns: ["session_id"];
+            foreignKeyName: "session_chat_messages_session_id_fkey";
+            isOneToOne: false;
+            referencedColumns: ["session_id"];
+            referencedRelation: "unarchived_game_sessions";
           },
-        ]
+        ];
         Row: {
-          created_at: string
-          id: string
-          player_id: string
-          sender_name: string
-          sent_at: string
-          session_id: string
-          text: string
-          updated_at: string
-        }
+          created_at: string;
+          id: string;
+          player_id: string;
+          sender_name: string;
+          sent_at: string;
+          session_id: string;
+          text: string;
+          updated_at: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          player_id?: string
-          sender_name?: string
-          sent_at?: string
-          session_id?: string
-          text?: string
-          updated_at?: string
-        }
-      }
+          created_at?: string;
+          id?: string;
+          player_id?: string;
+          sender_name?: string;
+          sent_at?: string;
+          session_id?: string;
+          text?: string;
+          updated_at?: string;
+        };
+      };
       session_memberships: {
         Insert: {
-          archived_at?: null | string
-          created_at?: string
-          device_id: string
-          last_opened_at?: string
-          role: Database["public"]["Enums"]["session_role"]
-          session_id: string
-          updated_at?: string
-        }
+          archived_at?: null | string;
+          created_at?: string;
+          device_id: string;
+          last_opened_at?: string;
+          role: Database["public"]["Enums"]["session_role"];
+          session_id: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            columns: ["device_id"]
-            foreignKeyName: "session_memberships_device_id_fkey"
-            isOneToOne: false
-            referencedColumns: ["device_id"]
-            referencedRelation: "player_profiles"
+            columns: ["device_id"];
+            foreignKeyName: "session_memberships_device_id_fkey";
+            isOneToOne: false;
+            referencedColumns: ["device_id"];
+            referencedRelation: "player_profiles";
           },
           {
-            columns: ["session_id"]
-            foreignKeyName: "session_memberships_session_id_fkey"
-            isOneToOne: false
-            referencedColumns: ["session_id"]
-            referencedRelation: "game_sessions"
+            columns: ["session_id"];
+            foreignKeyName: "session_memberships_session_id_fkey";
+            isOneToOne: false;
+            referencedColumns: ["session_id"];
+            referencedRelation: "game_sessions";
           },
           {
-            columns: ["session_id"]
-            foreignKeyName: "session_memberships_session_id_fkey"
-            isOneToOne: false
-            referencedColumns: ["session_id"]
-            referencedRelation: "open_game_sessions"
+            columns: ["session_id"];
+            foreignKeyName: "session_memberships_session_id_fkey";
+            isOneToOne: false;
+            referencedColumns: ["session_id"];
+            referencedRelation: "open_game_sessions";
           },
           {
-            columns: ["session_id"]
-            foreignKeyName: "session_memberships_session_id_fkey"
-            isOneToOne: false
-            referencedColumns: ["session_id"]
-            referencedRelation: "unarchived_game_sessions"
+            columns: ["session_id"];
+            foreignKeyName: "session_memberships_session_id_fkey";
+            isOneToOne: false;
+            referencedColumns: ["session_id"];
+            referencedRelation: "unarchived_game_sessions";
           },
-        ]
+        ];
         Row: {
-          archived_at: null | string
-          created_at: string
-          device_id: string
-          last_opened_at: string
-          role: Database["public"]["Enums"]["session_role"]
-          session_id: string
-          updated_at: string
-        }
+          archived_at: null | string;
+          created_at: string;
+          device_id: string;
+          last_opened_at: string;
+          role: Database["public"]["Enums"]["session_role"];
+          session_id: string;
+          updated_at: string;
+        };
         Update: {
-          archived_at?: null | string
-          created_at?: string
-          device_id?: string
-          last_opened_at?: string
-          role?: Database["public"]["Enums"]["session_role"]
-          session_id?: string
-          updated_at?: string
-        }
-      }
-    }
+          archived_at?: null | string;
+          created_at?: string;
+          device_id?: string;
+          last_opened_at?: string;
+          role?: Database["public"]["Enums"]["session_role"];
+          session_id?: string;
+          updated_at?: string;
+        };
+      };
+    };
     Views: {
       open_game_sessions: {
         Insert: {
-          created_at?: null | string
-          session_id?: null | string
-          state?: Json | null
-          updated_at?: null | string
-        }
-        Relationships: []
+          created_at?: null | string;
+          session_id?: null | string;
+          state?: Json | null;
+          updated_at?: null | string;
+        };
+        Relationships: [];
         Row: {
-          created_at: null | string
-          session_id: null | string
-          state: Json | null
-          updated_at: null | string
-        }
+          created_at: null | string;
+          session_id: null | string;
+          state: Json | null;
+          updated_at: null | string;
+        };
         Update: {
-          created_at?: null | string
-          session_id?: null | string
-          state?: Json | null
-          updated_at?: null | string
-        }
-      }
+          created_at?: null | string;
+          session_id?: null | string;
+          state?: Json | null;
+          updated_at?: null | string;
+        };
+      };
       unarchived_game_sessions: {
         Insert: {
-          created_at?: null | string
-          session_id?: null | string
-          state?: Json | null
-          updated_at?: null | string
-        }
-        Relationships: []
+          created_at?: null | string;
+          session_id?: null | string;
+          state?: Json | null;
+          updated_at?: null | string;
+        };
+        Relationships: [];
         Row: {
-          created_at: null | string
-          session_id: null | string
-          state: Json | null
-          updated_at: null | string
-        }
+          created_at: null | string;
+          session_id: null | string;
+          state: Json | null;
+          updated_at: null | string;
+        };
         Update: {
-          created_at?: null | string
-          session_id?: null | string
-          state?: Json | null
-          updated_at?: null | string
-        }
-      }
-    }
-  }
-}
+          created_at?: null | string;
+          session_id?: null | string;
+          state?: Json | null;
+          updated_at?: null | string;
+        };
+      };
+    };
+  };
+};
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+    : never;
 
 export type Json =
   | boolean
@@ -262,24 +262,24 @@ export type Json =
   | null
   | number
   | string
-  | { [key: string]: Json | undefined }
+  | { [key: string]: Json | undefined };
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
+      Row: infer R;
     }
     ? R
     : never
@@ -287,65 +287,65 @@ export type Tables<
         DefaultSchema["Views"])
     ? (DefaultSchema["Tables"] &
         DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
+        Row: infer R;
       }
       ? R
       : never
-    : never
+    : never;
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
+      Insert: infer I;
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
+        Insert: infer I;
       }
       ? I
       : never
-    : never
+    : never;
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
+      Update: infer U;
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
+        Update: infer U;
       }
       ? U
       : never
-    : never
+    : never;
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
 
 export const Constants = {
   public: {
@@ -353,4 +353,4 @@ export const Constants = {
       session_role: ["initiator", "challenger"],
     },
   },
-} as const
+} as const;

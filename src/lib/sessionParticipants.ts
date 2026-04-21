@@ -91,18 +91,22 @@ export const resolveSessionParticipants = ({
   );
 
   if (state?.players?.length) {
-    return state.players.slice(0, 2).map((player, index) =>
-      toParticipantFromPlayer(
-        player,
-        index,
-        membershipByRole.get(roleByIndex(index)),
-        profileByDeviceId.get(player.id),
-      ),
-    );
+    return state.players
+      .slice(0, 2)
+      .map((player, index) =>
+        toParticipantFromPlayer(
+          player,
+          index,
+          membershipByRole.get(roleByIndex(index)),
+          profileByDeviceId.get(player.id),
+        ),
+      );
   }
 
   return [...(memberships ?? [])]
-    .sort((left, right) => SESSION_ROLE_ORDER[left.role] - SESSION_ROLE_ORDER[right.role])
+    .sort(
+      (left, right) => SESSION_ROLE_ORDER[left.role] - SESSION_ROLE_ORDER[right.role],
+    )
     .map((membership) =>
       toParticipantFromMembership(
         membership,

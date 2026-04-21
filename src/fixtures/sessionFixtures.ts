@@ -100,17 +100,9 @@ const waitingForChallenger = {
 } satisfies GameSessionDetails;
 
 const setupDuel = {
-  challenger: createMembership(
-    setupDuelSessionId,
-    "challenger",
-    fixtureProfiles.slate,
-  ),
+  challenger: createMembership(setupDuelSessionId, "challenger", fixtureProfiles.slate),
   created_at: DEFAULT_TIMESTAMP,
-  initiator: createMembership(
-    setupDuelSessionId,
-    "initiator",
-    fixtureProfiles.ember,
-  ),
+  initiator: createMembership(setupDuelSessionId, "initiator", fixtureProfiles.ember),
   memberships: [
     createMembership(setupDuelSessionId, "initiator", fixtureProfiles.ember),
     createMembership(setupDuelSessionId, "challenger", fixtureProfiles.slate),
@@ -257,6 +249,7 @@ const openingSkirmish = {
       finishedAt: null,
       lastBattle: {
         at: { x: 5, y: 6 },
+        attackerFrom: { x: 5, y: 7 },
         attackerPieceId: "miner",
         defenderPieceId: "sergeant",
         winner: "attacker",

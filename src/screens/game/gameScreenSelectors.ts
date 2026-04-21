@@ -16,9 +16,10 @@ export const getPlayerColorClass = (playerId: string, playerOneId: null | string
 
 export const getPieceTraits = (piece: PieceDefinition) =>
   [
-    piece.id === "flag" ? "Capturing it wins the game." : null,
+    piece.goal ? "Capturing it wins the game." : null,
     piece.canTraverseMany ? "Moves multiple spaces in a line." : null,
     piece.immovable ? "Cannot move once deployed." : null,
+    piece.explodes ? "Explodes when attacked." : null,
     piece.canKill
       ? `Kills the ${pieceById.get(piece.canKill)?.label} if attacking.`
       : null,

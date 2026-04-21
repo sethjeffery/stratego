@@ -5,11 +5,7 @@ import type { GameState, PieceDefinition, Position, Unit } from "../../shared/sc
 import { isUnitAlive } from "../../shared/schema";
 import styles from "./ProjectedBoard.module.css";
 import { ProjectedBoardBattleBurst } from "./ProjectedBoardBattleBurst";
-import {
-  colorForOwner,
-  getPieceStyle,
-  getPieceZIndex,
-} from "./projectedBoardHelpers";
+import { colorForOwner, getPieceStyle, getPieceZIndex } from "./projectedBoardHelpers";
 import { ProjectedBoardPieceVisual } from "./ProjectedBoardPieceVisual";
 
 type ProjectedBoardPiecesProps = {
@@ -47,12 +43,11 @@ export function ProjectedBoardPieces({
   state,
   toDisplayPosition,
 }: ProjectedBoardPiecesProps) {
-  const positionedUnits = state.units
-    .map((unit) => ({
-      display: toDisplayPosition(unit),
-      isAlive: isUnitAlive(unit),
-      unit,
-    }));
+  const positionedUnits = state.units.map((unit) => ({
+    display: toDisplayPosition(unit),
+    isAlive: isUnitAlive(unit),
+    unit,
+  }));
 
   return (
     <>
@@ -83,6 +78,8 @@ export function ProjectedBoardPieces({
           state.lastBattle?.at.y === unit.y;
         const piece = pieceById.get(unit.pieceId) ?? null;
         const pieceColor = colorForOwner(unit.ownerId, playerOneId);
+
+        if (!piece) return null;
 
         return (
           <button

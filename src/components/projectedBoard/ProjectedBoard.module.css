@@ -262,6 +262,19 @@
     opacity 180ms ease;
 }
 
+.playerOne {
+  color: rgb(189, 11, 11);
+}
+
+.playerTwo {
+  color: rgb(11, 32, 189);
+}
+
+.pieceShell[data-bomb],
+.pieceShell[data-goal] {
+  color: black;
+}
+
 .captured {
   pointer-events: none;
 }
@@ -291,6 +304,7 @@
   display: grid;
   place-items: center;
   overflow: hidden;
+  color: rgba(255, 255, 255);
 }
 
 .pieceRank {
@@ -301,7 +315,6 @@
   font-size: 0.75rem;
   line-height: 1;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.96);
   text-shadow:
     0 1px 0 rgba(0, 0, 0, 0.8),
     1px 1px 0 rgba(0, 0, 0, 0.45);
@@ -319,7 +332,7 @@
   letter-spacing: 0.04em;
   font-size: 1.5rem;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.5);
+  opacity: 0.8;
 }
 
 .impact .pieceShell,
