@@ -1,9 +1,11 @@
 import { nanoid } from "nanoid";
 
 import type {
+  AiPlayerConfig,
   GameSetup,
   GameState,
   PieceDefinition,
+  PlayerController,
   PlayerState,
   Position,
   RulesConfig,
@@ -173,8 +175,16 @@ const createBattleChatMessage = (
 });
 
 export const createSessionGame = (
-  initiatorProfile: UserProfile,
-  challengerProfile: UserProfile,
+  initiatorPlayer: {
+    aiConfig?: AiPlayerConfig;
+    controller: PlayerController;
+    profile: UserProfile;
+  },
+  challengerPlayer: {
+    aiConfig?: AiPlayerConfig;
+    controller: PlayerController;
+    profile: UserProfile;
+  },
   gameSetup: GameSetup,
   playerIds?: { challengerId: string; initiatorId: string },
 ): { challengerId: string; initiatorId: string; state: GameState } => {
@@ -184,11 +194,19 @@ export const createSessionGame = (
 
   const players: PlayerState[] = [
     {
+      aiConfig: initiatorPlayer.aiConfig,
+      avatarId: initiatorPlayer.profile.avatar_id,
       connected: true,
+      controller: initiatorPlayer.controller,
+      displayName: initiatorPlayer.profile.player_name,
       id: initiatorId,
     },
     {
+      aiConfig: challengerPlayer.aiConfig,
+      avatarId: challengerPlayer.profile.avatar_id,
       connected: true,
+      controller: challengerPlayer.controller,
+      displayName: challengerPlayer.profile.player_name,
       id: challengerId,
     },
   ];
@@ -508,17 +526,38 @@ export const applyMoveToState = (
 
 export const createRematchState = (
   state: GameState,
-  profiles: [UserProfile, UserProfile],
   gameSetup: GameSetup,
 ): GameState => {
   if (state.players.length < 2) {
     throw new Error("Cannot reset without both players.");
   }
 
-  const next = createSessionGame(profiles[0], profiles[1], gameSetup, {
+  const initiatorProfile = {
+    avatar_id: state.players[0].avatarId ?? "",
+    player_name: state.players[0].displayName ?? "Commander Red",
+  };
+  const challengerProfile = {
+    avatar_id: state.players[1].avatarId ?? "",
+    player_name: state.players[1].displayName ?? "Commander Blue",
+  };
+
+  const next = createSessionGame(
+    {
+      aiConfig: state.players[0].aiConfig,
+      controller: state.players[0].controller ?? "human",
+      profile: initiatorProfile,
+    },
+    {
+      aiConfig: state.players[1].aiConfig,
+      controller: state.players[1].controller ?? "human",
+      profile: challengerProfile,
+    },
+    gameSetup,
+    {
     challengerId: state.players[1].id,
     initiatorId: state.players[0].id,
-  }).state;
+    },
+  ).state;
   next.roomCode = state.roomCode;
   return next;
 };

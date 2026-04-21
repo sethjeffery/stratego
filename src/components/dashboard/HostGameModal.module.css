@@ -1,7 +1,23 @@
+.section {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.section + .section {
+  margin-top: 1.15rem;
+}
+
+.sectionLabel {
+  color: #e9dbc0;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
 .optionList {
   display: grid;
   gap: 0.85rem;
-  margin: 1rem 0 1.25rem;
 }
 
 .optionCard {
@@ -20,6 +36,41 @@
     border-color 160ms ease,
     transform 160ms ease,
     box-shadow 160ms ease;
+}
+
+.matchupGrid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.matchupCard {
+  width: 100%;
+  min-height: 8.75rem;
+  text-align: left;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(220, 196, 147, 0.24);
+  background: linear-gradient(
+    160deg in oklab,
+    rgba(55, 61, 34, 0.92),
+    rgba(31, 42, 19, 0.9)
+  );
+  color: #f5eed8;
+  padding: 1rem 1.05rem;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.matchupCard:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 210, 112, 0.48);
+}
+
+.matchupCard[data-selected="true"] {
+  border-color: rgba(255, 210, 112, 0.78);
+  box-shadow: 0 0 0 1px rgba(255, 210, 112, 0.26);
 }
 
 .optionCard:hover {
@@ -46,4 +97,40 @@
 .optionCard p {
   margin: 0.45rem 0 0;
   color: #e9dbc0;
+}
+
+.matchupCard p {
+  margin: 0.45rem 0 0;
+  color: #e9dbc0;
+  font-size: 0.98rem;
+}
+
+.aiSettings {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.aiField {
+  display: grid;
+  gap: 0.45rem;
+  color: #f5eed8;
+  font-size: 0.95rem;
+}
+
+.aiField select {
+  border: 1px solid rgba(220, 196, 147, 0.24);
+  border-radius: 0.8rem;
+  background: rgba(18, 27, 11, 0.94);
+  color: #f5eed8;
+  padding: 0.75rem 0.85rem;
+}
+
+@media (max-width: 780px) {
+  .matchupGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .matchupCard {
+    min-height: 0;
+  }
 }

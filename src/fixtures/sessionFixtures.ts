@@ -1,3 +1,4 @@
+import type { SessionParticipant } from "../lib/sessionParticipants";
 import type {
   CurrentUser,
   GameSessionDetails,
@@ -45,15 +46,19 @@ const createMembership = (
     lastOpenedAt?: string;
     updatedAt?: string;
   },
-) => ({
+): SessionParticipant => ({
   archived_at: options?.archivedAt ?? null,
-  created_at: options?.createdAt ?? DEFAULT_TIMESTAMP,
+  avatar_id: player.avatar_id,
+  controller: "human",
   device_id: player.device_id,
-  last_opened_at: options?.lastOpenedAt ?? DEFAULT_TIMESTAMP,
-  player,
+  is_ai: false,
+  player_name: player.player_name,
+  profile: {
+    avatar_id: player.avatar_id,
+    device_id: player.device_id,
+    player_name: player.player_name,
+  },
   role,
-  session_id: sessionId,
-  updated_at: options?.updatedAt ?? DEFAULT_TIMESTAMP,
 });
 
 const createSessionState = (
@@ -64,7 +69,10 @@ const createSessionState = (
   ...state,
   gameSetupId: "quick-game",
   players: players.map((player) => ({
+    avatarId: player.avatar_id,
     connected: true,
+    controller: "human",
+    displayName: player.player_name,
     id: player.device_id,
   })),
   roomCode,
@@ -78,7 +86,11 @@ const finishedFlagSessionId = "FXDONE01";
 const waitingForChallenger = {
   challenger: null,
   created_at: DEFAULT_TIMESTAMP,
-  initiator: fixtureProfiles.ember,
+  initiator: createMembership(
+    waitingForChallengerSessionId,
+    "initiator",
+    fixtureProfiles.ember,
+  ),
   memberships: [
     createMembership(waitingForChallengerSessionId, "initiator", fixtureProfiles.ember),
   ],
@@ -88,9 +100,17 @@ const waitingForChallenger = {
 } satisfies GameSessionDetails;
 
 const setupDuel = {
-  challenger: fixtureProfiles.slate,
+  challenger: createMembership(
+    setupDuelSessionId,
+    "challenger",
+    fixtureProfiles.slate,
+  ),
   created_at: DEFAULT_TIMESTAMP,
-  initiator: fixtureProfiles.ember,
+  initiator: createMembership(
+    setupDuelSessionId,
+    "initiator",
+    fixtureProfiles.ember,
+  ),
   memberships: [
     createMembership(setupDuelSessionId, "initiator", fixtureProfiles.ember),
     createMembership(setupDuelSessionId, "challenger", fixtureProfiles.slate),
@@ -191,9 +211,17 @@ const setupDuel = {
 } satisfies GameSessionDetails;
 
 const openingSkirmish = {
-  challenger: fixtureProfiles.grove,
+  challenger: createMembership(
+    openingSkirmishSessionId,
+    "challenger",
+    fixtureProfiles.grove,
+  ),
   created_at: DEFAULT_TIMESTAMP,
-  initiator: fixtureProfiles.aurora,
+  initiator: createMembership(
+    openingSkirmishSessionId,
+    "initiator",
+    fixtureProfiles.aurora,
+  ),
   memberships: [
     createMembership(openingSkirmishSessionId, "initiator", fixtureProfiles.aurora),
     createMembership(openingSkirmishSessionId, "challenger", fixtureProfiles.grove),
@@ -319,9 +347,17 @@ const openingSkirmish = {
 } satisfies GameSessionDetails;
 
 const finishedFlag = {
-  challenger: fixtureProfiles.slate,
+  challenger: createMembership(
+    finishedFlagSessionId,
+    "challenger",
+    fixtureProfiles.slate,
+  ),
   created_at: DEFAULT_TIMESTAMP,
-  initiator: fixtureProfiles.ember,
+  initiator: createMembership(
+    finishedFlagSessionId,
+    "initiator",
+    fixtureProfiles.ember,
+  ),
   memberships: [
     createMembership(finishedFlagSessionId, "initiator", fixtureProfiles.ember),
     createMembership(finishedFlagSessionId, "challenger", fixtureProfiles.slate),

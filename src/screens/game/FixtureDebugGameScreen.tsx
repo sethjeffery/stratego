@@ -52,6 +52,7 @@ export function FixtureDebugGameScreen({
     getOtherDisplayPlayer(displayPlayers, myId)?.name ?? "the opponent";
   const mainStatus = getMainStatus({
     archived: false,
+    isAiTurn: false,
     isMyTurn: session.state.turnPlayerId === myId,
     isReady: session.state.setupReadyPlayerIds.includes(myId ?? ""),
     myId,

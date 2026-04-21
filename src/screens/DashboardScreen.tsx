@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import type { CreateSessionOptions } from "../lib/aiConfig";
+
 import { buildGamePath } from "../app/sessionRouting";
 import { DashboardTopbar } from "../components/dashboard/DashboardTopbar";
 import { HostGameModal } from "../components/dashboard/HostGameModal";
@@ -23,8 +25,8 @@ export function DashboardScreen() {
   const [hostGameModalVisible, setHostGameModalVisible] = useState(false);
   const navigate = useNavigate();
 
-  const handleCreateSession = async (setupId: string) => {
-    const newSession = await createSession({ setupId });
+  const handleCreateSession = async (options: CreateSessionOptions) => {
+    const newSession = await createSession(options);
     setHostGameModalVisible(false);
     navigate(buildGamePath(newSession.session_id));
   };

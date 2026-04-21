@@ -2,6 +2,7 @@ import { useCallback, useEffect } from "react";
 import useSWR, { mutate, useSWRConfig } from "swr";
 import useSWRMutation from "swr/mutation";
 
+import type { CreateSessionOptions } from "../lib/aiConfig";
 import type {
   GameSession,
   GameSessionDetails,
@@ -19,6 +20,7 @@ import {
   getSessionMembershipsCacheKey,
 } from "../lib/gameServiceCache";
 import { getMemberByRole } from "../lib/playerProfile";
+import { resolveSessionParticipants } from "../lib/sessionParticipants";
 import {
   applyChatMessageToSession,
   archiveSession,
@@ -160,9 +162,9 @@ export function useCreateSession() {
 
   return useSWRMutation(
     "/api/create-session",
-    async (_url, { arg: { setupId } }: { arg: { setupId: string } }) => {
+    async (_url, { arg }: { arg: CreateSessionOptions }) => {
       const currentUser = await getCurrentUser();
-      const session = await createInitiatedSession(currentUser, setupId);
+      const session = await createInitiatedSession(currentUser, arg);
       await revalidateSessionCaches(
         mutate,
         cacheScope,
@@ -311,17 +313,33 @@ export function useSessionDetails(sessionId: null | string): {
   const { data: challenger, isLoading: challengerLoading } = useProfile(
     getMemberByRole(memberships, "challenger")?.device_id ?? null,
   );
+  const resolvedProfiles = [initiator, challenger].filter(
+    (profile): profile is NonNullable<typeof profile> => Boolean(profile),
+  );
+  const resolvedMemberships = session
+    ? resolveSessionParticipants({
+        memberships:
+          memberships?.map((membership) => ({
+            archived_at: membership.archived_at,
+            device_id: membership.device_id,
+            role: membership.role,
+          })) ?? [],
+        profiles: resolvedProfiles,
+        state: session.state,
+      })
+    : null;
 
   return {
     data: session
       ? {
           ...session,
-          challenger,
-          initiator,
-          memberships: memberships?.map((m) => ({
-            ...m,
-            profile: m.role === "initiator" ? initiator : challenger,
-          })),
+          challenger:
+            resolvedMemberships?.find((participant) => participant.role === "challenger") ??
+            null,
+          initiator:
+            resolvedMemberships?.find((participant) => participant.role === "initiator") ??
+            null,
+          memberships: resolvedMemberships,
           state: session.state as GameState,
         }
       : null,

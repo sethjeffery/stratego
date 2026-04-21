@@ -15,6 +15,11 @@ import {
   sortAndLimitChatMessages,
 } from "../shared/schema";
 import {
+  createAiPlayerConfig,
+  createAiProfile,
+  type CreateSessionOptions,
+} from "./aiConfig";
+import {
   applyMoveToState,
   applySetupSwapToState,
   createOpenSessionState,
@@ -29,6 +34,10 @@ import {
   getMemberByRole,
   pickRandomAvatarId,
 } from "./playerProfile";
+import {
+  resolveSessionParticipants,
+  type SessionParticipant,
+} from "./sessionParticipants";
 
 export type CurrentUser = Database["public"]["Tables"]["player_profiles"]["Row"];
 export type GameSession = Omit<
@@ -39,13 +48,9 @@ export type GameSessionDetails = Omit<
   Database["public"]["Tables"]["game_sessions"]["Row"],
   "state"
 > & {
-  challenger?: null | UserDeviceProfile;
-  initiator?: null | UserDeviceProfile;
-  memberships?:
-    | (Database["public"]["Tables"]["session_memberships"]["Row"] & {
-        profile?: null | UserDeviceProfile;
-      })[]
-    | null;
+  challenger?: null | SessionParticipant;
+  initiator?: null | SessionParticipant;
+  memberships?: null | SessionParticipant[];
   state: GameState | null;
 };
 export type PlayerProfile = Database["public"]["Tables"]["player_profiles"]["Row"];
@@ -82,11 +87,6 @@ export type SessionAccess = {
   session: SessionSummary;
 };
 
-export type SessionParticipant = SessionMembershipRow & {
-  avatar_id: string;
-  player_name: string;
-};
-
 export type SessionSummary = Omit<
   GameSessionDetails,
   "challenger" | "initiator" | "memberships"
@@ -99,12 +99,8 @@ export type SessionSummary = Omit<
 
 type SessionMembershipRow = {
   archived_at: null | string;
-  created_at: string;
   device_id: string;
-  last_opened_at: string;
   role: SessionRole;
-  session_id: string;
-  updated_at: string;
 };
 
 const SESSION_ROLE_ORDER: Record<SessionRole, number> = {
@@ -316,16 +312,70 @@ export const updateCurrentUserProfile = async (profile: UserProfile) => {
 
 export const createInitiatedSession = async (
   initiator: CurrentUser,
-  setupId = defaultGameSetupId,
+  options: CreateSessionOptions = {
+    matchup: "human_vs_human",
+    setupId: defaultGameSetupId,
+  },
 ) => {
   if (!client) throw new Error("Supabase is not configured.");
 
   const sessionId = createSessionCode();
+  const setupId = options.setupId ?? defaultGameSetupId;
+  const shouldOpenLobby = options.matchup === "human_vs_human";
+  const initialState = shouldOpenLobby
+    ? createOpenSessionState(sessionId, setupId)
+    : createSessionGame(
+        {
+          aiConfig:
+            options.matchup === "ai_vs_ai"
+              ? createAiPlayerConfig(options.initiatorAiIntelligence)
+              : undefined,
+          controller: options.matchup === "ai_vs_ai" ? "ai" : "human",
+          profile:
+            options.matchup === "ai_vs_ai"
+              ? createAiProfile("initiator", options.initiatorAiIntelligence)
+              : initiator,
+        },
+        {
+          aiConfig:
+            options.matchup === "human_vs_ai" || options.matchup === "ai_vs_ai"
+              ? createAiPlayerConfig(options.challengerAiIntelligence)
+              : undefined,
+          controller:
+            options.matchup === "human_vs_ai" || options.matchup === "ai_vs_ai"
+              ? "ai"
+              : "human",
+          profile:
+            options.matchup === "human_vs_ai" || options.matchup === "ai_vs_ai"
+              ? createAiProfile("challenger", options.challengerAiIntelligence)
+              : initiator,
+        },
+        getGameSetup(setupId),
+        {
+          challengerId: `challenger-${sessionId}`,
+          initiatorId: initiator.device_id,
+        },
+      ).state;
+  const state =
+    options.matchup === "human_vs_ai"
+      ? (markPlayerSetupReady(
+          initialState,
+          initialState.players[1]?.id ?? "",
+        ).nextState ?? initialState)
+      : options.matchup === "ai_vs_ai"
+        ? initialState.players.reduce(
+            (nextState, player) =>
+              markPlayerSetupReady(nextState, player.id).nextState ?? nextState,
+            initialState,
+          )
+        : initialState;
+  state.roomCode = sessionId;
+
   const { data, error } = await client
     .from("game_sessions")
     .insert({
       session_id: sessionId,
-      state: createOpenSessionState(sessionId, setupId),
+      state,
     })
     .select("*")
     .single<GameSessionDetails>();
@@ -340,27 +390,41 @@ export const createInitiatedSession = async (
 
   return {
     ...data,
-    initiator: {
-      avatar_id: initiator.avatar_id,
-      device_id: initiator.device_id,
-      player_name: initiator.player_name,
-    },
-    session_memberships: [
-      {
-        archived_at: null,
-        created_at: "",
-        device_id: initiator.device_id,
-        last_opened_at: "",
-        player: {
-          avatar_id: initiator.avatar_id,
+    challenger:
+      resolveSessionParticipants({
+        memberships: [
+          {
+            archived_at: null,
+            device_id: initiator.device_id,
+            role: "initiator",
+          },
+        ],
+        profiles: [initiator],
+        state,
+      }).find(({ role }) => role === "challenger") ?? null,
+    initiator:
+      resolveSessionParticipants({
+        memberships: [
+          {
+            archived_at: null,
+            device_id: initiator.device_id,
+            role: "initiator",
+          },
+        ],
+        profiles: [initiator],
+        state,
+      }).find(({ role }) => role === "initiator") ?? null,
+    memberships: resolveSessionParticipants({
+      memberships: [
+        {
+          archived_at: null,
           device_id: initiator.device_id,
-          player_name: initiator.player_name,
+          role: "initiator",
         },
-        role: "initiator",
-        session_id: sessionId,
-        updated_at: "",
-      },
-    ],
+      ],
+      profiles: [initiator],
+      state,
+    }),
   } as GameSessionDetails;
 };
 
@@ -371,6 +435,9 @@ export const joinSessionAsCurrentUser = async (sessionId: string) => {
   const existingAccess = await getSession(sessionId);
   if (!existingAccess) {
     throw new Error("Session not found");
+  }
+  if (existingAccess.state?.phase !== "open") {
+    throw new Error("Session is not open to new players.");
   }
 
   const memberships = await getSessionMemberships(sessionId);
@@ -416,10 +483,21 @@ export const joinSessionAsCurrentUser = async (sessionId: string) => {
   });
 
   const gameSetup = getGameSetup(existingAccess.state?.gameSetupId);
-  const initialized = createSessionGame(initiator, currentUser, gameSetup, {
-    challengerId: currentUser.device_id,
-    initiatorId: initiator.device_id,
-  });
+  const initialized = createSessionGame(
+    {
+      controller: "human",
+      profile: initiator,
+    },
+    {
+      controller: "human",
+      profile: currentUser,
+    },
+    gameSetup,
+    {
+      challengerId: currentUser.device_id,
+      initiatorId: initiator.device_id,
+    },
+  );
   initialized.state.roomCode = sessionId;
   await updateSessionState(sessionId, () => ({ nextState: initialized.state }));
 
@@ -532,15 +610,6 @@ export const getSession = async (sessionId: string): Promise<GameSession> => {
   return mergeSessionChatMessages(nextSession, chatMessages);
 };
 
-const buildSessionParticipant = (
-  membership: SessionMembership,
-  profile?: null | PlayerProfile,
-): SessionParticipant => ({
-  ...membership,
-  avatar_id: profile?.avatar_id ?? "",
-  player_name: profile?.player_name ?? "Unknown player",
-});
-
 const hydrateSessionSummaries = async (
   sessions: GameSession[],
   currentDeviceId = getCurrentDeviceId(),
@@ -567,27 +636,24 @@ const hydrateSessionSummaries = async (
             .throwOnError()
         ).data;
 
-  const profileByDeviceId = new Map(
-    (profiles ?? []).map((profile) => [profile.device_id, profile]),
-  );
-  const membershipsBySessionId = new Map<string, SessionParticipant[]>();
+  const membershipsBySessionId = new Map<string, SessionMembershipRow[]>();
 
   for (const membership of memberships ?? []) {
     const sessionMemberships = membershipsBySessionId.get(membership.session_id) ?? [];
-
-    sessionMemberships.push(
-      buildSessionParticipant(
-        membership,
-        profileByDeviceId.get(membership.device_id) ?? null,
-      ),
-    );
+    sessionMemberships.push({
+      archived_at: membership.archived_at,
+      device_id: membership.device_id,
+      role: membership.role,
+    });
     membershipsBySessionId.set(membership.session_id, sessionMemberships);
   }
 
   return sessions.map((session) => {
-    const sessionMemberships = [
-      ...(membershipsBySessionId.get(session.session_id) ?? []),
-    ].sort(
+    const sessionMemberships = resolveSessionParticipants({
+      memberships: membershipsBySessionId.get(session.session_id) ?? [],
+      profiles: profiles ?? [],
+      state: session.state,
+    }).sort(
       (left, right) => SESSION_ROLE_ORDER[left.role] - SESSION_ROLE_ORDER[right.role],
     );
 
@@ -665,7 +731,9 @@ export const listOpenSessions = async (
     .limit(Math.max(limit * 3, limit))
     .throwOnError();
 
-  return hydrateSessionSummaries((data ?? []) as GameSession[]);
+  return hydrateSessionSummaries(
+    ((data ?? []) as GameSession[]).filter((session) => session.state?.phase === "open"),
+  );
 };
 
 export const applyMove = async (
@@ -723,18 +791,6 @@ export const markSetupReady = async (sessionId: string, playerId: string) => {
 };
 
 export const resetFinishedGame = async (sessionId: string, playerId: string) => {
-  const memberships = await getSessionMemberships(sessionId);
-  const initiator = await getProfile(
-    getMemberByRole(memberships, "initiator")?.device_id,
-  );
-  const challenger = await getProfile(
-    getMemberByRole(memberships, "challenger")?.device_id,
-  );
-
-  if (!initiator || !challenger) {
-    throw new Error("Both player profiles are required to start a rematch.");
-  }
-
   const row = await updateSessionState(sessionId, (currentRow) => {
     if (!currentRow.state) return { error: "Waiting for challenger to join." };
     if (!currentRow.state.players.some((player) => player.id === playerId)) {
@@ -746,11 +802,7 @@ export const resetFinishedGame = async (sessionId: string, playerId: string) => 
     const gameSetup = getGameSetup(currentRow.state.gameSetupId);
 
     return {
-      nextState: createRematchState(
-        currentRow.state,
-        [initiator, challenger],
-        gameSetup,
-      ),
+      nextState: createRematchState(currentRow.state, gameSetup),
     };
   });
 

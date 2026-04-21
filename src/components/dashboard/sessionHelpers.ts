@@ -1,6 +1,6 @@
 import type { GameSessionDetails, SessionSummary } from "../../lib/supabaseGameService";
 
-import { getMemberById } from "../../lib/playerProfile";
+import { getSessionParticipantById } from "../../lib/sessionParticipants";
 
 export type SessionOutcomeIcon = "active" | "flag" | "medal" | "skull";
 
@@ -37,7 +37,7 @@ export const getCompletionSummary = (
     };
   }
 
-  const winner = getMemberById(row.memberships, row.state?.winnerId);
+  const winner = getSessionParticipantById(row.memberships, row.state?.winnerId);
   if (!winner) {
     return {
       icon: null,
@@ -54,7 +54,10 @@ export const getCompletionSummary = (
         text: "You surrendered",
       };
     }
-    const surrenderedPlayer = getMemberById(row.memberships, surrenderedById);
+    const surrenderedPlayer = getSessionParticipantById(
+      row.memberships,
+      surrenderedById,
+    );
 
     return {
       icon: "flag",

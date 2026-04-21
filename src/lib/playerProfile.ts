@@ -91,13 +91,13 @@ export const generatePlayerName = (exceptName?: string) => {
 };
 
 export function getMemberById<
-  T extends Database["public"]["Tables"]["session_memberships"]["Row"],
+  T extends Pick<Database["public"]["Tables"]["session_memberships"]["Row"], "device_id">,
 >(memberships?: null | T[], id?: null | string): null | T {
   return (id && memberships?.find((membership) => membership.device_id === id)) || null;
 }
 
 export function getMemberByRole<
-  T extends Database["public"]["Tables"]["session_memberships"]["Row"],
+  T extends Pick<Database["public"]["Tables"]["session_memberships"]["Row"], "role">,
 >(
   memberships?: null | T[],
   role?: Database["public"]["Enums"]["session_role"],

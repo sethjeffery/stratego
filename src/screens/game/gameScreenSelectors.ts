@@ -56,16 +56,19 @@ export type MainStatus =
   | "draw"
   | "loser"
   | "setup"
+  | "thinking"
   | "waiting"
   | "winner";
 export const getMainStatus = ({
   archived,
+  isAiTurn,
   isMyTurn,
   isReady,
   myId,
   state,
 }: {
   archived: boolean;
+  isAiTurn: boolean;
   isMyTurn: boolean;
   isReady: boolean;
   myId: null | string;
@@ -83,6 +86,10 @@ export const getMainStatus = ({
 
   if (state.phase === "setup") {
     return isReady ? "waiting" : "setup";
+  }
+
+  if (isAiTurn) {
+    return "thinking";
   }
 
   return isMyTurn ? "active" : "waiting";

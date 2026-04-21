@@ -50,6 +50,9 @@ export const gameSetupCatalogSchema = z.object({
   setups: z.array(gameSetupSchema),
 });
 
+export type AiPlayerConfig = {
+  intelligence: number;
+};
 export type BattleChatMessage = {
   attackerOwnerId: string;
   attackerPieceId: string;
@@ -57,6 +60,7 @@ export type BattleChatMessage = {
   defenderPieceId: string;
   winner: "attacker" | "both" | "defender";
 };
+
 export type GameChatMessage = {
   battle?: BattleChatMessage;
   id: string;
@@ -68,7 +72,6 @@ export type GameChatMessage = {
 };
 
 export type GameSetup = z.infer<typeof gameSetupSchema>;
-
 export type GameSetupCatalog = z.infer<typeof gameSetupCatalogSchema>;
 
 export type GameState = {
@@ -97,8 +100,14 @@ export type GameState = {
 
 export type PieceDefinition = z.infer<typeof pieceDefinitionSchema>;
 
+export type PlayerController = "ai" | "human";
+
 export type PlayerState = {
+  aiConfig?: AiPlayerConfig;
+  avatarId?: string;
   connected: boolean;
+  controller?: PlayerController;
+  displayName?: string;
   id: string;
 };
 
@@ -119,6 +128,10 @@ export type Unit = {
 export type UnitStatus = NonNullable<Unit["status"]>;
 
 export const isUnitAlive = (unit: Unit) => unit.status !== "captured";
+export const getPlayerController = (player: Pick<PlayerState, "controller">) =>
+  player.controller ?? "human";
+export const isAiPlayer = (player: Pick<PlayerState, "controller">) =>
+  getPlayerController(player) === "ai";
 
 export const getAliveUnits = (state: Pick<GameState, "units">) =>
   state.units.filter(isUnitAlive);

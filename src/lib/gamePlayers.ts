@@ -1,12 +1,15 @@
 import type { GameState } from "../shared/schema";
-import type { GameSessionDetails } from "./supabaseGameService";
+import type { SessionParticipant } from "./sessionParticipants";
 
+import { getPlayerController } from "../shared/schema";
 import { getMemberByRole } from "./playerProfile";
 
 export type GameDisplayPlayer = {
   avatarId?: string;
   connected: boolean;
+  controller: "ai" | "human";
   id: string;
+  isAi: boolean;
   name: string;
 };
 
@@ -15,7 +18,7 @@ const getFallbackName = (index: number) =>
 
 export const getGameDisplayPlayers = (
   state: GameState | null,
-  memberships?: GameSessionDetails["memberships"],
+  memberships?: null | SessionParticipant[],
 ): GameDisplayPlayer[] => {
   if (!state) return [];
 
@@ -27,12 +30,19 @@ export const getGameDisplayPlayers = (
         : getMemberByRole(memberships, "challenger")) ??
       null;
     const profile = membership?.profile ?? null;
+    const controller = getPlayerController(player);
 
     return {
-      avatarId: profile?.avatar_id,
+      avatarId: profile?.avatar_id ?? membership?.avatar_id ?? player.avatarId,
       connected: player.connected,
+      controller,
       id: player.id,
-      name: profile?.player_name ?? getFallbackName(index),
+      isAi: controller === "ai",
+      name:
+        profile?.player_name ??
+        membership?.player_name ??
+        player.displayName ??
+        getFallbackName(index),
     };
   });
 };

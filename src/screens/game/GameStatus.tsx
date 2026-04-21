@@ -55,6 +55,13 @@ const statusMessage = ({
           Set up your pieces
         </>
       );
+    case "thinking":
+      return (
+        <>
+          <HourglassIcon size={16} />
+          AI is thinking
+        </>
+      );
     case "waiting":
       return (
         <>

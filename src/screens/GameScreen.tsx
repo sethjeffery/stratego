@@ -61,6 +61,11 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
   const completionStats = getCompletionStats(state);
   const mainStatus = getMainStatus({
     archived,
+    isAiTurn: Boolean(
+      state.turnPlayerId &&
+        state.players.find((player) => player.id === state.turnPlayerId)?.controller ===
+          "ai",
+    ),
     isMyTurn,
     isReady: state?.setupReadyPlayerIds.includes(myId ?? ""),
     myId,
