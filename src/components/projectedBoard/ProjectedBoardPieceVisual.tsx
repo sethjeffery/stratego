@@ -13,23 +13,27 @@ import { impactParticles } from "./projectedBoardConstants";
 import { shouldShowRank } from "./projectedBoardHelpers";
 
 type ProjectedBoardPieceVisualProps = {
+  className?: string;
   decorative?: boolean;
   isWinningBattlePiece?: boolean;
   piece: null | PieceDefinition;
   pieceColor: PieceColor;
   pieceId: string;
-  pieceKey: string;
-  visible: boolean;
+  pieceKey?: string;
+  shadow?: boolean;
+  visible?: boolean;
 };
 
 export function ProjectedBoardPieceVisual({
+  className,
   decorative = false,
   isWinningBattlePiece = false,
   piece,
   pieceColor,
   pieceId,
-  pieceKey,
-  visible,
+  pieceKey = pieceId,
+  shadow = true,
+  visible = true,
 }: ProjectedBoardPieceVisualProps) {
   const pieceIcon = pieceIconById[pieceId];
   const pieceShellUrl = pieceColor === "player-one" ? redPieceUrl : bluePieceUrl;
@@ -37,7 +41,14 @@ export function ProjectedBoardPieceVisual({
     pieceColor === "player-one" ? styles.impactPlayerOne : styles.impactPlayerTwo;
 
   return (
-    <span className={clsx(styles.piece, isWinningBattlePiece && styles.impact)}>
+    <span
+      className={clsx(
+        styles.piece,
+        className,
+        isWinningBattlePiece && styles.impact,
+        shadow && styles.shadow,
+      )}
+    >
       <img
         alt=""
         aria-hidden="true"

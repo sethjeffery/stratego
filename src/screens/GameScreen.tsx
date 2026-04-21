@@ -2,7 +2,6 @@ import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 
 import type { GameSessionDetails } from "../lib/supabaseGameService";
-import type { BattleChatMessage } from "../shared/schema";
 
 import { Button } from "../components/ui";
 import { getGameDisplayPlayers, getOtherDisplayPlayer } from "../lib/gamePlayers";
@@ -20,14 +19,13 @@ import { GameSidebar } from "./game/GameSidebar";
 import styles from "./game/GameSurface.module.css";
 import { GameSurrenderModal } from "./game/GameSurrenderModal";
 import { GameToolbar } from "./game/GameToolbar";
+import { useAttackAnimationPlayback } from "./game/useAttackAnimationPlayback";
 import { useGameScreenController } from "./game/useGameScreenController";
 
 export function GameScreen({ session }: { session: GameSessionDetails }) {
   const [surrenderConfirmVisible, setSurrenderConfirmVisible] = useState(false);
-  const [attackAnimationBattle, setAttackAnimationBattle] =
-    useState<BattleChatMessage | null>(null);
   const animatedMoveCountRef = useRef<null | number>(null);
-  const attackAnimationTimeoutRef = useRef<null | number>(null);
+  const { attackAnimationBattle, playAttackAnimation } = useAttackAnimationPlayback();
   const {
     archived,
     canMarkReady,
@@ -69,26 +67,8 @@ export function GameScreen({ session }: { session: GameSessionDetails }) {
     }
 
     animatedMoveCountRef.current = state.moveCount;
-    setAttackAnimationBattle(latestBattleMessage);
-
-    if (attackAnimationTimeoutRef.current !== null) {
-      window.clearTimeout(attackAnimationTimeoutRef.current);
-    }
-
-    attackAnimationTimeoutRef.current = window.setTimeout(() => {
-      setAttackAnimationBattle(null);
-      attackAnimationTimeoutRef.current = null;
-    }, 2400);
-  }, [state]);
-
-  useEffect(
-    () => () => {
-      if (attackAnimationTimeoutRef.current !== null) {
-        window.clearTimeout(attackAnimationTimeoutRef.current);
-      }
-    },
-    [],
-  );
+    playAttackAnimation(latestBattleMessage);
+  }, [playAttackAnimation, state]);
 
   if (!state) {
     return (

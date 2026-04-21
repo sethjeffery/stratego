@@ -245,7 +245,7 @@
     box-shadow 180ms ease;
 }
 
-.piece::before {
+.piece.shadow::before {
   content: "";
   opacity: 0.8;
   border-radius: 100%;

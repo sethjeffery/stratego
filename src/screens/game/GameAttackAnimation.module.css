@@ -4,62 +4,23 @@
   z-index: 70;
   display: grid;
   place-items: center;
-  background: rgba(6, 9, 16, 0.72);
-  backdrop-filter: blur(2px);
+  background: rgba(8, 8, 8, 0.72);
   pointer-events: none;
-  animation: backdrop-fade 2400ms ease forwards;
+  animation: backdrop-fade 2800ms forwards;
+  overflow: hidden;
+  will-change: opacity;
 }
 
 .stage {
-  width: min(52rem, calc(100vw - 2rem));
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 1.25rem;
   padding: clamp(1rem, 3vw, 2rem);
-  background:
-    radial-gradient(circle at 50% 50%, rgba(255, 245, 224, 0.13), transparent 60%),
-    linear-gradient(180deg, rgba(24, 30, 43, 0.95), rgba(11, 13, 20, 0.95));
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-}
-
-.lane {
+  display: flex;
   position: relative;
-  min-height: clamp(9rem, 24vw, 13rem);
 }
 
 .piece {
-  position: absolute;
-  top: 50%;
-  width: clamp(8.5rem, 22vw, 12rem);
-  padding: 0.95rem 0.75rem;
-  border-radius: 0.8rem;
-  display: grid;
-  justify-items: center;
-  gap: 0.45rem;
-  transform: translateY(-50%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.35);
-}
-
-.piece img {
-  width: clamp(2.8rem, 8vw, 4.5rem);
-  height: clamp(2.8rem, 8vw, 4.5rem);
-  object-fit: contain;
-}
-
-.piece strong {
-  color: #fff8e8;
-  font-size: clamp(0.85rem, 2vw, 1.15rem);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.playerOne {
-  background: linear-gradient(180deg, rgba(195, 35, 21, 0.9), rgba(119, 12, 3, 0.9));
-}
-
-.playerTwo {
-  background: linear-gradient(180deg, rgba(35, 62, 214, 0.9), rgba(7, 17, 94, 0.9));
+  display: block;
+  width: 6rem;
+  height: 9rem;
 }
 
 .attacker {
@@ -77,29 +38,6 @@
   width: 0;
   height: 0;
   transform: translate(-50%, -50%);
-}
-
-.ring,
-.flash {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  opacity: 0;
-}
-
-.ring {
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 999px;
-  border: 2px solid rgba(255, 245, 171, 0.95);
-}
-
-.flash {
-  width: 1.2rem;
-  height: 1.2rem;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(255, 255, 221, 1), rgba(255, 151, 28, 0.72));
 }
 
 .attackerWins .attacker {
@@ -126,13 +64,6 @@
   animation: draw-defender 1700ms ease-in-out forwards;
 }
 
-.draw .ring,
-.draw .flash,
-.bombImpact .ring,
-.bombImpact .flash {
-  animation: impact-burst 920ms ease-out 900ms both;
-}
-
 .bombImpact .attacker,
 .bombImpact .defender {
   animation-duration: 1550ms;
@@ -147,148 +78,215 @@
 }
 
 @keyframes attacker-bash {
-  0% {
-    transform: translate(0, -50%);
+  0%,
+  30% {
+    transform: translateX(-250%);
+    animation-timing-function: ease-in;
   }
-  20% {
-    transform: translate(25%, -50%);
+  50% {
+    transform: translateX(0%);
+    animation-timing-function: ease-out;
   }
-  36% {
-    transform: translate(8%, -50%);
+  60%,
+  65% {
+    transform: translateX(-50%);
+    animation-timing-function: ease-out;
   }
-  52% {
-    transform: translate(26%, -50%);
+  75% {
+    transform: translateX(-80%);
+    animation-timing-function: ease-in;
   }
-  68% {
-    transform: translate(12%, -50%);
+  80% {
+    transform: translateX(20%);
+    animation-timing-function: ease-out;
   }
+  90%,
   100% {
-    transform: translate(14%, -50%);
+    transform: translateX(10%);
   }
 }
 
 @keyframes defender-collapse {
   0%,
-  48% {
-    transform: translate(0, -50%) rotate(0deg);
-    opacity: 1;
+  30% {
+    transform: translateX(100%);
+    animation-timing-function: ease-in;
   }
-  68% {
-    transform: translate(6%, -40%) rotate(18deg);
-    opacity: 1;
+  50% {
+    transform: translateX(0%);
+    animation-timing-function: ease-out;
+  }
+  60%,
+  70% {
+    transform: translateX(20%);
+  }
+  81% {
+    transform: translateX(18%) rotate(0deg);
+    animation-timing-function: linear;
+  }
+  84% {
+    transform: translateX(140%) rotate(0deg);
+    transform-origin: bottom right;
+    animation-timing-function: ease-in;
   }
   100% {
-    transform: translate(22%, -28%) rotate(78deg);
-    opacity: 0;
+    transform: translateX(150%) rotate(90deg);
+    transform-origin: bottom right;
   }
 }
 
 @keyframes attacker-fails {
-  0% {
-    transform: translate(0, -50%);
-    opacity: 1;
-  }
-  18% {
-    transform: translate(20%, -50%);
-  }
-  34% {
-    transform: translate(8%, -50%);
+  0%,
+  30% {
+    transform: translateX(-250%);
+    animation-timing-function: ease-in;
   }
   50% {
-    transform: translate(20%, -50%);
+    transform: translateX(10%);
+    animation-timing-function: ease-out;
   }
-  66% {
-    transform: translate(8%, -50%);
+  60%,
+  80% {
+    transform: translateX(-25%);
+    animation-timing-function: ease-out;
   }
-  82% {
-    transform: translate(0, -50%);
+  87% {
+    transform: translateX(-220%);
+    animation-timing-function: ease-out;
+    transform-origin: bottom left;
   }
+  95%,
   100% {
-    transform: translate(-18%, -22%) rotate(-78deg);
-    opacity: 0;
+    transform: translateX(-220%) rotate(-90deg);
+    transform-origin: bottom left;
   }
 }
 
 @keyframes defender-retaliates {
   0%,
-  60% {
-    transform: translate(0, -50%);
+  40% {
+    transform: translateX(10%);
+    animation-timing-function: ease-out;
   }
-  76% {
-    transform: translate(-24%, -50%);
+  50%,
+  65% {
+    transform: translateX(50%);
+    animation-timing-function: ease-out;
   }
-  88% {
-    transform: translate(-8%, -50%);
+  75% {
+    transform: translateX(80%);
+    animation-timing-function: ease-in;
   }
+  80% {
+    transform: translateX(-30%);
+    animation-timing-function: ease-out;
+  }
+  85%,
   100% {
-    transform: translate(-10%, -50%);
+    transform: translateX(-20%);
   }
 }
 
 @keyframes draw-attacker {
-  0% {
-    transform: translate(0, -50%);
-    opacity: 1;
+  0%,
+  30% {
+    transform: translateX(-250%);
+    animation-timing-function: ease-in;
   }
-  48% {
-    transform: translate(34%, -50%);
-    opacity: 1;
+  50% {
+    transform: translateX(0%);
+    animation-timing-function: ease-out;
   }
-  62% {
-    transform: translate(20%, -48%);
-    opacity: 1;
+  65% {
+    transform: translateX(-100%);
+    animation-timing-function: ease-in;
+  }
+  72% {
+    transform: translateX(0);
+    animation-timing-function: ease-out;
+  }
+  85% {
+    transform: translateX(-50%);
+    animation-timing-function: ease-out;
+    transform-origin: bottom left;
+    animation-timing-function: cubic-bezier(0.32, 0, 0.67, 0);
   }
   100% {
-    transform: translate(8%, -20%) rotate(-72deg);
-    opacity: 0;
+    transform: translateX(-50%) rotate(-90deg);
+    transform-origin: bottom left;
   }
 }
 
 @keyframes draw-defender {
-  0% {
-    transform: translate(0, -50%);
-    opacity: 1;
+  0%,
+  30% {
+    transform: translateX(250%);
+    animation-timing-function: ease-in;
   }
-  48% {
-    transform: translate(-34%, -50%);
-    opacity: 1;
+  50% {
+    transform: translateX(0%);
+    animation-timing-function: ease-out;
   }
-  62% {
-    transform: translate(-20%, -48%);
-    opacity: 1;
+  65% {
+    transform: translateX(100%);
+    animation-timing-function: ease-in;
+  }
+  72% {
+    transform: translateX(0);
+    animation-timing-function: ease-out;
+  }
+  85% {
+    transform: translateX(50%);
+    animation-timing-function: ease-out;
+    transform-origin: bottom right;
+    animation-timing-function: cubic-bezier(0.32, 0, 0.67, 0);
   }
   100% {
-    transform: translate(-8%, -20%) rotate(72deg);
-    opacity: 0;
+    transform: translateX(50%) rotate(90deg);
+    transform-origin: bottom right;
   }
 }
 
 @keyframes bomb-attacker {
-  0% {
-    transform: translate(0, -50%);
-    opacity: 1;
+  0%,
+  30% {
+    transform: translateX(-250%);
+    animation-timing-function: ease-in;
   }
-  54% {
-    transform: translate(36%, -50%);
-    opacity: 1;
+  50% {
+    transform: translateX(25%);
+    animation-timing-function: ease-out;
   }
+  65% {
+    transform: translateX(-25%);
+    animation-timing-function: cubic-bezier(0.32, 0, 0.67, 0);
+    transform-origin: bottom left;
+  }
+  90%,
   100% {
-    transform: translate(20%, -30%) rotate(-65deg) scale(0.85);
-    opacity: 0;
+    transform: translateX(-25%) rotate(-90deg);
+    transform-origin: bottom left;
   }
 }
 
 @keyframes bomb-defender {
-  0% {
-    transform: translate(0, -50%);
+  0%,
+  50% {
+    transform: translate(25%, 0);
+    animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
     opacity: 1;
   }
-  54% {
-    transform: translate(-4%, -50%);
+  60% {
+    transform: translate(25%, -20%);
+    animation-timing-function: cubic-bezier(0.32, 0, 0.67, 0);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(25%, 0);
     opacity: 1;
   }
   100% {
-    transform: translate(-16%, -32%) rotate(60deg) scale(0.85);
+    transform: translate(25%, 0);
     opacity: 0;
   }
 }
@@ -309,7 +307,10 @@
 }
 
 @keyframes backdrop-fade {
-  0%,
+  0% {
+    opacity: 0;
+  }
+  5%,
   80% {
     opacity: 1;
   }
@@ -321,9 +322,7 @@
 @media (prefers-reduced-motion: reduce) {
   .backdrop,
   .attacker,
-  .defender,
-  .ring,
-  .flash {
+  .defender {
     animation-duration: 1ms !important;
     animation-delay: 0ms !important;
   }

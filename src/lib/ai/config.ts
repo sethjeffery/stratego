@@ -15,11 +15,6 @@ export type PlayerProfile = {
 
 export type SessionRole = Database["public"]["Enums"]["session_role"];
 
-const AI_AVATAR_BY_ROLE: Record<SessionRole, string> = {
-  challenger: "char21",
-  initiator: "char09",
-};
-
 export const AI_INTELLIGENCE_OPTIONS = [1, 2, 3, 4, 5] as const;
 export const DEFAULT_AI_INTELLIGENCE = 3;
 
@@ -33,13 +28,13 @@ export const createAiPlayerConfig = (intelligence?: number): AiPlayerConfig => (
 });
 
 export const createAiProfile = (
-  role: SessionRole,
+  _role: SessionRole,
   intelligence = DEFAULT_AI_INTELLIGENCE,
 ): PlayerProfile => {
   const level = normalizeAiIntelligence(intelligence);
 
   return {
-    avatar_id: AI_AVATAR_BY_ROLE[role],
+    avatar_id: `robo${String(level).padStart(2, "0")}`,
     player_name: `Arena AI Lv.${level}`,
   };
 };

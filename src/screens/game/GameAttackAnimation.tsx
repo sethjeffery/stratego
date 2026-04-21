@@ -3,6 +3,7 @@ import clsx from "clsx";
 import type { BattleChatMessage } from "../../shared/schema";
 
 import { pieceIconById } from "../../components/board/pieceIcons";
+import { ProjectedBoardPieceVisual } from "../../components/projectedBoard/ProjectedBoardPieceVisual";
 import styles from "./GameAttackAnimation.module.css";
 import { pieceById } from "./gameScreenSelectors";
 
@@ -32,33 +33,52 @@ export function GameAttackAnimation({ battle, playerOneId }: GameAttackAnimation
           isBombBattle && styles.bombImpact,
         )}
       >
-        <div className={styles.lane}>
-          <div
+        {attackerPiece ? (
+          <ProjectedBoardPieceVisual
             className={clsx(
               styles.piece,
               styles.attacker,
               getPieceColorClass(battle.attackerOwnerId, playerOneId),
             )}
-          >
-            {attackerIcon ? <img alt="" src={attackerIcon} /> : <span>⚔️</span>}
-            <strong>{attackerPiece?.label ?? "Unknown"}</strong>
-          </div>
-          <div
+            piece={attackerPiece}
+            pieceColor="player-one"
+            pieceId={battle.attackerPieceId}
+            shadow={false}
+          />
+        ) : null}
+        {defenderPiece ? (
+          <ProjectedBoardPieceVisual
             className={clsx(
               styles.piece,
               styles.defender,
               getPieceColorClass(battle.defenderOwnerId, playerOneId),
             )}
-          >
-            {defenderIcon ? <img alt="" src={defenderIcon} /> : <span>🛡️</span>}
-            <strong>{defenderPiece?.label ?? "Unknown"}</strong>
-          </div>
-          <span className={styles.impact}>
-            <span className={styles.ring} />
-            <span className={styles.ring} />
-            <span className={styles.flash} />
-          </span>
-        </div>
+            piece={defenderPiece}
+            pieceColor="player-two"
+            pieceId={battle.defenderPieceId}
+            shadow={false}
+          />
+        ) : null}
+        {/* <div
+          className={clsx(
+            styles.piece,
+            styles.attacker,
+            getPieceColorClass(battle.attackerOwnerId, playerOneId),
+          )}
+        >
+          {attackerIcon ? <img alt="" src={attackerIcon} /> : <span>⚔️</span>}
+          <strong>{attackerPiece?.label ?? "Unknown"}</strong>
+        </div> */}
+        {/* <div
+          className={clsx(
+            styles.piece,
+            styles.defender,
+            getPieceColorClass(battle.defenderOwnerId, playerOneId),
+          )}
+        >
+          {defenderIcon ? <img alt="" src={defenderIcon} /> : <span>🛡️</span>}
+          <strong>{defenderPiece?.label ?? "Unknown"}</strong>
+        </div> */}
       </div>
     </div>
   );

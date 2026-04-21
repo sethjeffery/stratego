@@ -5,9 +5,15 @@ const avatarModules = import.meta.glob("../assets/avatars/*.png", {
   import: "default",
 }) as Record<string, string>;
 
-export const avatarCatalog = Object.entries(avatarModules)
+const robotAvatarModules = import.meta.glob("../assets/robots/*.png", {
+  eager: true,
+  import: "default",
+}) as Record<string, string>;
+
+const createAvatarCatalog = (modules: Record<string, string>) =>
+  Object.entries(modules)
   .map(([path, url]) => {
-    const match = path.match(/\/(char\d+)\.jpg$/);
+    const match = path.match(/\/([a-z]+\d+)\.(?:png|jpg)$/);
     return {
       id: match?.[1] ?? path,
       url,
@@ -15,7 +21,14 @@ export const avatarCatalog = Object.entries(avatarModules)
   })
   .sort((left, right) => left.id.localeCompare(right.id));
 
-const avatarUrlById = new Map(avatarCatalog.map((avatar) => [avatar.id, avatar.url]));
+export const avatarCatalog = createAvatarCatalog(avatarModules);
+
+const allAvatarCatalog = [
+  ...avatarCatalog,
+  ...createAvatarCatalog(robotAvatarModules),
+];
+
+const avatarUrlById = new Map(allAvatarCatalog.map((avatar) => [avatar.id, avatar.url]));
 
 const titles = [
   "Commander",

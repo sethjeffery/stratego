@@ -11,11 +11,13 @@ import {
   getSessionFixture,
 } from "../../fixtures/sessionFixtures";
 import { getGameDisplayPlayers, getOtherDisplayPlayer } from "../../lib/gamePlayers";
+import { GameAttackAnimation } from "./GameAttackAnimation";
 import { GameBoardSection } from "./GameBoardSection";
 import { getInspectedPieceState, getMainStatus } from "./gameScreenSelectors";
 import { GameSidebar } from "./GameSidebar";
 import styles from "./GameSurface.module.css";
 import { GameToolbar } from "./GameToolbar";
+import { useAttackAnimationPlayback } from "./useAttackAnimationPlayback";
 
 type FixtureDebugGameScreenProps = {
   fixtureId: null | string;
@@ -28,6 +30,7 @@ export function FixtureDebugGameScreen({
 }: FixtureDebugGameScreenProps) {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<null | Position>(null);
+  const { attackAnimationBattle } = useAttackAnimationPlayback();
   const session = useMemo(
     () => (fixtureId ? getSessionFixture(fixtureId) : getDefaultSessionFixture()),
     [fixtureId],
@@ -60,6 +63,8 @@ export function FixtureDebugGameScreen({
   });
   const { inspectedPiece, inspectedPieceTraits, inspectedUnit, inspectedVisible } =
     getInspectedPieceState(session.state, selected, myId);
+
+  const playerOneId = session.state.players[0]?.id ?? null;
 
   const onCellClick = (target: Position) => {
     const nextUnit = session.state?.units.find(
@@ -115,6 +120,10 @@ export function FixtureDebugGameScreen({
         players={displayPlayers}
         state={session.state}
       />
+
+      {attackAnimationBattle && (
+        <GameAttackAnimation battle={attackAnimationBattle} playerOneId={playerOneId} />
+      )}
     </main>
   );
 }
