@@ -2,7 +2,7 @@ import { ArrowLeftIcon, FlagIcon } from "@phosphor-icons/react";
 
 import type { MainStatus } from "./gameScreenSelectors";
 
-import { IconButton } from "../../components/IconButton";
+import { IconButton } from "../../components/ui";
 import { GameStatus } from "./GameStatus";
 import styles from "./GameSurface.module.css";
 

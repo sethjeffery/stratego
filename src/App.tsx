@@ -2,8 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { DASHBOARD_ROUTE } from "./app/constants";
 import { AppLayout } from "./layouts/AppLayout";
-import { DashboardOrDebugScreen } from "./screens/DashboardOrDebugScreen";
-import { SessionAccessScreen } from "./screens/SessionAccessScreen";
+import { DashboardOrDebugScreen, SessionAccessScreen } from "./screens";
 
 export function App() {
   return (

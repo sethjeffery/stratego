@@ -1,4 +1,4 @@
-import { Button } from "../../components/Button";
+import { Button } from "../../components/ui";
 import styles from "./GameSurface.module.css";
 
 type GameSetupActionsProps = {

@@ -1,6 +1,6 @@
 import type { GameDisplayPlayer } from "../../lib/gamePlayers";
 
-import Avatar from "../../components/Avatar";
+import { Avatar } from "../../components/ui";
 import { resolveAvatarUrl } from "../../lib/playerProfile";
 import styles from "./GameSurface.module.css";
 
