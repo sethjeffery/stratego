@@ -18,7 +18,7 @@ import {
   createAiPlayerConfig,
   createAiProfile,
   type CreateSessionOptions,
-} from "./aiConfig";
+} from "./ai/config";
 import {
   applyMoveToState,
   applySetupSwapToState,

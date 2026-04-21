@@ -2,15 +2,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSWRConfig } from "swr";
 
-import type { AiWorkerResponse } from "../../lib/aiWorker";
+import type { AiWorkerResponse } from "../../lib/ai";
 import type { GameSessionDetails } from "../../lib/supabaseGameService";
 import type { GameState, Position } from "../../shared/schema";
 import type { PendingBoardAction } from "../../types/ui";
 
 import { useBoardInteractionState } from "../../hooks/useBoardInteractionState";
 import { useCurrentUser } from "../../hooks/useProfile";
-import { getAiThinkingDelayMs } from "../../lib/aiConfig";
-import { chooseAiMove } from "../../lib/aiPlayer";
+import { getAiThinkingDelayMs } from "../../lib/ai";
+import { chooseAiMove } from "../../lib/ai";
 import {
   applyMoveToState,
   applySetupSwapToState,
@@ -439,7 +439,7 @@ export function useGameScreenController(session: GameSessionDetails) {
   useEffect(() => {
     if (typeof Worker === "undefined") return;
 
-    const worker = new Worker(new URL("../../lib/aiWorker.ts", import.meta.url), {
+    const worker = new Worker(new URL("../../lib/ai/worker.ts", import.meta.url), {
       type: "module",
     });
     aiWorkerRef.current = worker;

@@ -6,7 +6,7 @@ import {
   type CreateSessionOptions,
   DEFAULT_AI_INTELLIGENCE,
   type HostedGameMode,
-} from "../../lib/aiConfig";
+} from "../../lib/ai";
 import { defaultGameSetupId, gameSetups } from "../../lib/gameConfig";
 import { Button } from "../ui";
 import styles from "./HostGameModal.module.css";

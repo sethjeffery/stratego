@@ -1,5 +1,5 @@
-import type { AiPlayerConfig } from "../shared/schema";
-import type { Database } from "../types/database.types";
+import type { AiPlayerConfig } from "../../shared/schema";
+import type { Database } from "../../types/database.types";
 
 export type CreateSessionOptions = {
   challengerAiIntelligence?: number;

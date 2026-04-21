@@ -1,22 +1,10 @@
-import type { GameSetup } from "../shared/schema";
-import type { GameState, PieceDefinition, Position } from "../shared/schema";
+import type { GameSetup, GameState, PieceDefinition, Position } from "../../shared/schema";
 
-import { getAliveUnits } from "../shared/schema";
-import {
-  getAiBestMoveProbability,
-  getAiScoreMargin,
-  getAiSearchDepth,
-} from "./aiConfig";
-import { applyMoveToState, getLegalMovesForUnit } from "./engine";
+import { getAliveUnits } from "../../shared/schema";
+import { applyMoveToState, getLegalMovesForUnit } from "../engine";
 
-export type AiChosenMove = Position & {
+type SearchMove = {
   from: Position;
-  score: number;
-};
-
-type CandidateMove = {
-  from: Position;
-  score: number;
   to: Position;
 };
 
@@ -25,7 +13,7 @@ const REVEAL_WEIGHT = 18;
 const MOBILITY_WEIGHT = 8;
 const TERMINAL_SCORE = 1_000_000;
 
-const buildPieceMap = (pieces: PieceDefinition[]) =>
+export const buildPieceMap = (pieces: PieceDefinition[]) =>
   new Map(pieces.map((piece) => [piece.id, piece]));
 
 const getPieceValue = (piece: PieceDefinition) => {
@@ -56,11 +44,11 @@ const getPositionScore = (
   );
 };
 
-const getAllLegalMoves = (
+export const getAllLegalMoves = (
   state: GameState,
   playerId: string,
   gameSetup: GameSetup,
-) => {
+): SearchMove[] => {
   return getAliveUnits(state)
     .filter((unit) => unit.ownerId === playerId)
     .flatMap((unit) =>
@@ -125,7 +113,7 @@ const scoreState = (
   return score + mobility * MOBILITY_WEIGHT;
 };
 
-const minimax = (
+export const minimax = (
   state: GameState,
   depth: number,
   alpha: number,
@@ -180,70 +168,4 @@ const minimax = (
   }
 
   return bestScore;
-};
-
-export const chooseAiMove = (
-  state: GameState,
-  playerId: string,
-  gameSetup: GameSetup,
-): AiChosenMove | null => {
-  const player = state.players.find((entry) => entry.id === playerId);
-  if (!player || state.phase !== "battle" || state.turnPlayerId !== playerId) {
-    return null;
-  }
-
-  const candidateMoves = getAllLegalMoves(state, playerId, gameSetup);
-  if (candidateMoves.length === 0) {
-    return null;
-  }
-
-  const pieceById = buildPieceMap(gameSetup.pieces);
-  const depth = getAiSearchDepth(player.aiConfig);
-  const scoredMoves: CandidateMove[] = candidateMoves
-    .map((move) => {
-      const result = applyMoveToState(
-        state,
-        playerId,
-        move.from,
-        move.to,
-        gameSetup.rules,
-        gameSetup.pieces,
-      );
-
-      return {
-        from: move.from,
-        score: result.nextState
-          ? minimax(
-              result.nextState,
-              Math.max(0, depth - 1),
-              -Infinity,
-              Infinity,
-              playerId,
-              gameSetup,
-              pieceById,
-            )
-          : -Infinity,
-        to: move.to,
-      };
-    })
-    .sort((left, right) => right.score - left.score);
-
-  const bestScore = scoredMoves[0]?.score ?? -Infinity;
-  const similarMoves = scoredMoves.filter(
-    (move) => bestScore - move.score <= getAiScoreMargin(player.aiConfig),
-  );
-  const shouldPickBest =
-    similarMoves.length === 1 ||
-    Math.random() <= getAiBestMoveProbability(player.aiConfig);
-  const chosenMove = shouldPickBest
-    ? similarMoves[0]
-    : similarMoves[Math.floor(Math.random() * similarMoves.length)];
-
-  if (!chosenMove) return null;
-
-  return {
-    ...chosenMove.to,
-    from: chosenMove.from,
-    score: chosenMove.score,
-  };
 };
