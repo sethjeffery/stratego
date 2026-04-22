@@ -173,6 +173,28 @@ const mergeSessionChatMessages = (
   };
 };
 
+export const mergeCachedChatMessagesIntoSession = (
+  session: GameSession,
+  cachedSession?: GameSession | null,
+): GameSession => {
+  if (!session.state || !cachedSession?.state) return session;
+
+  const cachedPlayerMessages = getChatMessages(cachedSession.state).filter(
+    (message) => message.type === "player",
+  );
+
+  return {
+    ...session,
+    state: {
+      ...session.state,
+      chatMessages: sortAndLimitChatMessages(
+        [...getBattleChatMessages(session.state), ...cachedPlayerMessages],
+        MAX_SESSION_CHAT_MESSAGES,
+      ),
+    },
+  };
+};
+
 export const applyChatMessageToSession = (
   session: GameSession,
   message: SessionChatMessage,

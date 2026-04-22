@@ -32,6 +32,7 @@ import {
   joinSessionAsCurrentUser,
   listMySessions,
   listOpenSessions,
+  mergeCachedChatMessagesIntoSession,
   removeChatMessageFromSession,
   subscribeToMemberships,
   subscribeToProfile,
@@ -92,6 +93,12 @@ const hasSessionChatMessageId = (
   value: Partial<SessionChatMessage> | Record<string, never>,
 ): value is Partial<SessionChatMessage> & Pick<SessionChatMessage, "id"> => {
   return typeof value.id === "string";
+};
+
+const hasSessionId = (
+  value: Partial<GameSession> | Record<string, never>,
+): value is GameSession => {
+  return typeof value.session_id === "string";
 };
 
 export function useArchiveSession() {
@@ -251,16 +258,25 @@ export function useResignSession() {
 export function useSession(sessionId: null | string) {
   const { mutate } = useSWRConfig();
   const cacheKey = getSessionCacheKey(sessionId);
-  const session = useModel(sessionId, cacheKey, getSession);
+  const session = useModel(sessionId, cacheKey, getSession, {
+    revalidateOnMount: true,
+  });
 
   useEffect(() => {
     if (!sessionId || !cacheKey) return;
 
     return subscribeToSession(sessionId, (payload) => {
-      if (payload.new) {
-        void mutate(cacheKey, payload.new, {
-          revalidate: false,
-        });
+      const nextSession = payload.new;
+
+      if (hasSessionId(nextSession)) {
+        void mutate(
+          cacheKey,
+          (currentSession?: GameSession | null) =>
+            mergeCachedChatMessagesIntoSession(nextSession, currentSession),
+          {
+            revalidate: false,
+          },
+        );
       }
     });
   }, [cacheKey, mutate, sessionId]);
@@ -421,11 +437,13 @@ function useModel<T extends Record<string, any>>(
   id: null | string | undefined,
   cacheKey: null | readonly string[] | string | undefined,
   getModel: (id: string) => Promise<null | T>,
+  options?: { revalidateOnMount?: boolean },
 ) {
   const sessionSwr = useSWR(cacheKey, () => getModel(id ?? ""), {
     keepPreviousData: true,
     revalidateIfStale: false,
     revalidateOnFocus: false,
+    revalidateOnMount: options?.revalidateOnMount,
   });
 
   return sessionSwr;
